@@ -1,0 +1,10 @@
+﻿C:\Users\LOGO\Desktop\Octopus\app\favicon.ico
+C:\Users\LOGO\Desktop\Octopus\app\globals.css
+C:\Users\LOGO\Desktop\Octopus\app\layout.tsx
+C:\Users\LOGO\Desktop\Octopus\app\page.tsx
+C:\Users\LOGO\Desktop\Octopus\app\(auth)\login\page.tsx
+C:\Users\LOGO\Desktop\Octopus\app\(auth)\login\owner\page.tsx
+C:\Users\LOGO\Desktop\Octopus\app\(dashboard)\layout.tsx
+C:\Users\LOGO\Desktop\Octopus\app\(dashboard)\items\page.tsx
+C:\Users\LOGO\Desktop\Octopus\app\(dashboard)\items\new\page.tsx
+C:\Users\LOGO\Desktop\Octopus\app\(dashboard)\sales\page.tsx

@@ -1,0 +1,2 @@
+﻿C:\Users\LOGO\Desktop\Octopus\repositories\category.repository.ts
+C:\Users\LOGO\Desktop\Octopus\repositories\item.repository.ts
