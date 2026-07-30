@@ -5,34 +5,7 @@ export type ItemType =
 export type SaleMethod =
   | "piece"
   | "weight"
-  | "money"
-  | "box"
-  | "carton"
-  | "meter"
-  | "hour"
-  | "day"
-  | "package";
-
-export type UnitType =
-  | "piece"
-  | "gram"
-  | "kilogram"
-  | "liter"
-  | "meter"
-  | "box"
-  | "carton"
-  | "bottle"
-  | "roll"
-  | "hour"
-  | "day";
-
-export interface ItemUnit {
-  unit: UnitType;
-
-  conversion: number;
-
-  is_default: boolean;
-}
+  | "money";
 
 export interface Item {
 
@@ -48,9 +21,9 @@ export interface Item {
 
   item_type: ItemType;
 
-  sale_methods: SaleMethod[];
+  sale_method: SaleMethod;
 
-  units: ItemUnit[];
+  unit: string;
 
   buy_price: number;
 
@@ -71,7 +44,9 @@ export interface Item {
   created_at: string;
 
   updated_at: string;
-}export type ItemFormData = Omit<
+}
+
+export type ItemFormData = Omit<
   Item,
   "id" | "created_at" | "updated_at"
 >;
