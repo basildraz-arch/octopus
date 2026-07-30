@@ -1,11 +1,40 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+import { login } from "@/services/auth.service";
+
 export default function OwnerLoginPage() {
-  const [identifier, setIdentifier] = useState("");
+  const router = useRouter();
+
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    setError("");
+    setLoading(true);
+
+    try {
+      const user = await login(email, password);
+
+      if (user.role === "owner") {
+        router.push("/items");
+      } else {
+        router.push("/sales");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("بيانات الدخول غير صحيحة");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-6">
@@ -24,19 +53,23 @@ export default function OwnerLoginPage() {
 
         </div>
 
-        <div className="space-y-5">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-5"
+        >
 
           <div>
 
             <label className="mb-2 block text-sm text-zinc-300">
-              البريد الإلكتروني أو رقم الهاتف
+              البريد الإلكتروني
             </label>
 
             <input
-              type="text"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="example@email.com"
+              required
               className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
             />
 
@@ -53,20 +86,29 @@ export default function OwnerLoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="********"
+              required
               className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
             />
 
           </div>
 
+          {error && (
+            <p className="text-sm text-red-500">
+              {error}
+            </p>
+          )}
+
           <button
-            className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700"
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
           >
-            تسجيل الدخول
+            {loading ? "جارِ الدخول..." : "تسجيل الدخول"}
           </button>
 
-        </div>
+        </form>
 
-        <div className="mt-6 flex justify-between text-sm">
+        <div className="mt-6 flex justify-center text-sm">
 
           <Link
             href="/login"
@@ -74,10 +116,6 @@ export default function OwnerLoginPage() {
           >
             ← رجوع
           </Link>
-
-          <button className="text-blue-400 hover:text-blue-300">
-            نسيت كلمة المرور؟
-          </button>
 
         </div>
 
