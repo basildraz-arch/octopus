@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import type { CartItem } from "@/components/Cart";
+import type { PaymentMethod } from "@/types/sale";
+import { getOrCreateOpenShift } from "@/repositories/shift.repository";
 
 export type SaleWithItems = {
   id: string;
@@ -53,8 +55,11 @@ export async function getSalesByDate(
 export async function createSale(
   businessId: string,
   createdBy: string,
-  cart: CartItem[]
+  cart: CartItem[],
+  paymentMethod: PaymentMethod
 ) {
+  const shift = await getOrCreateOpenShift(businessId);
+
   const total = cart.reduce(
     (sum, line) => sum + line.total,
     0
@@ -65,6 +70,8 @@ export async function createSale(
     .insert({
       business_id: businessId,
       created_by: createdBy,
+      shift_id: shift.id,
+      payment_method: paymentMethod,
       total,
     })
     .select()
