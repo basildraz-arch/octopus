@@ -1,109 +1,84 @@
 "use client";
 
 import { useState } from "react";
-import type { Product } from "@/data/products";
+import type { Item } from "@/types/item";
 
 type Props = {
-  product: Product | null;
+  item: Item | null;
   onClose: () => void;
   onAdd: (quantity: number, total: number) => void;
 };
 
+const LABELS: Record<Item["sale_method"], string> = {
+  piece: "الكمية",
+  weight: "الوزن",
+  money: "المبلغ",
+};
+
 export default function SalePopup({
-  product,
+  item,
   onClose,
   onAdd,
 }: Props) {
-  const [mode, setMode] = useState<"menu" | "money" | "weight">("menu");
   const [value, setValue] = useState("");
 
-  if (!product) {
+  if (!item) {
     return null;
   }
 
-  // نخزن المنتج في متغير جديد
-  const currentProduct = product;
-
-  function addSale() {
+  function handleAdd() {
     const number = Number(value);
 
-    if (number <= 0) return;
+    if (!item || number <= 0) return;
 
-    if (mode === "money") {
-      onAdd(number / currentProduct.price, number);
+    if (item.sale_method === "money") {
+      onAdd(number / item.sell_price, number);
     } else {
-      onAdd(number, number * currentProduct.price);
+      onAdd(number, number * item.sell_price);
     }
 
     setValue("");
-    setMode("menu");
     onClose();
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center">
-      <div className="bg-gray-900 rounded-2xl p-8 w-[400px]">
-        {mode === "menu" ? (
-          <>
-            <h2 className="text-2xl font-bold mb-2">
-              {currentProduct.name}
-            </h2>
+    <div className="fixed inset-0 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-gray-900 p-6">
+        <h2 className="mb-1 text-xl font-bold text-white">
+          {item.name}
+        </h2>
 
-            <p className="text-gray-400 mb-6">
-              اختر طريقة البيع
-            </p>
+        <p className="mb-6 text-sm text-gray-400">
+          {item.sell_price} جنيه / {item.unit}
+        </p>
 
-            <button
-              onClick={() => setMode("weight")}
-              className="w-full bg-blue-600 rounded-xl p-4 mb-4"
-            >
-              ⚖️ بيع بالكيلو
-            </button>
+        <label className="mb-2 block text-sm text-gray-300">
+          {LABELS[item.sale_method]}
+          {item.sale_method === "weight" ? ` (${item.unit})` : ""}
+        </label>
 
-            <button
-              onClick={() => setMode("money")}
-              className="w-full bg-green-600 rounded-xl p-4 mb-4"
-            >
-              💰 بيع بالمبلغ
-            </button>
+        <input
+          type="number"
+          autoFocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={item.sale_method === "piece" ? "1" : "0"}
+          className="mb-4 w-full rounded-xl bg-gray-800 p-4 text-white outline-none"
+        />
 
-            <button
-              onClick={onClose}
-              className="w-full bg-gray-700 rounded-xl p-4"
-            >
-              إلغاء
-            </button>
-          </>
-        ) : (
-          <>
-            <h2 className="text-2xl font-bold mb-6">
-              {mode === "money"
-                ? "💰 أدخل المبلغ"
-                : "⚖️ أدخل الوزن"}
-            </h2>
+        <button
+          onClick={handleAdd}
+          className="mb-3 w-full rounded-xl bg-green-600 p-4 font-bold text-white hover:bg-green-700"
+        >
+          ➕ إضافة للسلة
+        </button>
 
-            <input
-              type="number"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              className="w-full rounded-xl bg-gray-800 p-4 mb-4 outline-none"
-            />
-
-            <button
-              onClick={addSale}
-              className="w-full bg-green-600 rounded-xl p-4 mb-3"
-            >
-              إضافة
-            </button>
-
-            <button
-              onClick={() => setMode("menu")}
-              className="w-full bg-gray-700 rounded-xl p-4"
-            >
-              رجوع
-            </button>
-          </>
-        )}
+        <button
+          onClick={onClose}
+          className="w-full rounded-xl bg-gray-700 p-4 text-white hover:bg-gray-600"
+        >
+          إلغاء
+        </button>
       </div>
     </div>
   );
