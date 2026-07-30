@@ -4,7 +4,7 @@ import { ReactNode, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import DesktopSidebar from "@/components/layout/DesktopSidebar";
-import MobileSidebar from "@/components/layout/MobileSidebar";
+import BottomNav from "@/components/layout/BottomNav";
 import AppHeader from "@/components/layout/AppHeader";
 
 import { useSession } from "@/hooks/useSession";
@@ -47,16 +47,14 @@ export default function DashboardLayout({
         {/* Header */}
         <AppHeader />
 
-        {/* Mobile Sidebar */}
-        <div className="border-b border-zinc-800 bg-zinc-900 p-4 md:hidden">
-          <MobileSidebar />
-        </div>
-
         {/* Page */}
-        <main className="flex-1 p-6 md:p-8">
+        <main className="flex-1 p-6 pb-24 md:p-8 md:pb-8">
           {children}
         </main>
       </div>
+
+      {/* Bottom Navigation (mobile only) */}
+      <BottomNav />
     </div>
   );
 }

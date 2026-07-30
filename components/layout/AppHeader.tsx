@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 
-import MobileSidebar from "./MobileSidebar";
 import { logout } from "@/services/auth.service";
 
 export default function AppHeader() {
@@ -17,8 +16,6 @@ export default function AppHeader() {
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 md:px-8">
 
       <div className="flex items-center gap-4">
-
-        <MobileSidebar />
 
         <div>
           <h1 className="text-lg font-bold">
