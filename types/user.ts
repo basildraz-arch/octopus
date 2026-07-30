@@ -3,6 +3,8 @@ import { UserRole } from "./role";
 export interface User {
   id: string;
 
+  auth_user_id: string;
+
   business_id: string;
 
   branch_id?: string;

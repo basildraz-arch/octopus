@@ -1,6 +1,5 @@
 export type UserRole =
   | "owner"
-  | "manager"
   | "employee";
 
 export interface RolePermissions {
