@@ -6,6 +6,7 @@ import {
   getOpenShift,
   getLastShift,
   closeShift,
+  reopenShift,
   getShiftSummary,
   type Shift,
   type ShiftSummary,
@@ -27,6 +28,7 @@ export default function DayClosePage() {
   const [closing, setClosing] = useState(false);
   const [countedCash, setCountedCash] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const [reopening, setReopening] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -74,6 +76,23 @@ export default function DayClosePage() {
       alert("حدث خطأ أثناء إنهاء اليوم");
     } finally {
       setClosing(false);
+    }
+  }
+
+  async function handleReopen() {
+    if (!shift) return;
+
+    setReopening(true);
+
+    try {
+      await reopenShift(shift.id);
+
+      await load();
+    } catch (err) {
+      console.error(err);
+      alert("حدث خطأ أثناء إعادة فتح اليوم");
+    } finally {
+      setReopening(false);
     }
   }
 
@@ -239,6 +258,16 @@ export default function DayClosePage() {
             </p>
           )}
         </div>
+      )}
+
+      {!isOpen && (
+        <button
+          onClick={handleReopen}
+          disabled={reopening}
+          className="w-full rounded-xl bg-zinc-700 p-4 text-lg font-bold text-white hover:bg-zinc-600 disabled:opacity-50"
+        >
+          {reopening ? "جارِ إعادة الفتح..." : "↩️ إعادة فتح اليوم"}
+        </button>
       )}
     </main>
   );
