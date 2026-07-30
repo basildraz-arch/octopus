@@ -36,6 +36,21 @@ export async function getItemById(
   return data as Item;
 }
 
+export async function getActiveItems(): Promise<Item[]> {
+  const { data, error } = await supabase
+    .from("items")
+    .select("*")
+    .eq("active", true)
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("Supabase Error:", error.message);
+    return [];
+  }
+
+  return (data ?? []) as Item[];
+}
+
 export async function createItem(
   item: ItemFormData
 ) {

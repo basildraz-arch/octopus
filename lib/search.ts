@@ -1,19 +1,19 @@
-import type { Product } from "@/data/products";
+import type { Item } from "@/types/item";
 
-export function searchProducts(
-  products: Product[],
+export function searchItems(
+  items: Item[],
   search: string
 ) {
   const text = search.trim().toLowerCase();
 
-  if (!text) return products;
+  if (!text) return items;
 
-  return products.filter((product) => {
-    const nameMatch = product.name
+  return items.filter((item) => {
+    const nameMatch = item.name
       .toLowerCase()
       .includes(text);
 
-    const keywordMatch = product.keywords.some((keyword) =>
+    const keywordMatch = item.keywords.some((keyword) =>
       keyword.toLowerCase().includes(text)
     );
 
