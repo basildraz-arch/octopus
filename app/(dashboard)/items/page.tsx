@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import ProductTable from "@/components/items/ItemTable";
 
-import { getItems } from "@/repositories/item.repository";
+import { getItems, updateItem } from "@/repositories/item.repository";
 import type { Item } from "@/types/item";
 
 export default function ItemsPage() {
@@ -25,6 +25,11 @@ export default function ItemsPage() {
     setItems(data);
 
     setLoading(false);
+  }
+
+  async function handleToggleActive(item: Item) {
+    await updateItem(item.id, { active: !item.active });
+    await loadItems();
   }
 
   const filteredItems = useMemo(() => {
@@ -115,7 +120,10 @@ export default function ItemsPage() {
             جار تحميل الأصناف...
           </div>
         ) : (
-          <ProductTable products={filteredItems} />
+          <ProductTable
+            products={filteredItems}
+            onToggleActive={handleToggleActive}
+          />
         )}
       </div>
     </main>

@@ -5,10 +5,12 @@ import type { Item } from "@/types/item";
 
 type Props = {
   products: Item[];
+  onToggleActive: (item: Item) => void;
 };
 
 export default function ProductTable({
   products,
+  onToggleActive,
 }: Props) {
   if (products.length === 0) {
     return (
@@ -102,8 +104,15 @@ export default function ProductTable({
                     ✏️ تعديل
                   </Link>
 
-                  <button className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700">
-                    🗑 حذف
+                  <button
+                    onClick={() => onToggleActive(item)}
+                    className={`rounded px-3 py-1 text-sm text-white transition ${
+                      item.active
+                        ? "bg-zinc-700 hover:bg-zinc-600"
+                        : "bg-green-600 hover:bg-green-700"
+                    }`}
+                  >
+                    {item.active ? "⏸ تعطيل" : "▶ تفعيل"}
                   </button>
                 </div>
               </td>
