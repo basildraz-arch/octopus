@@ -5,12 +5,19 @@ import { useEffect, useState } from "react";
 import ItemList from "@/components/ItemList";
 import Cart, { type CartItem } from "@/components/Cart";
 import SalePopup from "@/components/SalePopup";
+import Receipt from "@/components/Receipt";
 
 import { getActiveItems } from "@/repositories/item.repository";
 import { createSale } from "@/repositories/sale.repository";
 import { useSession } from "@/hooks/useSession";
 
 import type { Item } from "@/types/item";
+
+type LastSale = {
+  cart: CartItem[];
+  total: number;
+  createdAt: Date;
+};
 
 export default function SalesPage() {
   const { user } = useSession();
@@ -22,6 +29,7 @@ export default function SalesPage() {
   const [showPopup, setShowPopup] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
+  const [lastSale, setLastSale] = useState<LastSale | null>(null);
 
   useEffect(() => {
     loadItems();
@@ -88,9 +96,18 @@ export default function SalesPage() {
     setCheckingOut(true);
 
     try {
+      const total = cart.reduce(
+        (sum, line) => sum + line.total,
+        0
+      );
+
       await createSale(user.business_id, user.id, cart);
 
-      alert("✅ تم إنهاء الفاتورة");
+      setLastSale({
+        cart,
+        total,
+        createdAt: new Date(),
+      });
 
       setCart([]);
       await loadItems();
@@ -103,37 +120,48 @@ export default function SalesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-950 p-4 text-white md:p-6">
-      <h1 className="mb-6 text-3xl font-bold md:mb-8 md:text-4xl">
-        🛒 عملية بيع
-      </h1>
+    <>
+      <main className="min-h-screen bg-gray-950 p-4 text-white md:p-6 print:hidden">
+        <h1 className="mb-6 text-3xl font-bold md:mb-8 md:text-4xl">
+          🛒 عملية بيع
+        </h1>
 
-      {loading ? (
-        <div className="p-8 text-center">
-          جارِ تحميل الأصناف...
-        </div>
-      ) : (
-        <div className="grid gap-8 md:grid-cols-2">
-          <ItemList
-            items={items}
-            onSelect={selectItem}
+        {loading ? (
+          <div className="p-8 text-center">
+            جارِ تحميل الأصناف...
+          </div>
+        ) : (
+          <div className="grid gap-8 md:grid-cols-2">
+            <ItemList
+              items={items}
+              onSelect={selectItem}
+            />
+
+            <Cart
+              cart={cart}
+              onDelete={deleteLine}
+              onCheckout={checkout}
+            />
+          </div>
+        )}
+
+        {showPopup && (
+          <SalePopup
+            item={selectedItem}
+            onClose={() => setShowPopup(false)}
+            onAdd={addToCart}
           />
+        )}
+      </main>
 
-          <Cart
-            cart={cart}
-            onDelete={deleteLine}
-            onCheckout={checkout}
-          />
-        </div>
-      )}
-
-      {showPopup && (
-        <SalePopup
-          item={selectedItem}
-          onClose={() => setShowPopup(false)}
-          onAdd={addToCart}
+      {lastSale && (
+        <Receipt
+          cart={lastSale.cart}
+          total={lastSale.total}
+          createdAt={lastSale.createdAt}
+          onClose={() => setLastSale(null)}
         />
       )}
-    </main>
+    </>
   );
 }
