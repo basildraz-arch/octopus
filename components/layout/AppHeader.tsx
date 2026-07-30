@@ -1,8 +1,18 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import MobileSidebar from "./MobileSidebar";
+import { logout } from "@/services/auth.service";
 
 export default function AppHeader() {
+  const router = useRouter();
+
+  async function handleLogout() {
+    await logout();
+    router.replace("/login");
+  }
+
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 md:px-8">
 
@@ -24,8 +34,11 @@ export default function AppHeader() {
 
       <div className="flex items-center gap-3">
 
-        <button className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700 transition">
-          👤
+        <button
+          onClick={handleLogout}
+          className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700 transition"
+        >
+          خروج
         </button>
 
       </div>
