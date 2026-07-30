@@ -20,6 +20,11 @@ const links = [
     icon: "📒",
   },
   {
+    title: "إنهاء اليوم",
+    href: "/day-close",
+    icon: "🔒",
+  },
+  {
     title: "العملاء",
     href: "/customers",
     icon: "👥",
