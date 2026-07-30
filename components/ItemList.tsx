@@ -47,20 +47,34 @@ export default function ItemList({
     recognition.interimResults = true;
 
     recognition.onstart = () => {
+      console.log("[voice] onstart");
       setListening(true);
       speak("قول اسم المنتج");
     };
 
     recognition.onresult = (event: any) => {
+      console.log("[voice] onresult", event);
+      console.log("[voice] results.length", event.results.length);
       const text = event.results[0][0].transcript;
+      console.log("[voice] transcript:", text);
       setSearch(text);
     };
 
-    recognition.onerror = () => {
+    recognition.onspeechstart = () => {
+      console.log("[voice] onspeechstart (audio detected)");
+    };
+
+    recognition.onaudiostart = () => {
+      console.log("[voice] onaudiostart (mic capture started)");
+    };
+
+    recognition.onerror = (event: any) => {
+      console.log("[voice] onerror", event.error);
       setListening(false);
     };
 
     recognition.onend = () => {
+      console.log("[voice] onend");
       setListening(false);
     };
 
