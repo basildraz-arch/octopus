@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { createProduct } from "@/repositories/item.repository";
+import { createItem } from "@/repositories/item.repository";
+import { useSession } from "@/hooks/useSession";
 
 import { itemSchema, ItemSchema } from "./validation";
 
@@ -13,10 +14,12 @@ import { Button } from "@/components/ui/button";
 
 export default function ItemForm() {
   const router = useRouter();
+  const { user } = useSession();
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ItemSchema>({
     resolver: zodResolver(itemSchema),
@@ -25,38 +28,37 @@ export default function ItemForm() {
       name: "",
       barcode: "",
 
+      item_type: "product",
+      sale_method: "piece",
+      unit: "قطعة",
+
       buy_price: 0,
       sell_price: 0,
 
       stock: 0,
       minimum_stock: 0,
-
-      item_type: "product",
-
-      has_stock: true,
-
-      active: true,
     },
   });
 
+  const itemType = watch("item_type");
+
   async function onSubmit(values: ItemSchema) {
+    if (!user) return;
+
     try {
-      await createProduct({
+      await createItem({
         ...values,
 
-        keywords: [],
+        has_stock: values.item_type === "product",
+        active: true,
 
-        business_id: undefined,
+        business_id: user.business_id,
         category_id: undefined,
-
-        unit: undefined,
         image: undefined,
-
-        sell_by_money: false,
-        sell_by_weight: false,
+        keywords: [],
       });
 
-      router.push("/products");
+      router.push("/items");
     } catch (err) {
       console.error(err);
       alert("حدث خطأ أثناء الحفظ");
@@ -71,7 +73,9 @@ export default function ItemForm() {
       <div className="grid gap-6 md:grid-cols-2">
 
         <div>
-          <label>اسم الصنف</label>
+          <label className="mb-2 block text-sm">
+            اسم الصنف
+          </label>
 
           <Input
             {...register("name")}
@@ -84,7 +88,9 @@ export default function ItemForm() {
         </div>
 
         <div>
-          <label>الباركود</label>
+          <label className="mb-2 block text-sm">
+            الباركود (اختياري)
+          </label>
 
           <Input
             {...register("barcode")}
@@ -93,10 +99,57 @@ export default function ItemForm() {
         </div>
 
         <div>
-          <label>سعر الشراء</label>
+          <label className="mb-2 block text-sm">
+            النوع
+          </label>
+
+          <select
+            {...register("item_type")}
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white"
+          >
+            <option value="product">📦 منتج</option>
+            <option value="service">💈 خدمة</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm">
+            طريقة البيع
+          </label>
+
+          <select
+            {...register("sale_method")}
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white"
+          >
+            <option value="piece">بالقطعة</option>
+            <option value="weight">بالوزن</option>
+            <option value="money">بالسعر المباشر</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm">
+            الوحدة
+          </label>
+
+          <Input
+            {...register("unit")}
+            placeholder="مثال: قطعة، كيلو، جرام"
+          />
+
+          <p className="mt-1 text-sm text-red-500">
+            {errors.unit?.message}
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm">
+            سعر الشراء
+          </label>
 
           <Input
             type="number"
+            step="0.01"
             {...register("buy_price")}
           />
 
@@ -106,10 +159,13 @@ export default function ItemForm() {
         </div>
 
         <div>
-          <label>سعر البيع</label>
+          <label className="mb-2 block text-sm">
+            سعر البيع
+          </label>
 
           <Input
             type="number"
+            step="0.01"
             {...register("sell_price")}
           />
 
@@ -118,29 +174,39 @@ export default function ItemForm() {
           </p>
         </div>
 
-        <div>
-          <label>المخزون</label>
+        {itemType === "product" && (
+          <>
+            <div>
+              <label className="mb-2 block text-sm">
+                المخزون الحالي
+              </label>
 
-          <Input
-            type="number"
-            {...register("stock")}
-          />
-        </div>
+              <Input
+                type="number"
+                step="0.01"
+                {...register("stock")}
+              />
+            </div>
 
-        <div>
-          <label>الحد الأدنى</label>
+            <div>
+              <label className="mb-2 block text-sm">
+                الحد الأدنى للتنبيه
+              </label>
 
-          <Input
-            type="number"
-            {...register("minimum_stock")}
-          />
-        </div>
+              <Input
+                type="number"
+                step="0.01"
+                {...register("minimum_stock")}
+              />
+            </div>
+          </>
+        )}
 
       </div>
 
       <Button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isSubmitting || !user}
       >
         {isSubmitting ? "جار الحفظ..." : "💾 حفظ الصنف"}
       </Button>
