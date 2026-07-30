@@ -24,21 +24,23 @@ const links = [
     href: "/day-close",
     icon: "🔒",
   },
-  {
-    title: "العملاء",
-    href: "/customers",
-    icon: "👥",
-  },
-  {
-    title: "التقارير",
-    href: "/reports",
-    icon: "📊",
-  },
-  {
-    title: "الإعدادات",
-    href: "/settings",
-    icon: "⚙️",
-  },
+
+  // غير مبنية بعد - رجّعها لما تتعمل الصفحات دي
+  // {
+  //   title: "العملاء",
+  //   href: "/customers",
+  //   icon: "👥",
+  // },
+  // {
+  //   title: "التقارير",
+  //   href: "/reports",
+  //   icon: "📊",
+  // },
+  // {
+  //   title: "الإعدادات",
+  //   href: "/settings",
+  //   icon: "⚙️",
+  // },
 ];
 
 export default function Navigation() {
