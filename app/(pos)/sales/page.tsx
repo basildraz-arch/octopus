@@ -1,35 +1,60 @@
 "use client";
 
-import { useState } from "react";
-import { products, type Product } from "@/data/products";
+import { useEffect, useState } from "react";
 
-import ProductList from "@/components/ProductList";
+import ItemList from "@/components/ItemList";
 import Cart, { type CartItem } from "@/components/Cart";
 import SalePopup from "@/components/SalePopup";
 
+import { getActiveItems } from "@/repositories/item.repository";
+import { createSale } from "@/repositories/sale.repository";
+import { useSession } from "@/hooks/useSession";
+
+import type { Item } from "@/types/item";
+
 export default function SalesPage() {
+  const { user } = useSession();
+
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showPopup, setShowPopup] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [checkingOut, setCheckingOut] = useState(false);
 
-  function selectProduct(product: Product) {
-    setSelectedProduct(product);
+  useEffect(() => {
+    loadItems();
+  }, []);
+
+  async function loadItems() {
+    setLoading(true);
+
+    const data = await getActiveItems();
+
+    setItems(data);
+
+    setLoading(false);
+  }
+
+  function selectItem(item: Item) {
+    setSelectedItem(item);
     setShowPopup(true);
   }
 
   function addToCart(quantity: number, total: number) {
-    if (!selectedProduct) return;
+    if (!selectedItem) return;
 
     setCart((oldCart) => {
       const index = oldCart.findIndex(
-        (item) => item.product.id === selectedProduct.id
+        (line) => line.item.id === selectedItem.id
       );
 
       if (index === -1) {
         return [
           ...oldCart,
           {
-            product: selectedProduct,
+            item: selectedItem,
             quantity,
             total,
           },
@@ -47,44 +72,64 @@ export default function SalesPage() {
       return newCart;
     });
 
-    setSelectedProduct(null);
+    setSelectedItem(null);
     setShowPopup(false);
   }
 
-  function deleteItem(id: number) {
+  function deleteLine(id: string) {
     setCart((oldCart) =>
-      oldCart.filter((item) => item.product.id !== id)
+      oldCart.filter((line) => line.item.id !== id)
     );
   }
 
-  function checkout() {
-    alert("✅ تم إنهاء الفاتورة");
+  async function checkout() {
+    if (!user || cart.length === 0 || checkingOut) return;
 
-    setCart([]);
+    setCheckingOut(true);
+
+    try {
+      await createSale(user.business_id, user.id, cart);
+
+      alert("✅ تم إنهاء الفاتورة");
+
+      setCart([]);
+      await loadItems();
+    } catch (err) {
+      console.error(err);
+      alert("حدث خطأ أثناء إتمام البيع");
+    } finally {
+      setCheckingOut(false);
+    }
   }
 
   return (
-    <main className="min-h-screen bg-gray-950 text-white p-6">
-      <h1 className="text-4xl font-bold mb-8">
+    <main className="min-h-screen bg-gray-950 p-4 text-white md:p-6">
+      <h1 className="mb-6 text-3xl font-bold md:mb-8 md:text-4xl">
         🛒 عملية بيع
       </h1>
 
-      <div className="grid grid-cols-2 gap-8">
-        <ProductList
-          products={products}
-          onSelect={selectProduct}
-        />
+      {loading ? (
+        <div className="p-8 text-center">
+          جارِ تحميل الأصناف...
+        </div>
+      ) : (
+        <div className="grid gap-8 md:grid-cols-2">
+          <ItemList
+            items={items}
+            onSelect={selectItem}
+          />
 
-        <Cart
-          cart={cart}
-          onDelete={deleteItem}
-          onCheckout={checkout}
-        />
-      </div>
+          <Cart
+            cart={cart}
+            onDelete={deleteLine}
+            onCheckout={checkout}
+          />
+        </div>
+      )}
 
       {showPopup && (
         <SalePopup
-          product={selectedProduct}
+          item={selectedItem}
           onClose={() => setShowPopup(false)}
           onAdd={addToCart}
         />
