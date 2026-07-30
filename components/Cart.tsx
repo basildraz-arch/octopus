@@ -1,4 +1,5 @@
 import type { Item } from "@/types/item";
+import type { PaymentMethod } from "@/types/sale";
 
 export type CartItem = {
   item: Item;
@@ -8,12 +9,22 @@ export type CartItem = {
 
 type Props = {
   cart: CartItem[];
+  paymentMethod: PaymentMethod;
+  onPaymentMethodChange: (method: PaymentMethod) => void;
   onDelete: (id: string) => void;
   onCheckout: () => void;
 };
 
+const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
+  { value: "cash", label: "💵 كاش" },
+  { value: "vodafone_cash", label: "📱 فودافون كاش" },
+  { value: "instapay", label: "💳 إنستاباي" },
+];
+
 export default function Cart({
   cart,
+  paymentMethod,
+  onPaymentMethodChange,
   onDelete,
   onCheckout,
 }: Props) {
@@ -64,6 +75,28 @@ export default function Cart({
 
           <div className="mt-6 rounded-xl bg-blue-700 p-4 text-xl font-bold text-white">
             الإجمالي: {grandTotal.toFixed(2)} جنيه
+          </div>
+
+          <div className="mt-4">
+            <p className="mb-2 text-sm text-gray-400">
+              طريقة الدفع
+            </p>
+
+            <div className="grid grid-cols-3 gap-2">
+              {PAYMENT_METHODS.map((method) => (
+                <button
+                  key={method.value}
+                  onClick={() => onPaymentMethodChange(method.value)}
+                  className={`rounded-xl p-3 text-sm font-semibold transition ${
+                    paymentMethod === method.value
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                  }`}
+                >
+                  {method.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <button

@@ -12,6 +12,7 @@ import { createSale } from "@/repositories/sale.repository";
 import { useSession } from "@/hooks/useSession";
 
 import type { Item } from "@/types/item";
+import type { PaymentMethod } from "@/types/sale";
 
 type LastSale = {
   cart: CartItem[];
@@ -30,6 +31,7 @@ export default function SalesPage() {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
   const [lastSale, setLastSale] = useState<LastSale | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
 
   useEffect(() => {
     loadItems();
@@ -101,7 +103,7 @@ export default function SalesPage() {
         0
       );
 
-      await createSale(user.business_id, user.id, cart);
+      await createSale(user.business_id, user.id, cart, paymentMethod);
 
       setLastSale({
         cart,
@@ -110,6 +112,7 @@ export default function SalesPage() {
       });
 
       setCart([]);
+      setPaymentMethod("cash");
       await loadItems();
     } catch (err) {
       console.error(err);
@@ -139,6 +142,8 @@ export default function SalesPage() {
 
             <Cart
               cart={cart}
+              paymentMethod={paymentMethod}
+              onPaymentMethodChange={setPaymentMethod}
               onDelete={deleteLine}
               onCheckout={checkout}
             />
