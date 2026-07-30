@@ -19,6 +19,23 @@ export async function getItems(): Promise<Item[]> {
   return (data ?? []) as Item[];
 }
 
+export async function getItemById(
+  id: string
+): Promise<Item | null> {
+  const { data, error } = await supabase
+    .from("items")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    console.error("Supabase Error:", error.message);
+    return null;
+  }
+
+  return data as Item;
+}
+
 export async function createItem(
   item: ItemFormData
 ) {

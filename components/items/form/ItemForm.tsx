@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { createItem } from "@/repositories/item.repository";
+import { createItem, updateItem } from "@/repositories/item.repository";
 import { useSession } from "@/hooks/useSession";
 
 import { itemSchema, ItemSchema } from "./validation";
@@ -12,7 +12,13 @@ import { itemSchema, ItemSchema } from "./validation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-export default function ItemForm() {
+import type { Item } from "@/types/item";
+
+type Props = {
+  item?: Item;
+};
+
+export default function ItemForm({ item }: Props) {
   const router = useRouter();
   const { user } = useSession();
 
@@ -24,39 +30,61 @@ export default function ItemForm() {
   } = useForm<ItemSchema>({
     resolver: zodResolver(itemSchema),
 
-    defaultValues: {
-      name: "",
-      barcode: "",
+    defaultValues: item
+      ? {
+          name: item.name,
+          barcode: item.barcode ?? "",
 
-      item_type: "product",
-      sale_method: "piece",
-      unit: "قطعة",
+          item_type: item.item_type,
+          sale_method: item.sale_method,
+          unit: item.unit,
 
-      buy_price: 0,
-      sell_price: 0,
+          buy_price: item.buy_price,
+          sell_price: item.sell_price,
 
-      stock: 0,
-      minimum_stock: 0,
-    },
+          stock: item.stock,
+          minimum_stock: item.minimum_stock,
+        }
+      : {
+          name: "",
+          barcode: "",
+
+          item_type: "product",
+          sale_method: "piece",
+          unit: "قطعة",
+
+          buy_price: 0,
+          sell_price: 0,
+
+          stock: 0,
+          minimum_stock: 0,
+        },
   });
 
   const itemType = watch("item_type");
 
   async function onSubmit(values: ItemSchema) {
-    if (!user) return;
-
     try {
-      await createItem({
-        ...values,
+      if (item) {
+        await updateItem(item.id, {
+          ...values,
+          has_stock: values.item_type === "product",
+        });
+      } else {
+        if (!user) return;
 
-        has_stock: values.item_type === "product",
-        active: true,
+        await createItem({
+          ...values,
 
-        business_id: user.business_id,
-        category_id: undefined,
-        image: undefined,
-        keywords: [],
-      });
+          has_stock: values.item_type === "product",
+          active: true,
+
+          business_id: user.business_id,
+          category_id: undefined,
+          image: undefined,
+          keywords: [],
+        });
+      }
 
       router.push("/items");
     } catch (err) {
@@ -206,9 +234,13 @@ export default function ItemForm() {
 
       <Button
         type="submit"
-        disabled={isSubmitting || !user}
+        disabled={isSubmitting || (!item && !user)}
       >
-        {isSubmitting ? "جار الحفظ..." : "💾 حفظ الصنف"}
+        {isSubmitting
+          ? "جار الحفظ..."
+          : item
+          ? "💾 حفظ التعديلات"
+          : "💾 حفظ الصنف"}
       </Button>
     </form>
   );
