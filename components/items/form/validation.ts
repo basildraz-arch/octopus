@@ -3,7 +3,10 @@ import { z } from "zod";
 export const itemSchema = z.object({
   name: z.string().min(2, "اسم الصنف مطلوب"),
 
-  barcode: z.string().optional(),
+  barcode: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v : undefined)),
 
   item_type: z.enum(["product", "service"]),
 
