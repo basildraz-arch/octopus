@@ -15,9 +15,9 @@ const links = [
     icon: "📦",
   },
   {
-    title: "المبيعات",
-    href: "/sales",
-    icon: "🛒",
+    title: "سجل المبيعات",
+    href: "/sales-log",
+    icon: "📒",
   },
   {
     title: "العملاء",
