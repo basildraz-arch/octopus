@@ -1,5 +1,9 @@
 import { supabase } from "@/lib/supabase";
 import { updateItem } from "@/repositories/item.repository";
+import {
+  createBatch,
+  getCurrentStockAndCost,
+} from "@/repositories/stockBatch.repository";
 import type { Item } from "@/types/item";
 
 export type Purchase = {
@@ -37,18 +41,13 @@ export async function createPurchase(
 
   if (error) throw error;
 
-  const oldQuantity = item.stock;
-  const oldPrice = item.buy_price;
-  const newQuantity = oldQuantity + quantity;
+  await createBatch(businessId, item.id, data.id, quantity, buyPrice);
 
-  const weightedBuyPrice =
-    newQuantity > 0
-      ? (oldQuantity * oldPrice + quantity * buyPrice) / newQuantity
-      : buyPrice;
+  const { stock, averageCost } = await getCurrentStockAndCost(item.id);
 
   await updateItem(item.id, {
-    stock: newQuantity,
-    buy_price: weightedBuyPrice,
+    stock,
+    buy_price: averageCost,
   });
 
   return data as Purchase;
