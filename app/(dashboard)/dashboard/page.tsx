@@ -4,22 +4,31 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { getItems } from "@/repositories/item.repository";
+import { getOpenShift, type Shift } from "@/repositories/shift.repository";
 import {
-  getOpenShift,
-  getShiftSummary,
-  type Shift,
-  type ShiftSummary,
-} from "@/repositories/shift.repository";
+  getReportSummary,
+  type ReportSummary,
+} from "@/repositories/report.repository";
 import { useSession } from "@/hooks/useSession";
 
 import type { Item } from "@/types/item";
+
+function todayString() {
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
 
 export default function DashboardHomePage() {
   const { user } = useSession();
 
   const [items, setItems] = useState<Item[]>([]);
   const [shift, setShift] = useState<Shift | null>(null);
-  const [summary, setSummary] = useState<ShiftSummary | null>(null);
+  const [todayReport, setTodayReport] = useState<ReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,20 +42,17 @@ export default function DashboardHomePage() {
 
     setLoading(true);
 
-    const [itemsData, openShift] = await Promise.all([
+    const today = todayString();
+
+    const [itemsData, openShift, report] = await Promise.all([
       getItems(),
       getOpenShift(user.business_id),
+      getReportSummary(user.business_id, today, today),
     ]);
 
     setItems(itemsData);
     setShift(openShift);
-
-    if (openShift) {
-      const s = await getShiftSummary(openShift.id);
-      setSummary(s);
-    } else {
-      setSummary(null);
-    }
+    setTodayReport(report);
 
     setLoading(false);
   }
@@ -95,12 +101,36 @@ export default function DashboardHomePage() {
         </div>
 
         <h2 className="mt-2 text-4xl font-bold text-green-400">
-          {(summary?.totalSales ?? 0).toFixed(2)} ج
+          {(todayReport?.totalSales ?? 0).toFixed(2)} ج
         </h2>
 
         <p className="mt-1 text-sm text-zinc-500">
-          {summary?.saleCount ?? 0} عملية بيع لحد دلوقتي
+          {todayReport?.saleCount ?? 0} عملية بيع لحد دلوقتي
         </p>
+
+        {shift && todayReport && (
+          <div className="mt-3 border-t border-zinc-800 pt-3">
+            <p className="text-sm text-zinc-400">
+              صافي ربح اليوم
+            </p>
+
+            <p
+              className={`mt-1 text-xl font-bold ${
+                todayReport.netProfit >= 0
+                  ? "text-green-400"
+                  : "text-red-400"
+              }`}
+            >
+              {todayReport.netProfit.toFixed(2)} ج
+            </p>
+
+            {todayReport.hasIncompleteCostData && (
+              <p className="mt-1 text-xs text-amber-400">
+                ⚠️ تكلفة بعض المبيعات القديمة مش محسوبة
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -125,7 +155,7 @@ export default function DashboardHomePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3">
         <Link
           href="/sales-log"
           className="rounded-xl bg-blue-600 p-4 text-center font-semibold text-white transition hover:bg-blue-700"
@@ -138,6 +168,20 @@ export default function DashboardHomePage() {
           className="rounded-xl bg-zinc-800 p-4 text-center font-semibold text-white transition hover:bg-zinc-700"
         >
           🔒 إنهاء اليوم
+        </Link>
+
+        <Link
+          href="/purchases"
+          className="rounded-xl bg-zinc-800 p-4 text-center font-semibold text-white transition hover:bg-zinc-700"
+        >
+          🚚 تزويد المخزون
+        </Link>
+
+        <Link
+          href="/reports"
+          className="rounded-xl bg-zinc-800 p-4 text-center font-semibold text-white transition hover:bg-zinc-700"
+        >
+          📊 التقارير
         </Link>
       </div>
     </main>
