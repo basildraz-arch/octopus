@@ -172,11 +172,25 @@ export default function DayClosePage() {
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
         <p className="text-sm text-zinc-400">
+          إجمالي المصروفات
+        </p>
+
+        <p className="mt-1 text-2xl font-bold text-red-400">
+          {summary.totalExpenses.toFixed(2)} ج
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+        <p className="text-sm text-zinc-400">
           الكاش المتوقع في الدرج
         </p>
 
         <p className="mt-1 text-2xl font-bold">
           {summary.expectedCash.toFixed(2)} ج
+        </p>
+
+        <p className="mt-1 text-xs text-zinc-500">
+          (مبيعات الكاش − المصروفات)
         </p>
       </div>
 
