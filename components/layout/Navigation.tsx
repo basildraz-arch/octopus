@@ -29,17 +29,17 @@ const links = [
     href: "/purchases",
     icon: "🚚",
   },
+  {
+    title: "التقارير",
+    href: "/reports",
+    icon: "📊",
+  },
 
   // غير مبنية بعد - رجّعها لما تتعمل الصفحات دي
   // {
   //   title: "العملاء",
   //   href: "/customers",
   //   icon: "👥",
-  // },
-  // {
-  //   title: "التقارير",
-  //   href: "/reports",
-  //   icon: "📊",
   // },
   // {
   //   title: "الإعدادات",
