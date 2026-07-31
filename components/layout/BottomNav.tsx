@@ -24,6 +24,11 @@ const links = [
     href: "/day-close",
     icon: "🔒",
   },
+  {
+    title: "تزويد",
+    href: "/purchases",
+    icon: "🚚",
+  },
 ];
 
 export default function BottomNav() {

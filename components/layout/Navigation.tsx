@@ -24,6 +24,11 @@ const links = [
     href: "/day-close",
     icon: "🔒",
   },
+  {
+    title: "تزويد المخزون",
+    href: "/purchases",
+    icon: "🚚",
+  },
 
   // غير مبنية بعد - رجّعها لما تتعمل الصفحات دي
   // {
