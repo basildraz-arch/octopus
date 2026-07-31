@@ -29,6 +29,11 @@ const links = [
     href: "/purchases",
     icon: "🚚",
   },
+  {
+    title: "تقارير",
+    href: "/reports",
+    icon: "📊",
+  },
 ];
 
 export default function BottomNav() {
