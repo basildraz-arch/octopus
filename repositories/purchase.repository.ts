@@ -37,9 +37,18 @@ export async function createPurchase(
 
   if (error) throw error;
 
+  const oldQuantity = item.stock;
+  const oldPrice = item.buy_price;
+  const newQuantity = oldQuantity + quantity;
+
+  const weightedBuyPrice =
+    newQuantity > 0
+      ? (oldQuantity * oldPrice + quantity * buyPrice) / newQuantity
+      : buyPrice;
+
   await updateItem(item.id, {
-    stock: item.stock + quantity,
-    buy_price: buyPrice,
+    stock: newQuantity,
+    buy_price: weightedBuyPrice,
   });
 
   return data as Purchase;
