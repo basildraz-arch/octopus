@@ -10,6 +10,11 @@ const links = [
     icon: "🏠",
   },
   {
+    title: "بيع",
+    href: "/sales",
+    icon: "🛒",
+  },
+  {
     title: "الأصناف",
     href: "/items",
     icon: "📦",
