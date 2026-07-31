@@ -16,6 +16,7 @@ export type ShiftSummary = {
   totalSales: number;
   saleCount: number;
   byPaymentMethod: Record<PaymentMethod, number>;
+  totalExpenses: number;
   expectedCash: number;
 };
 
@@ -123,16 +124,27 @@ export async function reopenShift(
 export async function getShiftSummary(
   shiftId: string
 ): Promise<ShiftSummary> {
-  const { data, error } = await supabase
-    .from("sales")
-    .select("total, payment_method")
-    .eq("shift_id", shiftId);
+  const [salesResult, expensesResult] = await Promise.all([
+    supabase
+      .from("sales")
+      .select("total, payment_method")
+      .eq("shift_id", shiftId),
+    supabase
+      .from("expenses")
+      .select("amount")
+      .eq("shift_id", shiftId),
+  ]);
 
-  if (error) {
-    console.error("Supabase Error:", error.message);
+  if (salesResult.error) {
+    console.error("Supabase Error:", salesResult.error.message);
   }
 
-  const sales = data ?? [];
+  if (expensesResult.error) {
+    console.error("Supabase Error:", expensesResult.error.message);
+  }
+
+  const sales = salesResult.data ?? [];
+  const expenses = expensesResult.data ?? [];
 
   const byPaymentMethod: Record<PaymentMethod, number> = {
     cash: 0,
@@ -149,10 +161,16 @@ export async function getShiftSummary(
     totalSales += sale.total;
   }
 
+  const totalExpenses = expenses.reduce(
+    (sum, expense) => sum + expense.amount,
+    0
+  );
+
   return {
     totalSales,
     saleCount: sales.length,
     byPaymentMethod,
-    expectedCash: byPaymentMethod.cash,
+    totalExpenses,
+    expectedCash: byPaymentMethod.cash - totalExpenses,
   };
 }
