@@ -1,10 +1,16 @@
 "use client";
 
 import { ReactNode, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 
 import { useSession } from "@/hooks/useSession";
 import { logout } from "@/services/auth.service";
+
+const tabs = [
+  { title: "🛒 بيع", href: "/sales" },
+  { title: "💸 مصروف", href: "/expenses" },
+];
 
 export default function PosLayout({
   children,
@@ -12,6 +18,7 @@ export default function PosLayout({
   children: ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, loading } = useSession();
 
   useEffect(() => {
@@ -39,9 +46,27 @@ export default function PosLayout({
     <div className="min-h-screen bg-zinc-950 text-white">
 
       <header className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 py-3">
-        <h1 className="text-lg font-bold">
-          🐙 Octopus
-        </h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-lg font-bold">
+            🐙 Octopus
+          </h1>
+
+          <nav className="flex gap-2">
+            {tabs.map((tab) => (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  pathname === tab.href
+                    ? "bg-blue-600 text-white"
+                    : "text-zinc-400 hover:bg-zinc-800"
+                }`}
+              >
+                {tab.title}
+              </Link>
+            ))}
+          </nav>
+        </div>
 
         <button
           onClick={handleLogout}
