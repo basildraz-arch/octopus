@@ -24,6 +24,10 @@ export async function createPurchase(
   quantity: number,
   buyPrice: number
 ): Promise<Purchase> {
+  if (item.item_type !== "product") {
+    throw new Error("لا يمكن تسجيل عملية شراء لصنف من نوع خدمة");
+  }
+
   const total = quantity * buyPrice;
 
   const { data, error } = await supabase

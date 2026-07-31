@@ -32,13 +32,15 @@ export default function PurchasesPage() {
     setLoading(false);
   }
 
+  const products = items.filter((item) => item.item_type === "product");
+
   const selectedItem =
-    items.find((item) => item.id === selectedItemId) ?? null;
+    products.find((item) => item.id === selectedItemId) ?? null;
 
   function handleSelectItem(id: string) {
     setSelectedItemId(id);
 
-    const item = items.find((i) => i.id === id);
+    const item = products.find((i) => i.id === id);
 
     if (item) {
       setBuyPrice(String(item.buy_price));
@@ -121,7 +123,7 @@ export default function PurchasesPage() {
           >
             <option value="">اختر صنف...</option>
 
-            {items.map((item) => (
+            {products.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
               </option>
