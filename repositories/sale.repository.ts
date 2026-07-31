@@ -2,6 +2,12 @@ import { supabase } from "@/lib/supabase";
 import type { CartItem } from "@/components/Cart";
 import type { PaymentMethod } from "@/types/sale";
 import { getOrCreateOpenShift } from "@/repositories/shift.repository";
+import { updateItem } from "@/repositories/item.repository";
+import {
+  checkAvailability,
+  drawFromBatches,
+  getCurrentStockAndCost,
+} from "@/repositories/stockBatch.repository";
 
 export type SaleWithItems = {
   id: string;
@@ -58,6 +64,21 @@ export async function createSale(
   cart: CartItem[],
   paymentMethod: PaymentMethod
 ) {
+  for (const line of cart) {
+    if (line.item.has_stock) {
+      const available = await checkAvailability(
+        line.item.id,
+        line.quantity
+      );
+
+      if (!available) {
+        throw new Error(
+          `الكمية المطلوبة من "${line.item.name}" أكبر من المخزون المتاح`
+        );
+      }
+    }
+  }
+
   const shift = await getOrCreateOpenShift(businessId);
 
   const total = cart.reduce(
@@ -79,12 +100,26 @@ export async function createSale(
 
   if (saleError) throw saleError;
 
+  const costByItemId: Record<string, number> = {};
+
+  for (const line of cart) {
+    if (line.item.has_stock) {
+      const draws = await drawFromBatches(line.item.id, line.quantity);
+
+      costByItemId[line.item.id] = draws.reduce(
+        (sum, draw) => sum + draw.quantity * draw.buyPrice,
+        0
+      );
+    }
+  }
+
   const saleItems = cart.map((line) => ({
     sale_id: sale.id,
     item_id: line.item.id,
     quantity: line.quantity,
     unit_price: line.item.sell_price,
     total: line.total,
+    cost: line.item.has_stock ? costByItemId[line.item.id] : null,
   }));
 
   const { error: itemsError } = await supabase
@@ -95,10 +130,14 @@ export async function createSale(
 
   for (const line of cart) {
     if (line.item.has_stock) {
-      await supabase
-        .from("items")
-        .update({ stock: line.item.stock - line.quantity })
-        .eq("id", line.item.id);
+      const { stock, averageCost } = await getCurrentStockAndCost(
+        line.item.id
+      );
+
+      await updateItem(line.item.id, {
+        stock,
+        buy_price: averageCost,
+      });
     }
   }
 
