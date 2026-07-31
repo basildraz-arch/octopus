@@ -22,12 +22,13 @@ export type SaleWithItems = {
   }[];
 };
 
-export async function getSalesByDate(
+export async function getSalesByDateRange(
   businessId: string,
-  date: string
+  startDate: string,
+  endDate: string
 ): Promise<SaleWithItems[]> {
-  const start = new Date(`${date}T00:00:00`).toISOString();
-  const end = new Date(`${date}T23:59:59.999`).toISOString();
+  const start = new Date(`${startDate}T00:00:00`).toISOString();
+  const end = new Date(`${endDate}T23:59:59.999`).toISOString();
 
   const { data, error } = await supabase
     .from("sales")

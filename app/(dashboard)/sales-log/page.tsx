@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import {
-  getSalesByDate,
+  getSalesByDateRange,
   type SaleWithItems,
 } from "@/repositories/sale.repository";
 import { useSession } from "@/hooks/useSession";
@@ -18,10 +19,16 @@ function todayString() {
   return `${year}-${month}-${day}`;
 }
 
-export default function SalesLogPage() {
+function SalesLogContent() {
   const { user } = useSession();
+  const searchParams = useSearchParams();
 
-  const [date, setDate] = useState(todayString());
+  const [startDate, setStartDate] = useState(
+    searchParams.get("from") ?? todayString()
+  );
+  const [endDate, setEndDate] = useState(
+    searchParams.get("to") ?? todayString()
+  );
   const [sales, setSales] = useState<SaleWithItems[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,21 +36,25 @@ export default function SalesLogPage() {
     if (!user) return;
 
     loadSales();
-  }, [user, date]);
+  }, [user, startDate, endDate]);
 
   async function loadSales() {
     if (!user) return;
 
     setLoading(true);
 
-    const data = await getSalesByDate(user.business_id, date);
+    const data = await getSalesByDateRange(
+      user.business_id,
+      startDate,
+      endDate
+    );
 
     setSales(data);
 
     setLoading(false);
   }
 
-  const dayTotal = useMemo(() => {
+  const periodTotal = useMemo(() => {
     return sales.reduce((sum, sale) => sum + sale.total, 0);
   }, [sales]);
 
@@ -61,11 +72,11 @@ export default function SalesLogPage() {
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
         <p className="text-sm text-zinc-400">
-          إجمالي مبيعات اليوم المحدد
+          إجمالي المبيعات في الفترة المحددة
         </p>
 
         <h2 className="mt-2 text-4xl font-bold text-green-400">
-          {dayTotal.toFixed(2)} ج
+          {periodTotal.toFixed(2)} ج
         </h2>
 
         <p className="mt-1 text-sm text-zinc-500">
@@ -73,12 +84,33 @@ export default function SalesLogPage() {
         </p>
       </div>
 
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-white outline-none"
-      />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-sm text-zinc-400">
+            من
+          </label>
+
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm text-zinc-400">
+            إلى
+          </label>
+
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white outline-none"
+          />
+        </div>
+      </div>
 
       {loading ? (
         <div className="p-8 text-center text-zinc-400">
@@ -86,7 +118,7 @@ export default function SalesLogPage() {
         </div>
       ) : sales.length === 0 ? (
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
-          لا توجد مبيعات في هذا اليوم
+          لا توجد مبيعات في هذه الفترة
         </div>
       ) : (
         <div className="space-y-3">
@@ -97,9 +129,9 @@ export default function SalesLogPage() {
             >
               <summary className="flex cursor-pointer items-center justify-between">
                 <span className="text-sm text-zinc-400">
-                  {new Date(sale.created_at).toLocaleTimeString("ar-EG", {
-                    hour: "2-digit",
-                    minute: "2-digit",
+                  {new Date(sale.created_at).toLocaleString("ar-EG", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
                   })}
                 </span>
 
@@ -129,5 +161,19 @@ export default function SalesLogPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function SalesLogPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="p-8 text-center text-zinc-400">
+          جارِ التحميل...
+        </main>
+      }
+    >
+      <SalesLogContent />
+    </Suspense>
   );
 }

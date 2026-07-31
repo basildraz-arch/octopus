@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 import {
   getReportSummary,
@@ -191,6 +192,13 @@ export default function ReportsPage() {
               {summary.netProfit.toFixed(2)} ج
             </h2>
           </div>
+
+          <Link
+            href={`/sales-log?from=${startDate}&to=${endDate}`}
+            className="block rounded-xl bg-zinc-800 p-4 text-center font-semibold text-white transition hover:bg-zinc-700"
+          >
+            📋 عرض التفاصيل
+          </Link>
         </div>
       ) : null}
     </main>
