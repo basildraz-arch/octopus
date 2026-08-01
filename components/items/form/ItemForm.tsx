@@ -4,7 +4,11 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { createItem, updateItem } from "@/repositories/item.repository";
+import {
+  createItem,
+  updateItem,
+  adjustItemStock,
+} from "@/repositories/item.repository";
 import { useSession } from "@/hooks/useSession";
 
 import { itemSchema, ItemSchema } from "./validation";
@@ -66,10 +70,16 @@ export default function ItemForm({ item }: Props) {
   async function onSubmit(values: ItemSchema) {
     try {
       if (item) {
+        const { stock: newStock, ...rest } = values;
+
         await updateItem(item.id, {
-          ...values,
+          ...rest,
           has_stock: values.item_type === "product",
         });
+
+        if (values.item_type === "product" && user) {
+          await adjustItemStock(user.business_id, item, newStock);
+        }
       } else {
         if (!user) return;
 

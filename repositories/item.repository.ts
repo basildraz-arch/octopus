@@ -1,5 +1,9 @@
 import { supabase } from "@/lib/supabase";
-import { createBatch } from "@/repositories/stockBatch.repository";
+import {
+  createBatch,
+  drawFromBatches,
+  getCurrentStockAndCost,
+} from "@/repositories/stockBatch.repository";
 
 import type {
   Item,
@@ -87,6 +91,31 @@ export async function updateItem(
     .eq("id", id);
 
   if (error) throw error;
+}
+
+export async function adjustItemStock(
+  businessId: string,
+  item: Item,
+  newStock: number
+): Promise<void> {
+  const { stock: actualStock } = await getCurrentStockAndCost(item.id);
+
+  const diff = newStock - actualStock;
+
+  if (diff === 0) return;
+
+  if (diff > 0) {
+    await createBatch(businessId, item.id, null, diff, item.buy_price);
+  } else {
+    await drawFromBatches(item.id, Math.abs(diff));
+  }
+
+  const { stock, averageCost } = await getCurrentStockAndCost(item.id);
+
+  await updateItem(item.id, {
+    stock,
+    buy_price: averageCost,
+  });
 }
 
 export async function deleteItem(id: string) {
