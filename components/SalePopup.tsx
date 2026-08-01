@@ -21,13 +21,18 @@ export default function SalePopup({
   onAdd,
 }: Props) {
   const [value, setValue] = useState("");
-  const [price, setPrice] = useState("");
+  const [discount, setDiscount] = useState("");
 
   if (!item) {
     return null;
   }
 
   const hasFlexiblePrice = item.min_sell_price != null;
+  const discountAmount = discount === "" ? 0 : Number(discount);
+  const finalPrice = item.sell_price - discountAmount;
+  const maxDiscount = hasFlexiblePrice
+    ? item.sell_price - (item.min_sell_price as number)
+    : 0;
 
   function handleAdd() {
     const number = Number(value);
@@ -37,16 +42,17 @@ export default function SalePopup({
     let effectivePrice = item.sell_price;
 
     if (hasFlexiblePrice) {
-      effectivePrice = price === "" ? item.sell_price : Number(price);
-
-      const minPrice = item.min_sell_price as number;
-
-      if (effectivePrice < minPrice || effectivePrice > item.sell_price) {
-        alert(
-          `السعر لازم يكون بين ${minPrice} و ${item.sell_price} جنيه`
-        );
+      if (discountAmount < 0) {
+        alert("الخصم لازم يكون رقم موجب");
         return;
       }
+
+      if (finalPrice < (item.min_sell_price as number)) {
+        alert(`أقصى خصم مسموح ${maxDiscount.toFixed(2)} جنيه`);
+        return;
+      }
+
+      effectivePrice = finalPrice;
     }
 
     if (item.sale_method === "money") {
@@ -56,7 +62,7 @@ export default function SalePopup({
     }
 
     setValue("");
-    setPrice("");
+    setDiscount("");
     onClose();
   }
 
@@ -74,16 +80,33 @@ export default function SalePopup({
         {hasFlexiblePrice && (
           <>
             <label className="mb-2 block text-sm text-gray-300">
-              السعر (بين {item.min_sell_price} و {item.sell_price} جنيه)
+              خصم (اختياري) - أقصى خصم {maxDiscount.toFixed(2)} جنيه
             </label>
 
             <input
               type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder={String(item.sell_price)}
-              className="mb-4 w-full rounded-xl bg-gray-800 p-4 text-white outline-none"
+              value={discount}
+              onChange={(e) => setDiscount(e.target.value)}
+              placeholder="0"
+              className="mb-3 w-full rounded-xl bg-gray-800 p-4 text-white outline-none"
             />
+
+            <div className="mb-4 space-y-1 rounded-xl bg-gray-800/50 p-3 text-sm">
+              <div className="flex justify-between text-gray-400">
+                <span>السعر الأصلي</span>
+                <span>{item.sell_price.toFixed(2)} جنيه</span>
+              </div>
+
+              <div className="flex justify-between text-gray-400">
+                <span>الخصم</span>
+                <span>{discountAmount.toFixed(2)} جنيه</span>
+              </div>
+
+              <div className="flex justify-between border-t border-gray-700 pt-1 font-bold text-white">
+                <span>السعر النهائي</span>
+                <span>{finalPrice.toFixed(2)} جنيه</span>
+              </div>
+            </div>
           </>
         )}
 
