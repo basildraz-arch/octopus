@@ -54,7 +54,7 @@ export default function SettingsPage() {
 
       setDiscountSuccess(true);
     } catch (err) {
-      console.error(err);
+      console.error(JSON.stringify(err));
       alert("حدث خطأ أثناء حفظ نسبة الخصم");
     } finally {
       setDiscountSaving(false);
