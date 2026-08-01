@@ -73,6 +73,7 @@ export default function ItemForm({ item }: Props) {
     if (itemType === "service") {
       setValue("buy_price", 0);
       setValue("unit", "قطعة");
+      setValue("sale_method", "piece");
     }
   }, [itemType, setValue]);
 
@@ -168,9 +169,15 @@ export default function ItemForm({ item }: Props) {
             {...register("sale_method")}
             className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white"
           >
-            <option value="piece">بالقطعة</option>
-            <option value="weight">بالوزن</option>
-            <option value="money">بالسعر المباشر</option>
+            {itemType === "service" ? (
+              <option value="piece">لكل مرة</option>
+            ) : (
+              <>
+                <option value="piece">بالقطعة</option>
+                <option value="weight">بالوزن</option>
+                <option value="money">بالسعر المباشر</option>
+              </>
+            )}
           </select>
         </div>
 
