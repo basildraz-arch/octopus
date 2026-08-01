@@ -21,23 +21,42 @@ export default function SalePopup({
   onAdd,
 }: Props) {
   const [value, setValue] = useState("");
+  const [price, setPrice] = useState("");
 
   if (!item) {
     return null;
   }
+
+  const hasFlexiblePrice = item.min_sell_price != null;
 
   function handleAdd() {
     const number = Number(value);
 
     if (!item || number <= 0) return;
 
+    let effectivePrice = item.sell_price;
+
+    if (hasFlexiblePrice) {
+      effectivePrice = price === "" ? item.sell_price : Number(price);
+
+      const minPrice = item.min_sell_price as number;
+
+      if (effectivePrice < minPrice || effectivePrice > item.sell_price) {
+        alert(
+          `السعر لازم يكون بين ${minPrice} و ${item.sell_price} جنيه`
+        );
+        return;
+      }
+    }
+
     if (item.sale_method === "money") {
-      onAdd(number / item.sell_price, number);
+      onAdd(number / effectivePrice, number);
     } else {
-      onAdd(number, number * item.sell_price);
+      onAdd(number, number * effectivePrice);
     }
 
     setValue("");
+    setPrice("");
     onClose();
   }
 
@@ -51,6 +70,22 @@ export default function SalePopup({
         <p className="mb-6 text-sm text-gray-400">
           {item.sell_price} جنيه / {item.unit}
         </p>
+
+        {hasFlexiblePrice && (
+          <>
+            <label className="mb-2 block text-sm text-gray-300">
+              السعر (بين {item.min_sell_price} و {item.sell_price} جنيه)
+            </label>
+
+            <input
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder={String(item.sell_price)}
+              className="mb-4 w-full rounded-xl bg-gray-800 p-4 text-white outline-none"
+            />
+          </>
+        )}
 
         <label className="mb-2 block text-sm text-gray-300">
           {LABELS[item.sale_method]}
