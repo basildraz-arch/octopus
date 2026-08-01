@@ -206,6 +206,7 @@ export default function SalesPage() {
         <Receipt
           cart={lastSale.cart}
           total={lastSale.total}
+          discountAmount={lastSale.discountAmount}
           createdAt={lastSale.createdAt}
           onClose={() => setLastSale(null)}
         />

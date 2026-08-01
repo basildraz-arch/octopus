@@ -5,6 +5,7 @@ import type { CartItem } from "@/components/Cart";
 type Props = {
   cart: CartItem[];
   total: number;
+  discountAmount: number;
   createdAt: Date;
   onClose: () => void;
 };
@@ -12,9 +13,14 @@ type Props = {
 export default function Receipt({
   cart,
   total,
+  discountAmount,
   createdAt,
   onClose,
 }: Props) {
+  const subtotal = cart.reduce(
+    (sum, line) => sum + line.total,
+    0
+  );
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 print:static print:bg-white print:p-0">
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-gray-900 print:max-w-full print:rounded-none print:shadow-none">
@@ -46,9 +52,23 @@ export default function Receipt({
           ))}
         </div>
 
-        <div className="mt-4 flex justify-between text-lg font-bold">
-          <span>الإجمالي</span>
-          <span>{total.toFixed(2)} جنيه</span>
+        <div className="mt-4 space-y-1">
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>الإجمالي قبل الخصم</span>
+            <span>{subtotal.toFixed(2)} جنيه</span>
+          </div>
+
+          {discountAmount > 0 && (
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>الخصم</span>
+              <span>{discountAmount.toFixed(2)} جنيه</span>
+            </div>
+          )}
+
+          <div className="flex justify-between border-t border-dashed border-gray-300 pt-1 text-lg font-bold">
+            <span>الإجمالي النهائي</span>
+            <span>{total.toFixed(2)} جنيه</span>
+          </div>
         </div>
 
         <div className="mt-6 flex gap-2 print:hidden">
