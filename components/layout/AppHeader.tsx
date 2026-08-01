@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { logout } from "@/services/auth.service";
 
@@ -30,6 +31,13 @@ export default function AppHeader() {
       </div>
 
       <div className="flex items-center gap-3">
+
+        <Link
+          href="/settings"
+          className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700 transition"
+        >
+          ⚙️
+        </Link>
 
         <button
           onClick={handleLogout}
