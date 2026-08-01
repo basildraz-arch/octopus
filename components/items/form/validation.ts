@@ -18,6 +18,8 @@ export const itemSchema = z.object({
 
   sell_price: z.coerce.number().min(0.01, "سعر البيع يجب أن يكون أكبر من صفر"),
 
+  min_sell_price: z.coerce.number().min(0).optional(),
+
   stock: z.coerce.number().min(0),
 
   minimum_stock: z.coerce.number().min(0),

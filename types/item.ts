@@ -29,6 +29,8 @@ export interface Item {
 
   sell_price: number;
 
+  min_sell_price?: number;
+
   stock: number;
 
   minimum_stock: number;
