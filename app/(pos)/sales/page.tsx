@@ -116,7 +116,13 @@ export default function SalesPage() {
       await loadItems();
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء إتمام البيع");
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : "حدث خطأ أثناء إتمام البيع";
+
+      alert(message);
     } finally {
       setCheckingOut(false);
     }
