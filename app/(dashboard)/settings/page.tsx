@@ -9,6 +9,7 @@ import { useSession } from "@/hooks/useSession";
 export default function SettingsPage() {
   const { user } = useSession();
 
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
@@ -79,14 +80,21 @@ export default function SettingsPage() {
     setSaving(true);
 
     try {
-      await changePassword(newPassword);
+      await changePassword(currentPassword, newPassword);
 
       setSuccess(true);
+      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء تغيير كلمة المرور");
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : "حدث خطأ أثناء تغيير كلمة المرور";
+
+      alert(message);
     } finally {
       setSaving(false);
     }
@@ -155,6 +163,20 @@ export default function SettingsPage() {
           onSubmit={handleSubmit}
           className="space-y-4"
         >
+          <div>
+            <label className="mb-2 block text-sm text-zinc-300">
+              كلمة المرور الحالية
+            </label>
+
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              required
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            />
+          </div>
+
           <div>
             <label className="mb-2 block text-sm text-zinc-300">
               كلمة المرور الجديدة

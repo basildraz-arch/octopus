@@ -3,6 +3,7 @@ import {
   signOut,
   getCurrentAuthUser,
   updatePassword,
+  verifyPassword,
 } from "@/repositories/auth.repository";
 
 import { getUserByAuthId } from "@/repositories/user.repository";
@@ -43,6 +44,24 @@ export async function getCurrentUser(): Promise<User | null> {
   return getUserByAuthId(authUser.id);
 }
 
-export async function changePassword(newPassword: string) {
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string
+) {
+  const authUser = await getCurrentAuthUser();
+
+  if (!authUser?.email) {
+    throw new Error("تعذر التحقق من هوية المستخدم");
+  }
+
+  const isCurrentPasswordValid = await verifyPassword(
+    authUser.email,
+    currentPassword
+  );
+
+  if (!isCurrentPasswordValid) {
+    throw new Error("كلمة المرور الحالية غير صحيحة");
+  }
+
   await updatePassword(newPassword);
 }
