@@ -11,6 +11,9 @@ type Props = {
   cart: CartItem[];
   paymentMethod: PaymentMethod;
   onPaymentMethodChange: (method: PaymentMethod) => void;
+  maxDiscountPercent: number | null;
+  discountAmount: string;
+  onDiscountAmountChange: (value: string) => void;
   onDelete: (id: string) => void;
   onCheckout: () => void;
 };
@@ -25,13 +28,21 @@ export default function Cart({
   cart,
   paymentMethod,
   onPaymentMethodChange,
+  maxDiscountPercent,
+  discountAmount,
+  onDiscountAmountChange,
   onDelete,
   onCheckout,
 }: Props) {
-  const grandTotal = cart.reduce(
+  const subtotal = cart.reduce(
     (sum, line) => sum + line.total,
     0
   );
+
+  const discountValue = discountAmount === "" ? 0 : Number(discountAmount);
+  const maxAllowedDiscount =
+    maxDiscountPercent != null ? (subtotal * maxDiscountPercent) / 100 : 0;
+  const finalTotal = subtotal - discountValue;
 
   return (
     <div>
@@ -73,8 +84,40 @@ export default function Cart({
             ))}
           </div>
 
-          <div className="mt-6 rounded-xl bg-blue-700 p-4 text-xl font-bold text-white">
-            الإجمالي: {grandTotal.toFixed(2)} جنيه
+          {maxDiscountPercent != null && (
+            <div className="mt-4">
+              <p className="mb-2 text-sm text-gray-400">
+                خصم على الفاتورة (اختياري) - أقصى خصم مسموح{" "}
+                {maxAllowedDiscount.toFixed(2)} جنيه
+              </p>
+
+              <input
+                type="number"
+                value={discountAmount}
+                onChange={(e) => onDiscountAmountChange(e.target.value)}
+                placeholder="0"
+                className="w-full rounded-xl bg-gray-800 p-4 text-white outline-none"
+              />
+            </div>
+          )}
+
+          <div className="mt-4 space-y-1 rounded-xl bg-gray-800/50 p-3 text-sm">
+            <div className="flex justify-between text-gray-400">
+              <span>الإجمالي قبل الخصم</span>
+              <span>{subtotal.toFixed(2)} جنيه</span>
+            </div>
+
+            {discountValue > 0 && (
+              <div className="flex justify-between text-gray-400">
+                <span>الخصم</span>
+                <span>{discountValue.toFixed(2)} جنيه</span>
+              </div>
+            )}
+
+            <div className="flex justify-between border-t border-gray-700 pt-1 text-lg font-bold text-white">
+              <span>الإجمالي النهائي</span>
+              <span>{finalTotal.toFixed(2)} جنيه</span>
+            </div>
           </div>
 
           <div className="mt-4">

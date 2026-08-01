@@ -9,6 +9,7 @@ import Receipt from "@/components/Receipt";
 
 import { getActiveItems } from "@/repositories/item.repository";
 import { createSale } from "@/repositories/sale.repository";
+import { getBusiness } from "@/repositories/business.repository";
 import { useSession } from "@/hooks/useSession";
 
 import type { Item } from "@/types/item";
@@ -17,6 +18,7 @@ import type { PaymentMethod } from "@/types/sale";
 type LastSale = {
   cart: CartItem[];
   total: number;
+  discountAmount: number;
   createdAt: Date;
 };
 
@@ -32,10 +34,20 @@ export default function SalesPage() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [lastSale, setLastSale] = useState<LastSale | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [maxDiscountPercent, setMaxDiscountPercent] = useState<number | null>(null);
+  const [discountAmount, setDiscountAmount] = useState("");
 
   useEffect(() => {
     loadItems();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    getBusiness(user.business_id).then((business) => {
+      setMaxDiscountPercent(business?.max_discount_percent ?? null);
+    });
+  }, [user]);
 
   async function loadItems() {
     setLoading(true);
@@ -95,24 +107,46 @@ export default function SalesPage() {
   async function checkout() {
     if (!user || cart.length === 0 || checkingOut) return;
 
+    const subtotal = cart.reduce(
+      (sum, line) => sum + line.total,
+      0
+    );
+
+    const discountValue = discountAmount === "" ? 0 : Number(discountAmount);
+
+    if (discountValue > 0) {
+      const maxAllowedDiscount =
+        maxDiscountPercent != null
+          ? (subtotal * maxDiscountPercent) / 100
+          : 0;
+
+      if (discountValue > maxAllowedDiscount) {
+        alert(`أقصى خصم مسموح ${maxAllowedDiscount.toFixed(2)} جنيه`);
+        return;
+      }
+    }
+
     setCheckingOut(true);
 
     try {
-      const total = cart.reduce(
-        (sum, line) => sum + line.total,
-        0
+      await createSale(
+        user.business_id,
+        user.id,
+        cart,
+        paymentMethod,
+        discountValue
       );
-
-      await createSale(user.business_id, user.id, cart, paymentMethod);
 
       setLastSale({
         cart,
-        total,
+        total: subtotal - discountValue,
+        discountAmount: discountValue,
         createdAt: new Date(),
       });
 
       setCart([]);
       setPaymentMethod("cash");
+      setDiscountAmount("");
       await loadItems();
     } catch (err) {
       console.error(err);
@@ -150,6 +184,9 @@ export default function SalesPage() {
               cart={cart}
               paymentMethod={paymentMethod}
               onPaymentMethodChange={setPaymentMethod}
+              maxDiscountPercent={maxDiscountPercent}
+              discountAmount={discountAmount}
+              onDiscountAmountChange={setDiscountAmount}
               onDelete={deleteLine}
               onCheckout={checkout}
             />
