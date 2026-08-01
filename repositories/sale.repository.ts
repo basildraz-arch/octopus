@@ -8,6 +8,7 @@ import {
   drawFromBatches,
   getCurrentStockAndCost,
 } from "@/repositories/stockBatch.repository";
+import { logActivity } from "@/repositories/activity.repository";
 
 export type SaleWithItems = {
   id: string;
@@ -141,6 +142,8 @@ export async function createSale(
       });
     }
   }
+
+  await logActivity(createdBy, businessId);
 
   return sale;
 }

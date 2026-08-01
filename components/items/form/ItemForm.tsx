@@ -10,6 +10,7 @@ import {
   updateItem,
   adjustItemStock,
 } from "@/repositories/item.repository";
+import { logActivity } from "@/repositories/activity.repository";
 import { useSession } from "@/hooks/useSession";
 
 import { itemSchema, ItemSchema } from "./validation";
@@ -103,6 +104,10 @@ export default function ItemForm({ item }: Props) {
         if (values.item_type === "product" && user) {
           await adjustItemStock(user.business_id, item, newStock);
         }
+
+        if (user) {
+          await logActivity(user.id, user.business_id);
+        }
       } else {
         if (!user) return;
 
@@ -118,6 +123,8 @@ export default function ItemForm({ item }: Props) {
           image: undefined,
           keywords: [],
         });
+
+        await logActivity(user.id, user.business_id);
       }
 
       router.push("/items");

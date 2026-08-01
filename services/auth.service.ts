@@ -6,6 +6,7 @@ import {
 } from "@/repositories/auth.repository";
 
 import { getUserByAuthId } from "@/repositories/user.repository";
+import { logActivity } from "@/repositories/activity.repository";
 
 import type { User } from "@/types/user";
 
@@ -24,6 +25,8 @@ export async function login(
   if (!appUser) {
     throw new Error("الحساب غير مرتبط بأي نشاط تجاري");
   }
+
+  await logActivity(appUser.id, appUser.business_id);
 
   return appUser;
 }
