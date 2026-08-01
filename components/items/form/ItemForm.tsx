@@ -48,7 +48,6 @@ export default function ItemForm({ item }: Props) {
 
           buy_price: item.buy_price,
           sell_price: item.sell_price,
-          min_sell_price: item.min_sell_price,
 
           stock: item.stock,
           minimum_stock: item.minimum_stock,
@@ -63,7 +62,6 @@ export default function ItemForm({ item }: Props) {
 
           buy_price: 0,
           sell_price: 0,
-          min_sell_price: undefined,
 
           stock: 0,
           minimum_stock: 0,
@@ -82,22 +80,11 @@ export default function ItemForm({ item }: Props) {
 
   async function onSubmit(values: ItemSchema) {
     try {
-      const minSellPrice =
-        values.min_sell_price && values.min_sell_price > 0
-          ? values.min_sell_price
-          : undefined;
-
-      if (minSellPrice !== undefined && minSellPrice > values.sell_price) {
-        alert("الحد الأدنى للسعر لازم يكون أقل من أو يساوي سعر البيع");
-        return;
-      }
-
       if (item) {
         const { stock: newStock, ...rest } = values;
 
         await updateItem(item.id, {
           ...rest,
-          min_sell_price: minSellPrice,
           has_stock: values.item_type === "product",
         });
 
@@ -113,7 +100,6 @@ export default function ItemForm({ item }: Props) {
 
         await createItem({
           ...values,
-          min_sell_price: minSellPrice,
 
           has_stock: values.item_type === "product",
           active: true,
@@ -250,23 +236,6 @@ export default function ItemForm({ item }: Props) {
 
           <p className="mt-1 text-sm text-red-500">
             {errors.sell_price?.message}
-          </p>
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm">
-            الحد الأدنى للسعر (اختياري)
-          </label>
-
-          <Input
-            type="number"
-            step="0.01"
-            {...register("min_sell_price")}
-            placeholder="اسيبه فاضي لو السعر ثابت"
-          />
-
-          <p className="mt-1 text-sm text-red-500">
-            {errors.min_sell_price?.message}
           </p>
         </div>
 
