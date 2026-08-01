@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +31,7 @@ export default function ItemForm({ item }: Props) {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ItemSchema>({
     resolver: zodResolver(itemSchema),
@@ -66,6 +68,13 @@ export default function ItemForm({ item }: Props) {
   });
 
   const itemType = watch("item_type");
+
+  useEffect(() => {
+    if (itemType === "service") {
+      setValue("buy_price", 0);
+      setValue("unit", "قطعة");
+    }
+  }, [itemType, setValue]);
 
   async function onSubmit(values: ItemSchema) {
     try {
@@ -165,36 +174,40 @@ export default function ItemForm({ item }: Props) {
           </select>
         </div>
 
-        <div>
-          <label className="mb-2 block text-sm">
-            الوحدة
-          </label>
+        {itemType === "product" && (
+          <div>
+            <label className="mb-2 block text-sm">
+              الوحدة
+            </label>
 
-          <Input
-            {...register("unit")}
-            placeholder="مثال: قطعة، كيلو، جرام"
-          />
+            <Input
+              {...register("unit")}
+              placeholder="مثال: قطعة، كيلو، جرام"
+            />
 
-          <p className="mt-1 text-sm text-red-500">
-            {errors.unit?.message}
-          </p>
-        </div>
+            <p className="mt-1 text-sm text-red-500">
+              {errors.unit?.message}
+            </p>
+          </div>
+        )}
 
-        <div>
-          <label className="mb-2 block text-sm">
-            سعر الشراء
-          </label>
+        {itemType === "product" && (
+          <div>
+            <label className="mb-2 block text-sm">
+              سعر الشراء
+            </label>
 
-          <Input
-            type="number"
-            step="0.01"
-            {...register("buy_price")}
-          />
+            <Input
+              type="number"
+              step="0.01"
+              {...register("buy_price")}
+            />
 
-          <p className="mt-1 text-sm text-red-500">
-            {errors.buy_price?.message}
-          </p>
-        </div>
+            <p className="mt-1 text-sm text-red-500">
+              {errors.buy_price?.message}
+            </p>
+          </div>
+        )}
 
         <div>
           <label className="mb-2 block text-sm">
