@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { createBatch } from "@/repositories/stockBatch.repository";
 
 import type {
   Item,
@@ -60,6 +61,18 @@ export async function createItem(
     .select();
 
   if (error) throw error;
+
+  const newItem = data?.[0];
+
+  if (newItem && item.has_stock && item.stock > 0) {
+    await createBatch(
+      item.business_id,
+      newItem.id,
+      null,
+      item.stock,
+      item.buy_price
+    );
+  }
 
   return data;
 }
