@@ -2,6 +2,7 @@ import {
   signIn,
   signOut,
   getCurrentAuthUser,
+  updatePassword,
 } from "@/repositories/auth.repository";
 
 import { getUserByAuthId } from "@/repositories/user.repository";
@@ -37,4 +38,8 @@ export async function getCurrentUser(): Promise<User | null> {
   if (!authUser) return null;
 
   return getUserByAuthId(authUser.id);
+}
+
+export async function changePassword(newPassword: string) {
+  await updatePassword(newPassword);
 }
