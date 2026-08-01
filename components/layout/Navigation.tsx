@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useSession } from "@/hooks/useSession";
+
 const links = [
   {
     title: "الرئيسية",
@@ -53,12 +55,20 @@ const links = [
   // },
 ];
 
+const ADMIN_EMAIL = "basildraz@gmail.com";
+
 export default function Navigation() {
   const pathname = usePathname();
+  const { user } = useSession();
+
+  const visibleLinks =
+    user?.email === ADMIN_EMAIL
+      ? [...links, { title: "نشاط", href: "/activity", icon: "📈" }]
+      : links;
 
   return (
     <nav className="space-y-2">
-      {links.map((item) => {
+      {visibleLinks.map((item) => {
         const active = pathname === item.href;
 
         return (
