@@ -64,7 +64,8 @@ export async function createSale(
   businessId: string,
   createdBy: string,
   cart: CartItem[],
-  paymentMethod: PaymentMethod
+  paymentMethod: PaymentMethod,
+  discountAmount: number = 0
 ) {
   for (const line of cart) {
     if (line.item.has_stock) {
@@ -83,10 +84,12 @@ export async function createSale(
 
   const shift = await getOrCreateOpenShift(businessId);
 
-  const total = cart.reduce(
+  const subtotal = cart.reduce(
     (sum, line) => sum + line.total,
     0
   );
+
+  const total = subtotal - discountAmount;
 
   const { data: sale, error: saleError } = await supabase
     .from("sales")
@@ -96,6 +99,7 @@ export async function createSale(
       shift_id: shift.id,
       payment_method: paymentMethod,
       total,
+      discount_amount: discountAmount,
     })
     .select()
     .single();
