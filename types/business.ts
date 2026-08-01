@@ -33,7 +33,7 @@ export interface Business {
 
   timezone: string;
 
-  max_discount_percent?: number;
+  max_discount_percent?: number | null;
 
   active: boolean;
 
