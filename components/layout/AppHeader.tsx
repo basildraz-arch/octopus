@@ -4,9 +4,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { logout } from "@/services/auth.service";
+import { useSession } from "@/hooks/useSession";
+
+const ADMIN_EMAIL = "basildraz@gmail.com";
 
 export default function AppHeader() {
   const router = useRouter();
+  const { user } = useSession();
 
   async function handleLogout() {
     await logout();
@@ -31,6 +35,15 @@ export default function AppHeader() {
       </div>
 
       <div className="flex items-center gap-3">
+
+        {user?.email === ADMIN_EMAIL && (
+          <Link
+            href="/activity"
+            className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700 transition"
+          >
+            📈
+          </Link>
+        )}
 
         <Link
           href="/settings"
