@@ -22,6 +22,11 @@ const links = [
     icon: "📦",
   },
   {
+    title: "الفئات",
+    href: "/categories",
+    icon: "🏷️",
+  },
+  {
     title: "سجل المبيعات",
     href: "/sales-log",
     icon: "📒",

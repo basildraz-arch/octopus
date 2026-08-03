@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 
 import type { Item } from "@/types/item";
+import type { Category } from "@/repositories/category.repository";
 import { searchItems } from "@/lib/search";
 
 type Props = {
   items: Item[];
+  categories: Category[];
   onSelect: (item: Item) => void;
 };
 
@@ -19,11 +21,15 @@ function speak(text: string) {
 
 export default function ItemList({
   items,
+  categories,
   onSelect,
 }: Props) {
   const [search, setSearch] = useState("");
   const [listening, setListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     const supported =
@@ -33,7 +39,11 @@ export default function ItemList({
     setVoiceSupported(supported);
   }, []);
 
-  const filteredItems = searchItems(items, search);
+  const categoryFilteredItems = selectedCategoryId
+    ? items.filter((item) => item.category_id === selectedCategoryId)
+    : items;
+
+  const filteredItems = searchItems(categoryFilteredItems, search);
 
   function startVoice() {
     const SpeechRecognition =
@@ -109,6 +119,35 @@ export default function ItemList({
           </button>
         )}
       </div>
+
+      {categories.length > 0 && (
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+          <button
+            onClick={() => setSelectedCategoryId(null)}
+            className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
+              selectedCategoryId === null
+                ? "bg-blue-600 text-white"
+                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+            }`}
+          >
+            الكل
+          </button>
+
+          {categories.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => setSelectedCategoryId(category.id)}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
+                selectedCategoryId === category.id
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              }`}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="space-y-3">
         {filteredItems.map((item) => (

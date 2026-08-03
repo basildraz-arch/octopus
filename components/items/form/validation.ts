@@ -8,6 +8,11 @@ export const itemSchema = z.object({
     .optional()
     .transform((v) => (v ? v : undefined)),
 
+  category_id: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v : undefined)),
+
   item_type: z.enum(["product", "service"]),
 
   sale_method: z.enum(["piece", "weight", "money"]),

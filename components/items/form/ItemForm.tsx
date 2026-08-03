@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +11,10 @@ import {
   adjustItemStock,
 } from "@/repositories/item.repository";
 import { logActivity } from "@/repositories/activity.repository";
+import {
+  getCategories,
+  type Category,
+} from "@/repositories/category.repository";
 import { useSession } from "@/hooks/useSession";
 
 import { itemSchema, ItemSchema } from "./validation";
@@ -28,6 +32,12 @@ export default function ItemForm({ item }: Props) {
   const router = useRouter();
   const { user } = useSession();
 
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    getCategories().then(setCategories);
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -41,6 +51,7 @@ export default function ItemForm({ item }: Props) {
       ? {
           name: item.name,
           barcode: item.barcode ?? "",
+          category_id: item.category_id ?? "",
 
           item_type: item.item_type,
           sale_method: item.sale_method,
@@ -55,6 +66,7 @@ export default function ItemForm({ item }: Props) {
       : {
           name: "",
           barcode: "",
+          category_id: "",
 
           item_type: "product",
           sale_method: "piece",
@@ -105,7 +117,6 @@ export default function ItemForm({ item }: Props) {
           active: true,
 
           business_id: user.business_id,
-          category_id: undefined,
           image: undefined,
           keywords: [],
         });
@@ -151,6 +162,28 @@ export default function ItemForm({ item }: Props) {
             {...register("barcode")}
             placeholder="الباركود"
           />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm">
+            الفئة (اختياري)
+          </label>
+
+          <select
+            {...register("category_id")}
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white"
+          >
+            <option value="">بدون فئة</option>
+
+            {categories.map((category) => (
+              <option
+                key={category.id}
+                value={category.id}
+              >
+                {category.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>

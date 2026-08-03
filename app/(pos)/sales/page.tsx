@@ -10,6 +10,7 @@ import Receipt from "@/components/Receipt";
 import { getActiveItems } from "@/repositories/item.repository";
 import { createSale } from "@/repositories/sale.repository";
 import { getBusiness } from "@/repositories/business.repository";
+import { getCategories, type Category } from "@/repositories/category.repository";
 import { useSession } from "@/hooks/useSession";
 
 import type { Item } from "@/types/item";
@@ -27,6 +28,7 @@ export default function SalesPage() {
 
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showPopup, setShowPopup] = useState(false);
@@ -39,6 +41,7 @@ export default function SalesPage() {
 
   useEffect(() => {
     loadItems();
+    getCategories().then(setCategories);
   }, []);
 
   useEffect(() => {
@@ -177,6 +180,7 @@ export default function SalesPage() {
           <div className="grid gap-8 md:grid-cols-2">
             <ItemList
               items={items}
+              categories={categories}
               onSelect={selectItem}
             />
 

@@ -41,6 +41,18 @@ export async function createCategory(
   return data as Category;
 }
 
+export async function updateCategory(
+  id: string,
+  category: Partial<Omit<Category, "id" | "created_at">>
+) {
+  const { error } = await supabase
+    .from("categories")
+    .update(category)
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
 export async function deleteCategory(id: string) {
   const { error } = await supabase
     .from("categories")
