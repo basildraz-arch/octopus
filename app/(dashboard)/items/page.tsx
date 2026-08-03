@@ -61,12 +61,21 @@ export default function ItemsPage() {
           </p>
         </div>
 
-        <Link
-          href="/items/new"
-          className="rounded-lg bg-blue-600 px-5 py-3 font-semibold transition hover:bg-blue-700"
-        >
-          ➕ إضافة صنف
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            href="/categories"
+            className="rounded-lg bg-zinc-700 px-5 py-3 font-semibold transition hover:bg-zinc-600"
+          >
+            🏷️ إدارة الفئات
+          </Link>
+
+          <Link
+            href="/items/new"
+            className="rounded-lg bg-blue-600 px-5 py-3 font-semibold transition hover:bg-blue-700"
+          >
+            ➕ إضافة صنف
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
