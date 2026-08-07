@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +10,7 @@ import {
   createItem,
   updateItem,
   adjustItemStock,
+  findItemByName,
 } from "@/repositories/item.repository";
 import { logActivity } from "@/repositories/activity.repository";
 import {
@@ -33,6 +35,7 @@ export default function ItemForm({ item }: Props) {
   const { user } = useSession();
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [duplicateItem, setDuplicateItem] = useState<Item | null>(null);
 
   useEffect(() => {
     getCategories().then(setCategories);
@@ -81,6 +84,11 @@ export default function ItemForm({ item }: Props) {
   });
 
   const itemType = watch("item_type");
+  const name = watch("name");
+
+  useEffect(() => {
+    setDuplicateItem(null);
+  }, [name]);
 
   useEffect(() => {
     if (itemType === "service") {
@@ -91,6 +99,15 @@ export default function ItemForm({ item }: Props) {
   }, [itemType, setValue]);
 
   async function onSubmit(values: ItemSchema) {
+    if (!item) {
+      const existing = await findItemByName(values.name);
+
+      if (existing) {
+        setDuplicateItem(existing);
+        return;
+      }
+    }
+
     try {
       if (item) {
         const { stock: newStock, ...rest } = values;
@@ -127,7 +144,14 @@ export default function ItemForm({ item }: Props) {
       router.push("/items");
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء الحفظ");
+
+      const code = (err as { code?: string })?.code;
+
+      if (code === "23505") {
+        alert("يوجد صنف بنفس الاسم بالفعل. عدّل الصنف الموجود بدل إضافة واحد جديد.");
+      } else {
+        alert("حدث خطأ أثناء الحفظ");
+      }
     }
   }
 
@@ -151,6 +175,19 @@ export default function ItemForm({ item }: Props) {
           <p className="mt-1 text-sm text-red-500">
             {errors.name?.message}
           </p>
+
+          {duplicateItem && (
+            <div className="mt-2 rounded-lg border border-amber-700 bg-amber-950/40 p-3 text-sm text-amber-300">
+              ⚠️ يوجد صنف بنفس الاسم "{duplicateItem.name}" بالفعل.{" "}
+              <Link
+                href={`/items/edit/${duplicateItem.id}`}
+                className="font-bold text-blue-400 underline"
+              >
+                اضغط هنا لتعديله
+              </Link>{" "}
+              بدل إضافة صنف مكرر.
+            </div>
+          )}
         </div>
 
         <div>

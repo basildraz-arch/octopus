@@ -41,6 +41,23 @@ export async function getItemById(
   return data as Item;
 }
 
+export async function findItemByName(
+  name: string
+): Promise<Item | null> {
+  const { data, error } = await supabase
+    .from("items")
+    .select("*")
+    .ilike("name", name.trim())
+    .maybeSingle();
+
+  if (error) {
+    console.error("Supabase Error:", error.message);
+    return null;
+  }
+
+  return data as Item | null;
+}
+
 export async function getActiveItems(): Promise<Item[]> {
   const { data, error } = await supabase
     .from("items")
