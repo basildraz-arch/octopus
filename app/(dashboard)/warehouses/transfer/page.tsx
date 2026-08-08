@@ -147,57 +147,62 @@ export default function StockTransferPage() {
           </select>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm text-zinc-300">
-              من مخزن
-            </label>
+        <div>
+          <label className="mb-2 block text-sm text-zinc-300">
+            من مخزن
+          </label>
 
-            <select
-              value={fromWarehouseId}
-              onChange={(e) => setFromWarehouseId(e.target.value)}
-              required
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
-            >
-              <option value="">اختر مخزن...</option>
+          <select
+            value={fromWarehouseId}
+            onChange={(e) => setFromWarehouseId(e.target.value)}
+            required
+            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+          >
+            <option value="">اختر مخزن...</option>
 
-              {warehouses.map((warehouse) => (
+            {warehouses.map((warehouse) => (
+              <option key={warehouse.id} value={warehouse.id}>
+                {warehouse.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {selectedItem && fromWarehouseId && (
+          <div className="rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-center">
+            <span className="text-sm text-zinc-400">المتاح في المخزن المصدر: </span>
+            <span className="font-bold text-white">
+              {availableInFromWarehouse} {selectedItem.unit}
+            </span>
+          </div>
+        )}
+
+        <div className="text-center text-2xl text-zinc-500">
+          ⬇️
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm text-zinc-300">
+            إلى مخزن
+          </label>
+
+          <select
+            value={toWarehouseId}
+            onChange={(e) => setToWarehouseId(e.target.value)}
+            required
+            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+          >
+            <option value="">اختر مخزن...</option>
+
+            {warehouses
+              .filter((warehouse) => warehouse.id !== fromWarehouseId)
+              .map((warehouse) => (
                 <option key={warehouse.id} value={warehouse.id}>
                   {warehouse.name}
                 </option>
               ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm text-zinc-300">
-              إلى مخزن
-            </label>
-
-            <select
-              value={toWarehouseId}
-              onChange={(e) => setToWarehouseId(e.target.value)}
-              required
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
-            >
-              <option value="">اختر مخزن...</option>
-
-              {warehouses
-                .filter((warehouse) => warehouse.id !== fromWarehouseId)
-                .map((warehouse) => (
-                  <option key={warehouse.id} value={warehouse.id}>
-                    {warehouse.name}
-                  </option>
-                ))}
-            </select>
-          </div>
+          </select>
         </div>
-
-        {selectedItem && fromWarehouseId && (
-          <p className="text-sm text-zinc-400">
-            المتاح في المخزن المصدر: {availableInFromWarehouse} {selectedItem.unit}
-          </p>
-        )}
 
         <div>
           <label className="mb-2 block text-sm text-zinc-300">
@@ -217,7 +222,7 @@ export default function StockTransferPage() {
         <button
           type="submit"
           disabled={saving || !selectedItemId || !fromWarehouseId || !toWarehouseId}
-          className="w-full rounded-xl bg-blue-600 p-3 font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+          className="w-full rounded-xl bg-blue-600 p-4 font-bold text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {saving ? "جارِ النقل..." : "🔀 نقل المخزون"}
         </button>

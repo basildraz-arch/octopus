@@ -50,7 +50,7 @@ export default function ItemsPage() {
 
   return (
     <main className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold">
             📦 إدارة الأصناف
@@ -61,24 +61,24 @@ export default function ItemsPage() {
           </p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
           <Link
             href="/warehouses"
-            className="rounded-lg bg-zinc-700 px-5 py-3 font-semibold transition hover:bg-zinc-600"
+            className="rounded-lg bg-zinc-700 px-5 py-3 text-center font-semibold transition hover:bg-zinc-600"
           >
             🏭 إدارة المخازن
           </Link>
 
           <Link
             href="/categories"
-            className="rounded-lg bg-zinc-700 px-5 py-3 font-semibold transition hover:bg-zinc-600"
+            className="rounded-lg bg-zinc-700 px-5 py-3 text-center font-semibold transition hover:bg-zinc-600"
           >
             🏷️ إدارة الفئات
           </Link>
 
           <Link
             href="/items/new"
-            className="rounded-lg bg-blue-600 px-5 py-3 font-semibold transition hover:bg-blue-700"
+            className="rounded-lg bg-blue-600 px-5 py-3 text-center font-semibold transition hover:bg-blue-700"
           >
             ➕ إضافة صنف
           </Link>

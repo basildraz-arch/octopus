@@ -119,7 +119,7 @@ export default function WarehousesPage() {
 
   return (
     <main className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">
             🏭 المخازن
@@ -133,7 +133,7 @@ export default function WarehousesPage() {
         {activeWarehousesCount > 1 && (
           <Link
             href="/warehouses/transfer"
-            className="rounded-lg bg-zinc-700 px-5 py-3 font-semibold transition hover:bg-zinc-600"
+            className="rounded-lg bg-zinc-700 px-5 py-3 text-center font-semibold transition hover:bg-zinc-600 sm:w-auto"
           >
             🔀 نقل مخزون
           </Link>
@@ -147,7 +147,7 @@ export default function WarehousesPage() {
 
         <form
           onSubmit={handleAdd}
-          className="flex gap-3"
+          className="flex flex-col gap-3 sm:flex-row"
         >
           <input
             type="text"
@@ -160,103 +160,105 @@ export default function WarehousesPage() {
           <button
             type="submit"
             disabled={adding || !newName.trim()}
-            className="rounded-xl bg-blue-600 px-6 font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-xl bg-blue-600 px-6 py-3 font-bold text-white hover:bg-blue-700 disabled:opacity-50 sm:w-auto"
           >
             {adding ? "جارِ الإضافة..." : "💾 إضافة"}
           </button>
         </form>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
-        {loading ? (
-          <div className="p-8 text-center">
-            جارِ تحميل المخازن...
-          </div>
-        ) : warehouses.length === 0 ? (
-          <div className="p-8 text-center text-zinc-400">
-            لا توجد مخازن بعد.
-          </div>
-        ) : (
-          <div className="divide-y divide-zinc-800">
-            {warehouses.map((warehouse) => (
-              <div
-                key={warehouse.id}
-                className="flex items-center justify-between gap-3 p-4"
-              >
-                {editingId === warehouse.id ? (
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    autoFocus
-                    className="flex-1 rounded-lg border border-zinc-700 bg-zinc-950 p-2 text-white outline-none"
-                  />
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">
-                      {warehouse.name}
-                    </span>
+      {loading ? (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center">
+          جارِ تحميل المخازن...
+        </div>
+      ) : warehouses.length === 0 ? (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
+          لا توجد مخازن بعد.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {warehouses.map((warehouse) => (
+            <div
+              key={warehouse.id}
+              className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+            >
+              {editingId === warehouse.id ? (
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  autoFocus
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+                />
+              ) : (
+                <div>
+                  <h3 className="font-semibold">
+                    {warehouse.name}
+                  </h3>
 
-                    {warehouse.is_default && (
-                      <span className="rounded bg-blue-600 px-2 py-1 text-xs">
-                        افتراضي
-                      </span>
-                    )}
+                  {(warehouse.is_default || !warehouse.active) && (
+                    <div className="mt-1 flex gap-2">
+                      {warehouse.is_default && (
+                        <span className="rounded bg-blue-600 px-2 py-1 text-xs">
+                          افتراضي
+                        </span>
+                      )}
 
-                    {!warehouse.active && (
-                      <span className="rounded bg-zinc-700 px-2 py-1 text-xs">
-                        معطّل
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex shrink-0 gap-2">
-                  {editingId === warehouse.id ? (
-                    <>
-                      <button
-                        onClick={() => saveEdit(warehouse.id)}
-                        disabled={savingEdit || !editName.trim()}
-                        className="rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700 disabled:opacity-50"
-                      >
-                        ✅ حفظ
-                      </button>
-
-                      <button
-                        onClick={cancelEdit}
-                        className="rounded bg-zinc-700 px-3 py-1 text-sm text-white hover:bg-zinc-600"
-                      >
-                        إلغاء
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => startEdit(warehouse)}
-                        className="rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700"
-                      >
-                        ✏️ تعديل
-                      </button>
-
-                      <button
-                        onClick={() => toggleActive(warehouse)}
-                        disabled={warehouse.is_default && warehouse.active}
-                        className={`rounded px-3 py-1 text-sm text-white transition disabled:opacity-40 ${
-                          warehouse.active
-                            ? "bg-zinc-700 hover:bg-zinc-600"
-                            : "bg-green-600 hover:bg-green-700"
-                        }`}
-                      >
-                        {warehouse.active ? "⏸ تعطيل" : "▶ تفعيل"}
-                      </button>
-                    </>
+                      {!warehouse.active && (
+                        <span className="rounded bg-zinc-700 px-2 py-1 text-xs">
+                          معطّل
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
+              )}
+
+              <div className="mt-4 flex gap-2">
+                {editingId === warehouse.id ? (
+                  <>
+                    <button
+                      onClick={() => saveEdit(warehouse.id)}
+                      disabled={savingEdit || !editName.trim()}
+                      className="flex-1 rounded bg-green-600 px-3 py-2.5 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+                    >
+                      ✅ حفظ
+                    </button>
+
+                    <button
+                      onClick={cancelEdit}
+                      className="flex-1 rounded bg-zinc-700 px-3 py-2.5 text-sm text-white hover:bg-zinc-600"
+                    >
+                      إلغاء
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => startEdit(warehouse)}
+                      className="flex-1 rounded bg-blue-600 px-3 py-2.5 text-sm text-white hover:bg-blue-700"
+                    >
+                      ✏️ تعديل
+                    </button>
+
+                    <button
+                      onClick={() => toggleActive(warehouse)}
+                      disabled={warehouse.is_default && warehouse.active}
+                      className={`flex-1 rounded px-3 py-2.5 text-sm text-white transition disabled:opacity-40 ${
+                        warehouse.active
+                          ? "bg-zinc-700 hover:bg-zinc-600"
+                          : "bg-green-600 hover:bg-green-700"
+                      }`}
+                    >
+                      {warehouse.active ? "⏸ تعطيل" : "▶ تفعيل"}
+                    </button>
+                  </>
+                )}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
     </main>
   );
 }
