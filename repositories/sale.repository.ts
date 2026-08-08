@@ -9,7 +9,6 @@ import {
   getCurrentStockAndCost,
 } from "@/repositories/stockBatch.repository";
 import { logActivity } from "@/repositories/activity.repository";
-import { getDefaultWarehouse } from "@/repositories/warehouse.repository";
 
 export type SaleWithItems = {
   id: string;
@@ -66,16 +65,15 @@ export async function createSale(
   createdBy: string,
   cart: CartItem[],
   paymentMethod: PaymentMethod,
-  discountAmount: number = 0
+  discountAmount: number = 0,
+  warehouseId: string
 ) {
-  const warehouse = await getDefaultWarehouse(businessId);
-
   for (const line of cart) {
     if (line.item.has_stock) {
       const available = await checkAvailability(
         line.item.id,
         line.quantity,
-        warehouse.id
+        warehouseId
       );
 
       if (!available) {
@@ -114,7 +112,7 @@ export async function createSale(
 
   for (const line of cart) {
     if (line.item.has_stock) {
-      const draws = await drawFromBatches(line.item.id, line.quantity, warehouse.id);
+      const draws = await drawFromBatches(line.item.id, line.quantity, warehouseId);
 
       costByItemId[line.item.id] = draws.reduce(
         (sum, draw) => sum + draw.quantity * draw.buyPrice,

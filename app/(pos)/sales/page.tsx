@@ -12,6 +12,7 @@ import { createSale } from "@/repositories/sale.repository";
 import { getBusiness } from "@/repositories/business.repository";
 import { getCategories, type Category } from "@/repositories/category.repository";
 import { useSession } from "@/hooks/useSession";
+import { useWarehouseSelection } from "@/hooks/useWarehouseSelection";
 
 import type { Item } from "@/types/item";
 import type { PaymentMethod } from "@/types/sale";
@@ -25,6 +26,8 @@ type LastSale = {
 
 export default function SalesPage() {
   const { user } = useSession();
+  const { warehouses, selectedWarehouseId, selectWarehouse } =
+    useWarehouseSelection(user?.business_id);
 
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,7 +111,7 @@ export default function SalesPage() {
   }
 
   async function checkout() {
-    if (!user || cart.length === 0 || checkingOut) return;
+    if (!user || cart.length === 0 || checkingOut || !selectedWarehouseId) return;
 
     const subtotal = cart.reduce(
       (sum, line) => sum + line.total,
@@ -137,7 +140,8 @@ export default function SalesPage() {
         user.id,
         cart,
         paymentMethod,
-        discountValue
+        discountValue,
+        selectedWarehouseId
       );
 
       setLastSale({
@@ -171,6 +175,26 @@ export default function SalesPage() {
         <h1 className="mb-6 text-3xl font-bold md:mb-8 md:text-4xl">
           🛒 عملية بيع
         </h1>
+
+        {warehouses.length > 1 && (
+          <div className="mb-6">
+            <label className="mb-1 block text-sm text-gray-400">
+              البيع من مخزن
+            </label>
+
+            <select
+              value={selectedWarehouseId}
+              onChange={(e) => selectWarehouse(e.target.value)}
+              className="w-full max-w-xs rounded-xl bg-gray-800 p-3 text-white outline-none"
+            >
+              {warehouses.map((warehouse) => (
+                <option key={warehouse.id} value={warehouse.id}>
+                  {warehouse.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {loading ? (
           <div className="p-8 text-center">

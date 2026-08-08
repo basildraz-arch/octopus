@@ -5,11 +5,14 @@ import { useEffect, useState } from "react";
 import { getItems } from "@/repositories/item.repository";
 import { createPurchase } from "@/repositories/purchase.repository";
 import { useSession } from "@/hooks/useSession";
+import { useWarehouseSelection } from "@/hooks/useWarehouseSelection";
 
 import type { Item } from "@/types/item";
 
 export default function PurchasesPage() {
   const { user } = useSession();
+  const { warehouses, selectedWarehouseId, selectWarehouse } =
+    useWarehouseSelection(user?.business_id);
 
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +53,7 @@ export default function PurchasesPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!user || !selectedItem) return;
+    if (!user || !selectedItem || !selectedWarehouseId) return;
 
     const quantityValue = Number(quantity);
     const buyPriceValue = Number(buyPrice);
@@ -66,7 +69,8 @@ export default function PurchasesPage() {
         user.id,
         selectedItem,
         quantityValue,
-        buyPriceValue
+        buyPriceValue,
+        selectedWarehouseId
       );
 
       alert(
@@ -110,6 +114,27 @@ export default function PurchasesPage() {
         onSubmit={handleSubmit}
         className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900 p-5"
       >
+        {warehouses.length > 1 && (
+          <div>
+            <label className="mb-2 block text-sm text-zinc-300">
+              المخزن
+            </label>
+
+            <select
+              value={selectedWarehouseId}
+              onChange={(e) => selectWarehouse(e.target.value)}
+              required
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            >
+              {warehouses.map((warehouse) => (
+                <option key={warehouse.id} value={warehouse.id}>
+                  {warehouse.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div>
           <label className="mb-2 block text-sm text-zinc-300">
             الصنف
@@ -170,7 +195,7 @@ export default function PurchasesPage() {
 
         <button
           type="submit"
-          disabled={saving || !selectedItem}
+          disabled={saving || !selectedItem || !selectedWarehouseId}
           className="w-full rounded-xl bg-blue-600 p-3 font-bold text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {saving ? "جارِ الحفظ..." : "💾 حفظ الشراء"}

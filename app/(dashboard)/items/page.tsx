@@ -63,6 +63,13 @@ export default function ItemsPage() {
 
         <div className="flex gap-3">
           <Link
+            href="/warehouses"
+            className="rounded-lg bg-zinc-700 px-5 py-3 font-semibold transition hover:bg-zinc-600"
+          >
+            🏭 إدارة المخازن
+          </Link>
+
+          <Link
             href="/categories"
             className="rounded-lg bg-zinc-700 px-5 py-3 font-semibold transition hover:bg-zinc-600"
           >

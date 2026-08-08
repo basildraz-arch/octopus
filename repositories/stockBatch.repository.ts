@@ -155,3 +155,51 @@ export async function getCurrentStockAndCost(
 
   return { stock, averageCost };
 }
+
+export type WarehouseStock = {
+  warehouse_id: string;
+  warehouse_name: string;
+  quantity: number;
+};
+
+type StockBatchWithWarehouse = {
+  warehouse_id: string;
+  remaining_quantity: number;
+  warehouses: { name: string } | null;
+};
+
+export async function getStockByWarehouse(
+  itemId: string
+): Promise<WarehouseStock[]> {
+  const { data, error } = await supabase
+    .from("stock_batches")
+    .select("warehouse_id, remaining_quantity, warehouses ( name )")
+    .eq("item_id", itemId)
+    .gt("remaining_quantity", 0);
+
+  if (error) {
+    console.error("Supabase Error:", error.message);
+    return [];
+  }
+
+  const rows = (data ?? []) as unknown as StockBatchWithWarehouse[];
+
+  const totals = new Map<string, WarehouseStock>();
+
+  for (const row of rows) {
+    const existing = totals.get(row.warehouse_id);
+    const quantity = Number(row.remaining_quantity);
+
+    if (existing) {
+      existing.quantity += quantity;
+    } else {
+      totals.set(row.warehouse_id, {
+        warehouse_id: row.warehouse_id,
+        warehouse_name: row.warehouses?.name ?? "",
+        quantity,
+      });
+    }
+  }
+
+  return Array.from(totals.values());
+}

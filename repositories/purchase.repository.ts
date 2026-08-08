@@ -4,7 +4,6 @@ import {
   createBatch,
   getCurrentStockAndCost,
 } from "@/repositories/stockBatch.repository";
-import { getDefaultWarehouse } from "@/repositories/warehouse.repository";
 import type { Item } from "@/types/item";
 
 export type Purchase = {
@@ -23,7 +22,8 @@ export async function createPurchase(
   createdBy: string,
   item: Item,
   quantity: number,
-  buyPrice: number
+  buyPrice: number,
+  warehouseId: string
 ): Promise<Purchase> {
   if (item.item_type !== "product") {
     throw new Error("لا يمكن تسجيل عملية شراء لصنف من نوع خدمة");
@@ -46,9 +46,7 @@ export async function createPurchase(
 
   if (error) throw error;
 
-  const warehouse = await getDefaultWarehouse(businessId);
-
-  await createBatch(businessId, item.id, warehouse.id, data.id, quantity, buyPrice);
+  await createBatch(businessId, item.id, warehouseId, data.id, quantity, buyPrice);
 
   const { stock, averageCost } = await getCurrentStockAndCost(item.id);
 

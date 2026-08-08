@@ -18,6 +18,32 @@ export async function getWarehouses(
   return (data ?? []) as Warehouse[];
 }
 
+export async function createWarehouse(
+  warehouse: Omit<Warehouse, "id" | "created_at">
+): Promise<Warehouse> {
+  const { data, error } = await supabase
+    .from("warehouses")
+    .insert(warehouse)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data as Warehouse;
+}
+
+export async function updateWarehouse(
+  id: string,
+  warehouse: Partial<Omit<Warehouse, "id" | "created_at">>
+) {
+  const { error } = await supabase
+    .from("warehouses")
+    .update(warehouse)
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
 export async function getDefaultWarehouse(
   businessId: string
 ): Promise<Warehouse> {

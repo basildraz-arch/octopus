@@ -1,0 +1,75 @@
+import { supabase } from "@/lib/supabase";
+import {
+  checkAvailability,
+  drawFromBatches,
+  createBatch,
+} from "@/repositories/stockBatch.repository";
+
+export type StockTransfer = {
+  id: string;
+  business_id: string;
+  item_id: string;
+  from_warehouse_id: string;
+  to_warehouse_id: string;
+  quantity: number;
+  created_by: string | null;
+  created_at: string;
+};
+
+export async function createTransfer(
+  businessId: string,
+  createdBy: string,
+  itemId: string,
+  fromWarehouseId: string,
+  toWarehouseId: string,
+  quantity: number
+): Promise<StockTransfer> {
+  if (fromWarehouseId === toWarehouseId) {
+    throw new Error("لا يمكن النقل من نفس المخزن إلى نفسه");
+  }
+
+  if (quantity <= 0) {
+    throw new Error("الكمية يجب أن تكون أكبر من صفر");
+  }
+
+  const available = await checkAvailability(itemId, quantity, fromWarehouseId);
+
+  if (!available) {
+    throw new Error("الكمية المطلوبة أكبر من المخزون المتاح في المخزن المصدر");
+  }
+
+  const draws = await drawFromBatches(itemId, quantity, fromWarehouseId);
+
+  const totalCost = draws.reduce(
+    (sum, draw) => sum + draw.quantity * draw.buyPrice,
+    0
+  );
+
+  const averageBuyPrice = totalCost / quantity;
+
+  await createBatch(
+    businessId,
+    itemId,
+    toWarehouseId,
+    null,
+    quantity,
+    averageBuyPrice
+  );
+
+  const { data, error } = await supabase
+    .from("stock_transfers")
+    .insert({
+      business_id: businessId,
+      item_id: itemId,
+      from_warehouse_id: fromWarehouseId,
+      to_warehouse_id: toWarehouseId,
+      quantity,
+      created_by: createdBy,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data as StockTransfer;
+}
