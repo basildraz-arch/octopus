@@ -132,7 +132,7 @@ export default function CategoriesPage() {
 
         <form
           onSubmit={handleAdd}
-          className="flex gap-3"
+          className="flex flex-col gap-3 sm:flex-row"
         >
           <input
             type="text"
@@ -145,84 +145,82 @@ export default function CategoriesPage() {
           <button
             type="submit"
             disabled={adding || !newName.trim()}
-            className="rounded-xl bg-blue-600 px-6 font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-xl bg-blue-600 px-6 py-3 font-bold text-white hover:bg-blue-700 disabled:opacity-50 sm:w-auto"
           >
             {adding ? "جارِ الإضافة..." : "💾 إضافة"}
           </button>
         </form>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
-        {loading ? (
-          <div className="p-8 text-center">
-            جارِ تحميل الفئات...
-          </div>
-        ) : categories.length === 0 ? (
-          <div className="p-8 text-center text-zinc-400">
-            لا توجد فئات بعد.
-          </div>
-        ) : (
-          <div className="divide-y divide-zinc-800">
-            {categories.map((category) => (
-              <div
-                key={category.id}
-                className="flex items-center justify-between gap-3 p-4"
-              >
+      {loading ? (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center">
+          جارِ تحميل الفئات...
+        </div>
+      ) : categories.length === 0 ? (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
+          لا توجد فئات بعد.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {categories.map((category) => (
+            <div
+              key={category.id}
+              className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+            >
+              {editingId === category.id ? (
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  autoFocus
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+                />
+              ) : (
+                <h3 className="font-semibold">
+                  {category.name}
+                </h3>
+              )}
+
+              <div className="mt-4 flex gap-2">
                 {editingId === category.id ? (
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    autoFocus
-                    className="flex-1 rounded-lg border border-zinc-700 bg-zinc-950 p-2 text-white outline-none"
-                  />
+                  <>
+                    <button
+                      onClick={() => saveEdit(category.id)}
+                      disabled={savingEdit || !editName.trim()}
+                      className="flex-1 rounded bg-green-600 px-3 py-2.5 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+                    >
+                      ✅ حفظ
+                    </button>
+
+                    <button
+                      onClick={cancelEdit}
+                      className="flex-1 rounded bg-zinc-700 px-3 py-2.5 text-sm text-white hover:bg-zinc-600"
+                    >
+                      إلغاء
+                    </button>
+                  </>
                 ) : (
-                  <span className="font-semibold">
-                    {category.name}
-                  </span>
+                  <>
+                    <button
+                      onClick={() => startEdit(category)}
+                      className="flex-1 rounded bg-blue-600 px-3 py-2.5 text-sm text-white hover:bg-blue-700"
+                    >
+                      ✏️ تعديل
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(category)}
+                      className="flex-1 rounded bg-red-600 px-3 py-2.5 text-sm text-white hover:bg-red-700"
+                    >
+                      🗑️ حذف
+                    </button>
+                  </>
                 )}
-
-                <div className="flex shrink-0 gap-2">
-                  {editingId === category.id ? (
-                    <>
-                      <button
-                        onClick={() => saveEdit(category.id)}
-                        disabled={savingEdit || !editName.trim()}
-                        className="rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700 disabled:opacity-50"
-                      >
-                        ✅ حفظ
-                      </button>
-
-                      <button
-                        onClick={cancelEdit}
-                        className="rounded bg-zinc-700 px-3 py-1 text-sm text-white hover:bg-zinc-600"
-                      >
-                        إلغاء
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => startEdit(category)}
-                        className="rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700"
-                      >
-                        ✏️ تعديل
-                      </button>
-
-                      <button
-                        onClick={() => handleDelete(category)}
-                        className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
-                      >
-                        🗑️ حذف
-                      </button>
-                    </>
-                  )}
-                </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
     </main>
   );
 }
