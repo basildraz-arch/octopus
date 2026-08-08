@@ -19,22 +19,27 @@ export default function PosLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, loading } = useSession();
+  const { user, business, loading } = useSession();
 
   useEffect(() => {
     if (loading) return;
 
     if (!user) {
       router.replace("/login");
+      return;
     }
-  }, [loading, user, router]);
+
+    if (business?.app_mode === "warehouse_management") {
+      router.replace("/dashboard");
+    }
+  }, [loading, user, business, router]);
 
   async function handleLogout() {
     await logout();
     router.replace("/login");
   }
 
-  if (loading || !user) {
+  if (loading || !user || business?.app_mode === "warehouse_management") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-white">
         جارِ التحميل...

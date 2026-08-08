@@ -1,3 +1,7 @@
+export type AppMode =
+  | "retail"
+  | "warehouse_management";
+
 export type BusinessType =
   | "pet_shop"
   | "barber"
@@ -16,6 +20,8 @@ export interface Business {
   name: string;
 
   business_type: BusinessType;
+
+  app_mode: AppMode;
 
   custom_business_type?: string;
 

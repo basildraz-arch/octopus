@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { useSession } from "@/hooks/useSession";
 
-const links = [
+const retailLinks = [
   {
     title: "الرئيسية",
     href: "/dashboard",
@@ -55,16 +55,49 @@ const links = [
   // },
 ];
 
+const warehouseManagementLinks = [
+  {
+    title: "الرئيسية",
+    href: "/dashboard",
+    icon: "🏠",
+  },
+  {
+    title: "الأصناف",
+    href: "/items",
+    icon: "📦",
+  },
+  {
+    title: "المخازن",
+    href: "/warehouses",
+    icon: "🏭",
+  },
+  {
+    title: "تزويد المخزون",
+    href: "/purchases",
+    icon: "🚚",
+  },
+  {
+    title: "الإعدادات",
+    href: "/settings",
+    icon: "⚙️",
+  },
+];
+
 const ADMIN_EMAIL = "basildraz@gmail.com";
 
 export default function Navigation() {
   const pathname = usePathname();
-  const { user } = useSession();
+  const { user, business } = useSession();
+
+  const baseLinks =
+    business?.app_mode === "warehouse_management"
+      ? warehouseManagementLinks
+      : retailLinks;
 
   const visibleLinks =
     user?.email === ADMIN_EMAIL
-      ? [...links, { title: "نشاط", href: "/activity", icon: "📈" }]
-      : links;
+      ? [...baseLinks, { title: "نشاط", href: "/activity", icon: "📈" }]
+      : baseLinks;
 
   return (
     <nav className="space-y-2">

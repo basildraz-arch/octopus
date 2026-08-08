@@ -9,6 +9,11 @@ import {
   getReportSummary,
   type ReportSummary,
 } from "@/repositories/report.repository";
+import { getWarehouses } from "@/repositories/warehouse.repository";
+import {
+  getRecentTransfers,
+  type StockTransferWithDetails,
+} from "@/repositories/stockTransfer.repository";
 import { useSession } from "@/hooks/useSession";
 
 import type { Item } from "@/types/item";
@@ -24,35 +29,53 @@ function todayString() {
 }
 
 export default function DashboardHomePage() {
-  const { user } = useSession();
+  const { user, business } = useSession();
 
   const [items, setItems] = useState<Item[]>([]);
   const [shift, setShift] = useState<Shift | null>(null);
   const [todayReport, setTodayReport] = useState<ReportSummary | null>(null);
+  const [warehouseCount, setWarehouseCount] = useState(0);
+  const [recentTransfers, setRecentTransfers] = useState<
+    StockTransferWithDetails[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
+  const isWarehouseManagement = business?.app_mode === "warehouse_management";
+
   useEffect(() => {
-    if (!user) return;
+    if (!user || !business) return;
 
     load();
-  }, [user]);
+  }, [user, business]);
 
   async function load() {
     if (!user) return;
 
     setLoading(true);
 
-    const today = todayString();
+    if (isWarehouseManagement) {
+      const [itemsData, warehouses, transfers] = await Promise.all([
+        getItems(),
+        getWarehouses(user.business_id),
+        getRecentTransfers(user.business_id),
+      ]);
 
-    const [itemsData, openShift, report] = await Promise.all([
-      getItems(),
-      getOpenShift(user.business_id),
-      getReportSummary(user.business_id, today, today),
-    ]);
+      setItems(itemsData);
+      setWarehouseCount(warehouses.filter((w) => w.active).length);
+      setRecentTransfers(transfers);
+    } else {
+      const today = todayString();
 
-    setItems(itemsData);
-    setShift(openShift);
-    setTodayReport(report);
+      const [itemsData, openShift, report] = await Promise.all([
+        getItems(),
+        getOpenShift(user.business_id),
+        getReportSummary(user.business_id, today, today),
+      ]);
+
+      setItems(itemsData);
+      setShift(openShift);
+      setTodayReport(report);
+    }
 
     setLoading(false);
   }
@@ -67,6 +90,109 @@ export default function DashboardHomePage() {
     return (
       <main className="p-8 text-center text-zinc-400">
         جارِ التحميل...
+      </main>
+    );
+  }
+
+  if (isWarehouseManagement) {
+    return (
+      <main className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">
+            🐙 الرئيسية
+          </h1>
+
+          <p className="mt-1 text-zinc-400">
+            نظرة سريعة على مخازنك
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+            <p className="text-sm text-zinc-400">
+              عدد المخازن
+            </p>
+
+            <h3 className="mt-2 text-3xl font-bold">
+              {warehouseCount}
+            </h3>
+          </div>
+
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+            <p className="text-sm text-zinc-400">
+              عدد الأصناف
+            </p>
+
+            <h3 className="mt-2 text-3xl font-bold">
+              {items.length}
+            </h3>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+          <p className="text-sm text-zinc-400">
+            قيمة المخزون
+          </p>
+
+          <h2 className="mt-2 text-4xl font-bold text-green-400">
+            {totalStockValue.toFixed(2)} ج
+          </h2>
+        </div>
+
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+          <h2 className="mb-4 text-lg font-bold">
+            🔀 آخر عمليات النقل
+          </h2>
+
+          {recentTransfers.length === 0 ? (
+            <p className="text-zinc-400">
+              لا توجد عمليات نقل بعد
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {recentTransfers.map((transfer) => (
+                <div
+                  key={transfer.id}
+                  className="rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-sm"
+                >
+                  <div className="flex justify-between">
+                    <span className="font-semibold">
+                      {transfer.items?.name ?? "صنف محذوف"}
+                    </span>
+
+                    <span className="text-zinc-400">
+                      {new Date(transfer.created_at).toLocaleDateString(
+                        "ar-EG"
+                      )}
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-zinc-400">
+                    {transfer.quantity} {transfer.items?.unit ?? ""} من "
+                    {transfer.from_warehouse?.name ?? "؟"}" إلى "
+                    {transfer.to_warehouse?.name ?? "؟"}"
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Link
+            href="/warehouses"
+            className="rounded-xl bg-blue-600 p-4 text-center font-semibold text-white transition hover:bg-blue-700"
+          >
+            🏭 المخازن
+          </Link>
+
+          <Link
+            href="/items"
+            className="rounded-xl bg-zinc-800 p-4 text-center font-semibold text-white transition hover:bg-zinc-700"
+          >
+            📦 الأصناف
+          </Link>
+        </div>
       </main>
     );
   }

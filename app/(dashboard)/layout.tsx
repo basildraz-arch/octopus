@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 import DesktopSidebar from "@/components/layout/DesktopSidebar";
 import BottomNav from "@/components/layout/BottomNav";
@@ -9,13 +9,20 @@ import AppHeader from "@/components/layout/AppHeader";
 
 import { useSession } from "@/hooks/useSession";
 
+const RETAIL_ONLY_PATHS = ["/day-close", "/sales-log", "/reports"];
+
 export default function DashboardLayout({
   children,
 }: {
   children: ReactNode;
 }) {
   const router = useRouter();
-  const { user, loading } = useSession();
+  const pathname = usePathname();
+  const { user, business, loading } = useSession();
+
+  const isBlockedForWarehouseManagement =
+    business?.app_mode === "warehouse_management" &&
+    RETAIL_ONLY_PATHS.includes(pathname);
 
   useEffect(() => {
     if (loading) return;
@@ -27,10 +34,20 @@ export default function DashboardLayout({
 
     if (user.role !== "owner") {
       router.replace("/sales");
+      return;
     }
-  }, [loading, user, router]);
 
-  if (loading || !user || user.role !== "owner") {
+    if (isBlockedForWarehouseManagement) {
+      router.replace("/dashboard");
+    }
+  }, [loading, user, isBlockedForWarehouseManagement, router]);
+
+  if (
+    loading ||
+    !user ||
+    user.role !== "owner" ||
+    isBlockedForWarehouseManagement
+  ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-white">
         جارِ التحميل...

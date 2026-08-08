@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const links = [
+import { useSession } from "@/hooks/useSession";
+
+const retailLinks = [
   {
     title: "الرئيسية",
     href: "/dashboard",
@@ -41,8 +43,37 @@ const links = [
   },
 ];
 
+const warehouseManagementLinks = [
+  {
+    title: "الرئيسية",
+    href: "/dashboard",
+    icon: "🏠",
+  },
+  {
+    title: "الأصناف",
+    href: "/items",
+    icon: "📦",
+  },
+  {
+    title: "المخازن",
+    href: "/warehouses",
+    icon: "🏭",
+  },
+  {
+    title: "تزويد",
+    href: "/purchases",
+    icon: "🚚",
+  },
+];
+
 export default function BottomNav() {
   const pathname = usePathname();
+  const { business } = useSession();
+
+  const links =
+    business?.app_mode === "warehouse_management"
+      ? warehouseManagementLinks
+      : retailLinks;
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-zinc-800 bg-zinc-900 md:hidden">

@@ -73,3 +73,40 @@ export async function createTransfer(
 
   return data as StockTransfer;
 }
+
+export type StockTransferWithDetails = {
+  id: string;
+  quantity: number;
+  created_at: string;
+  items: { name: string; unit: string } | null;
+  from_warehouse: { name: string } | null;
+  to_warehouse: { name: string } | null;
+};
+
+export async function getRecentTransfers(
+  businessId: string,
+  limit: number = 5
+): Promise<StockTransferWithDetails[]> {
+  const { data, error } = await supabase
+    .from("stock_transfers")
+    .select(
+      `
+      id,
+      quantity,
+      created_at,
+      items ( name, unit ),
+      from_warehouse:from_warehouse_id ( name ),
+      to_warehouse:to_warehouse_id ( name )
+    `
+    )
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Supabase Error:", error.message);
+    return [];
+  }
+
+  return (data ?? []) as unknown as StockTransferWithDetails[];
+}
