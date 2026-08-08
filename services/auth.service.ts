@@ -4,6 +4,8 @@ import {
   getCurrentAuthUser,
   updatePassword,
   verifyPassword,
+  signUp,
+  completeSignup,
 } from "@/repositories/auth.repository";
 
 import { getUserByAuthId } from "@/repositories/user.repository";
@@ -64,4 +66,51 @@ export async function changePassword(
   }
 
   await updatePassword(newPassword);
+}
+
+export async function registerBusiness(params: {
+  fullName: string;
+  businessName: string;
+  email: string;
+  password: string;
+  appMode: "retail" | "warehouse_management";
+}) {
+  await signOut();
+
+  const emailRedirectTo = `${window.location.origin}/signup/complete`;
+
+  await signUp(
+    params.email,
+    params.password,
+    {
+      full_name: params.fullName,
+      business_name: params.businessName,
+      app_mode: params.appMode,
+    },
+    emailRedirectTo
+  );
+}
+
+export async function finishSignup(): Promise<User> {
+  const authUser = await getCurrentAuthUser();
+
+  if (!authUser) {
+    throw new Error("لا يوجد مستخدم مسجّل دخول");
+  }
+
+  const existingUser = await getUserByAuthId(authUser.id);
+
+  if (existingUser) {
+    return existingUser;
+  }
+
+  await completeSignup();
+
+  const newUser = await getUserByAuthId(authUser.id);
+
+  if (!newUser) {
+    throw new Error("تعذر إكمال إنشاء الحساب");
+  }
+
+  return newUser;
 }

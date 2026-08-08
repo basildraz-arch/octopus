@@ -47,3 +47,35 @@ export async function updatePassword(newPassword: string) {
 
   if (error) throw error;
 }
+
+export async function signUp(
+  email: string,
+  password: string,
+  metadata: {
+    full_name: string;
+    business_name: string;
+    app_mode: string;
+  },
+  emailRedirectTo: string
+) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: metadata,
+      emailRedirectTo,
+    },
+  });
+
+  if (error) throw error;
+
+  return data;
+}
+
+export async function completeSignup(): Promise<string> {
+  const { data, error } = await supabase.rpc("complete_signup");
+
+  if (error) throw error;
+
+  return data as string;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,6 +51,15 @@ export default function LoginPage() {
             </p>
           </button>
 
+        </div>
+
+        <div className="mt-8 flex justify-center text-sm">
+          <Link
+            href="/signup"
+            className="text-zinc-400 hover:text-white"
+          >
+            مفيش حساب؟ سجّل بيزنسك الآن
+          </Link>
         </div>
 
       </div>
