@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 import {
   getWarehouses,
@@ -114,16 +115,29 @@ export default function WarehousesPage() {
     }
   }
 
+  const activeWarehousesCount = warehouses.filter((w) => w.active).length;
+
   return (
     <main className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">
-          🏭 المخازن
-        </h1>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">
+            🏭 المخازن
+          </h1>
 
-        <p className="mt-1 text-zinc-400">
-          إدارة مواقع تخزين المخزون
-        </p>
+          <p className="mt-1 text-zinc-400">
+            إدارة مواقع تخزين المخزون
+          </p>
+        </div>
+
+        {activeWarehousesCount > 1 && (
+          <Link
+            href="/warehouses/transfer"
+            className="rounded-lg bg-zinc-700 px-5 py-3 font-semibold transition hover:bg-zinc-600"
+          >
+            🔀 نقل مخزون
+          </Link>
+        )}
       </div>
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">

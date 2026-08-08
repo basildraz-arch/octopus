@@ -17,6 +17,8 @@ import {
   getCategories,
   type Category,
 } from "@/repositories/category.repository";
+import { getWarehouses } from "@/repositories/warehouse.repository";
+import { getStockByWarehouse } from "@/repositories/stockBatch.repository";
 import { useSession } from "@/hooks/useSession";
 
 import { itemSchema, ItemSchema } from "./validation";
@@ -36,10 +38,38 @@ export default function ItemForm({ item }: Props) {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [duplicateItem, setDuplicateItem] = useState<Item | null>(null);
+  const [warehouseStocks, setWarehouseStocks] = useState<
+    { warehouse_id: string; warehouse_name: string; quantity: number }[]
+  >([]);
 
   useEffect(() => {
     getCategories().then(setCategories);
   }, []);
+
+  useEffect(() => {
+    if (!item || !user) return;
+
+    Promise.all([
+      getWarehouses(user.business_id),
+      getStockByWarehouse(item.id),
+    ]).then(([warehouses, stocks]) => {
+      const active = warehouses.filter((w) => w.active);
+
+      if (active.length <= 1) {
+        setWarehouseStocks([]);
+        return;
+      }
+
+      setWarehouseStocks(
+        active.map((warehouse) => ({
+          warehouse_id: warehouse.id,
+          warehouse_name: warehouse.name,
+          quantity:
+            stocks.find((s) => s.warehouse_id === warehouse.id)?.quantity ?? 0,
+        }))
+      );
+    });
+  }, [item, user]);
 
   const {
     register,
@@ -334,6 +364,28 @@ export default function ItemForm({ item }: Props) {
                 {...register("minimum_stock")}
               />
             </div>
+
+            {warehouseStocks.length > 0 && (
+              <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 md:col-span-2">
+                <p className="mb-2 text-sm font-semibold text-zinc-300">
+                  المخزون حسب المخزن
+                </p>
+
+                <div className="space-y-1 text-sm">
+                  {warehouseStocks.map((w) => (
+                    <div
+                      key={w.warehouse_id}
+                      className="flex justify-between text-zinc-400"
+                    >
+                      <span>{w.warehouse_name}</span>
+                      <span className="font-semibold text-white">
+                        {w.quantity}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
 
