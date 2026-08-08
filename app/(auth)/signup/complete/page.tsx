@@ -7,10 +7,13 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { finishSignup } from "@/services/auth.service";
 
+const TIMEOUT_MS = 10000;
+
 export default function SignupCompletePage() {
   const router = useRouter();
 
   const [error, setError] = useState("");
+  const [timedOut, setTimedOut] = useState(false);
   const ran = useRef(false);
 
   useEffect(() => {
@@ -48,20 +51,33 @@ export default function SignupCompletePage() {
       }
     });
 
+    const timeoutId = setTimeout(() => {
+      if (!ran.current) {
+        setTimedOut(true);
+      }
+    }, TIMEOUT_MS);
+
     return () => {
       subscription.unsubscribe();
+      clearTimeout(timeoutId);
     };
   }, [router]);
+
+  const displayError =
+    error ||
+    (timedOut
+      ? "استغرق تفعيل الحساب وقتًا أطول من المتوقع. جرّب تدخل من رابط التأكيد في الإيميل تاني، أو سجّل دخولك مباشرة."
+      : "");
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-6">
       <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center shadow-2xl">
-        {error ? (
+        {displayError ? (
           <>
             <p className="text-5xl">⚠️</p>
 
             <p className="mt-4 text-red-400">
-              {error}
+              {displayError}
             </p>
 
             <Link
