@@ -4,6 +4,7 @@ import {
   drawFromBatches,
   getCurrentStockAndCost,
 } from "@/repositories/stockBatch.repository";
+import { getDefaultWarehouse } from "@/repositories/warehouse.repository";
 
 import type {
   Item,
@@ -86,9 +87,12 @@ export async function createItem(
   const newItem = data?.[0];
 
   if (newItem && item.has_stock && item.stock > 0) {
+    const warehouse = await getDefaultWarehouse(item.business_id);
+
     await createBatch(
       item.business_id,
       newItem.id,
+      warehouse.id,
       null,
       item.stock,
       item.buy_price
@@ -121,10 +125,12 @@ export async function adjustItemStock(
 
   if (diff === 0) return;
 
+  const warehouse = await getDefaultWarehouse(businessId);
+
   if (diff > 0) {
-    await createBatch(businessId, item.id, null, diff, item.buy_price);
+    await createBatch(businessId, item.id, warehouse.id, null, diff, item.buy_price);
   } else {
-    await drawFromBatches(item.id, Math.abs(diff));
+    await drawFromBatches(item.id, Math.abs(diff), warehouse.id);
   }
 
   const { stock, averageCost } = await getCurrentStockAndCost(item.id);

@@ -4,6 +4,7 @@ import {
   createBatch,
   getCurrentStockAndCost,
 } from "@/repositories/stockBatch.repository";
+import { getDefaultWarehouse } from "@/repositories/warehouse.repository";
 import type { Item } from "@/types/item";
 
 export type Purchase = {
@@ -45,7 +46,9 @@ export async function createPurchase(
 
   if (error) throw error;
 
-  await createBatch(businessId, item.id, data.id, quantity, buyPrice);
+  const warehouse = await getDefaultWarehouse(businessId);
+
+  await createBatch(businessId, item.id, warehouse.id, data.id, quantity, buyPrice);
 
   const { stock, averageCost } = await getCurrentStockAndCost(item.id);
 

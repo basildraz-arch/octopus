@@ -4,6 +4,7 @@ export type StockBatch = {
   id: string;
   business_id: string;
   item_id: string;
+  warehouse_id: string;
   purchase_id: string | null;
   quantity: number;
   remaining_quantity: number;
@@ -20,6 +21,7 @@ export type BatchDraw = {
 export async function createBatch(
   businessId: string,
   itemId: string,
+  warehouseId: string,
   purchaseId: string | null,
   quantity: number,
   buyPrice: number
@@ -29,6 +31,7 @@ export async function createBatch(
     .insert({
       business_id: businessId,
       item_id: itemId,
+      warehouse_id: warehouseId,
       purchase_id: purchaseId,
       quantity,
       remaining_quantity: quantity,
@@ -43,12 +46,14 @@ export async function createBatch(
 }
 
 export async function getAvailableBatches(
-  itemId: string
+  itemId: string,
+  warehouseId: string
 ): Promise<StockBatch[]> {
   const { data, error } = await supabase
     .from("stock_batches")
     .select("*")
     .eq("item_id", itemId)
+    .eq("warehouse_id", warehouseId)
     .gt("remaining_quantity", 0)
     .order("created_at", { ascending: true });
 
@@ -62,9 +67,10 @@ export async function getAvailableBatches(
 
 export async function checkAvailability(
   itemId: string,
-  quantityNeeded: number
+  quantityNeeded: number,
+  warehouseId: string
 ): Promise<boolean> {
-  const batches = await getAvailableBatches(itemId);
+  const batches = await getAvailableBatches(itemId, warehouseId);
 
   const totalAvailable = batches.reduce(
     (sum, batch) => sum + Number(batch.remaining_quantity),
@@ -76,9 +82,10 @@ export async function checkAvailability(
 
 export async function drawFromBatches(
   itemId: string,
-  quantityNeeded: number
+  quantityNeeded: number,
+  warehouseId: string
 ): Promise<BatchDraw[]> {
-  const batches = await getAvailableBatches(itemId);
+  const batches = await getAvailableBatches(itemId, warehouseId);
 
   const totalAvailable = batches.reduce(
     (sum, batch) => sum + Number(batch.remaining_quantity),
@@ -120,7 +127,18 @@ export async function drawFromBatches(
 export async function getCurrentStockAndCost(
   itemId: string
 ): Promise<{ stock: number; averageCost: number }> {
-  const batches = await getAvailableBatches(itemId);
+  const { data, error } = await supabase
+    .from("stock_batches")
+    .select("*")
+    .eq("item_id", itemId)
+    .gt("remaining_quantity", 0);
+
+  if (error) {
+    console.error("Supabase Error:", error.message);
+    return { stock: 0, averageCost: 0 };
+  }
+
+  const batches = (data ?? []) as StockBatch[];
 
   let stock = 0;
   let totalCost = 0;
