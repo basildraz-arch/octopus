@@ -1,0 +1,166 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
+
+// Exact field order Paymob uses to compute the HMAC for the
+// "Transaction Processed Callback" - do not reorder or add fields.
+const HMAC_FIELDS = [
+  "amount_cents",
+  "created_at",
+  "currency",
+  "error_occured",
+  "has_parent_transaction",
+  "id",
+  "integration_id",
+  "is_3d_secure",
+  "is_auth",
+  "is_capture",
+  "is_refunded",
+  "is_standalone_payment",
+  "is_voided",
+  "order.id",
+  "owner",
+  "pending",
+  "source_data.pan",
+  "source_data.sub_type",
+  "source_data.type",
+  "success",
+];
+
+function getField(obj: Record<string, unknown>, path: string) {
+  return path
+    .split(".")
+    .reduce<unknown>(
+      (value, key) =>
+        value && typeof value === "object"
+          ? (value as Record<string, unknown>)[key]
+          : undefined,
+      obj
+    );
+}
+
+function computeHmac(obj: Record<string, unknown>, secret: string) {
+  const concatenated = HMAC_FIELDS.map((field) => {
+    const value = getField(obj, field);
+    return value === null || value === undefined ? "" : String(value);
+  }).join("");
+
+  return crypto
+    .createHmac("sha512", secret)
+    .update(concatenated)
+    .digest("hex");
+}
+
+export async function POST(request: NextRequest) {
+  const url = new URL(request.url);
+  const receivedHmac = url.searchParams.get("hmac");
+
+  if (!receivedHmac) {
+    return NextResponse.json({ error: "missing hmac" }, { status: 400 });
+  }
+
+  const body = await request.json();
+
+  if (body?.type !== "TRANSACTION") {
+    return NextResponse.json({ received: true, ignored: true });
+  }
+
+  const obj = body?.obj;
+
+  if (!obj) {
+    return NextResponse.json({ error: "invalid payload" }, { status: 400 });
+  }
+
+  const expectedHmac = computeHmac(obj, process.env.PAYMOB_HMAC_SECRET!);
+
+  const receivedBuffer = Buffer.from(receivedHmac, "hex");
+  const expectedBuffer = Buffer.from(expectedHmac, "hex");
+
+  const isValid =
+    receivedBuffer.length === expectedBuffer.length &&
+    crypto.timingSafeEqual(receivedBuffer, expectedBuffer);
+
+  if (!isValid) {
+    console.error("Paymob webhook: HMAC mismatch");
+    return NextResponse.json({ error: "invalid signature" }, { status: 401 });
+  }
+
+  // special_reference (set to business_id in create-payment) should
+  // surface here as merchant_order_id - confirm against a real
+  // Test-mode transaction before relying on this in production.
+  const businessId = obj?.order?.merchant_order_id;
+
+  if (!businessId) {
+    console.error("Paymob webhook: missing merchant_order_id", obj);
+    return NextResponse.json(
+      { error: "missing business reference" },
+      { status: 400 }
+    );
+  }
+
+  const amountCents = Number(obj.amount_cents);
+  const expectedAmountCents = Number(process.env.SUBSCRIPTION_PRICE_EGP) * 100;
+
+  const isSuccessful =
+    obj.success === true &&
+    obj.pending === false &&
+    obj.is_refunded !== true &&
+    obj.is_voided !== true &&
+    amountCents === expectedAmountCents;
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const { error: insertError } = await supabase
+    .from("subscription_payments")
+    .insert({
+      business_id: businessId,
+      paymob_transaction_id: String(obj.id),
+      paymob_order_id: String(obj.order?.id ?? ""),
+      amount_cents: amountCents,
+      currency: obj.currency ?? "EGP",
+      status: isSuccessful ? "success" : "failed",
+      raw_payload: obj,
+    });
+
+  if (insertError) {
+    // 23505 = unique_violation on paymob_transaction_id - Paymob
+    // already sent this exact transaction before, ignore quietly
+    // instead of extending the subscription a second time.
+    if (insertError.code === "23505") {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+
+    console.error("Paymob webhook: failed to record payment", insertError);
+    return NextResponse.json({ error: "database error" }, { status: 500 });
+  }
+
+  if (isSuccessful) {
+    const { data: business } = await supabase
+      .from("businesses")
+      .select("subscription_expires_at")
+      .eq("id", businessId)
+      .single();
+
+    // extend from the current expiry if it's still in the future
+    // (renewing early doesn't waste remaining paid days), otherwise
+    // start the new month from now (paying after a lockout)
+    const currentExpiry =
+      business?.subscription_expires_at &&
+      new Date(business.subscription_expires_at) > new Date()
+        ? new Date(business.subscription_expires_at)
+        : new Date();
+
+    const newExpiry = new Date(currentExpiry);
+    newExpiry.setMonth(newExpiry.getMonth() + 1);
+
+    await supabase
+      .from("businesses")
+      .update({ subscription_expires_at: newExpiry.toISOString() })
+      .eq("id", businessId);
+  }
+
+  return NextResponse.json({ received: true });
+}
