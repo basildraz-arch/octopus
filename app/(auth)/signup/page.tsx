@@ -8,7 +8,11 @@ import { registerBusiness } from "@/services/auth.service";
 type AppMode = "retail" | "warehouse_management";
 
 export default function SignupPage() {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
+
+  const [inviteCode, setInviteCode] = useState("");
+  const [verifyingInvite, setVerifyingInvite] = useState(false);
+  const [inviteError, setInviteError] = useState("");
 
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
@@ -18,6 +22,34 @@ export default function SignupPage() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  async function handleInviteSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    setInviteError("");
+    setVerifyingInvite(true);
+
+    try {
+      const res = await fetch("/api/signup/verify-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: inviteCode }),
+      });
+
+      const data = await res.json();
+
+      if (data.valid) {
+        setStep(1);
+      } else {
+        setInviteError("كود الدعوة غير صحيح");
+      }
+    } catch (err) {
+      console.error(err);
+      setInviteError("حدث خطأ أثناء التحقق من الكود");
+    } finally {
+      setVerifyingInvite(false);
+    }
+  }
 
   function handleStep1Submit(e: React.FormEvent) {
     e.preventDefault();
@@ -72,9 +104,42 @@ export default function SignupPage() {
           </h1>
 
           <p className="mt-3 text-zinc-400">
-            {step === 3 ? "خطوة أخيرة وهتبقى جاهز" : "سجّل بيزنسك الجديد"}
+            {step === 0
+              ? "أدخل كود الدعوة للمتابعة"
+              : step === 3
+              ? "خطوة أخيرة وهتبقى جاهز"
+              : "سجّل بيزنسك الجديد"}
           </p>
         </div>
+
+        {step === 0 && (
+          <form onSubmit={handleInviteSubmit} className="space-y-5">
+            <div>
+              <label className="mb-2 block text-sm text-zinc-300">
+                كود الدعوة
+              </label>
+              <input
+                type="text"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                required
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+              />
+            </div>
+
+            {inviteError && (
+              <p className="text-sm text-red-500">{inviteError}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={verifyingInvite}
+              className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+            >
+              {verifyingInvite ? "جارِ التحقق..." : "متابعة"}
+            </button>
+          </form>
+        )}
 
         {step === 1 && (
           <form onSubmit={handleStep1Submit} className="space-y-5">
