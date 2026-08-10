@@ -8,6 +8,7 @@ import {
   type ReportSummary,
 } from "@/repositories/report.repository";
 import { useSession } from "@/hooks/useSession";
+import WarehousePulseDashboard from "@/components/reports/WarehousePulseDashboard";
 
 function toDateString(date: Date) {
   const year = date.getFullYear();
@@ -42,7 +43,7 @@ const PRESETS = [
 ];
 
 export default function ReportsPage() {
-  const { user } = useSession();
+  const { user, business } = useSession();
 
   const [startDate, setStartDate] = useState(
     toDateString(startOfMonth(new Date()))
@@ -51,11 +52,13 @@ export default function ReportsPage() {
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const isWarehouseManagement = business?.app_mode === "warehouse_management";
+
   useEffect(() => {
-    if (!user) return;
+    if (!user || isWarehouseManagement) return;
 
     load();
-  }, [user, startDate, endDate]);
+  }, [user, isWarehouseManagement, startDate, endDate]);
 
   async function load() {
     if (!user) return;
@@ -76,6 +79,24 @@ export default function ReportsPage() {
   function applyPreset(getStart: () => Date) {
     setStartDate(toDateString(getStart()));
     setEndDate(toDateString(new Date()));
+  }
+
+  if (isWarehouseManagement) {
+    return (
+      <main className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">
+            📊 لوحة نبض المخازن
+          </h1>
+
+          <p className="mt-1 text-zinc-400">
+            متابعة شبه لحظية لمخازنك ونشاطها
+          </p>
+        </div>
+
+        <WarehousePulseDashboard />
+      </main>
+    );
   }
 
   return (

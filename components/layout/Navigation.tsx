@@ -77,6 +77,11 @@ const warehouseManagementLinks = [
     icon: "🚚",
   },
   {
+    title: "التقارير",
+    href: "/reports",
+    icon: "📊",
+  },
+  {
     title: "الإعدادات",
     href: "/settings",
     icon: "⚙️",

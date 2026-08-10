@@ -9,7 +9,7 @@ import AppHeader from "@/components/layout/AppHeader";
 
 import { useSession } from "@/hooks/useSession";
 
-const RETAIL_ONLY_PATHS = ["/day-close", "/sales-log", "/reports"];
+const RETAIL_ONLY_PATHS = ["/day-close", "/sales-log"];
 
 export default function DashboardLayout({
   children,
