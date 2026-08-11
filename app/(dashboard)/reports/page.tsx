@@ -43,7 +43,7 @@ const PRESETS = [
 ];
 
 export default function ReportsPage() {
-  const { user, business } = useSession();
+  const { user, hasFeature } = useSession();
 
   const [startDate, setStartDate] = useState(
     toDateString(startOfMonth(new Date()))
@@ -52,7 +52,7 @@ export default function ReportsPage() {
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const isWarehouseManagement = business?.app_mode === "warehouse_management";
+  const isWarehouseManagement = hasFeature("warehouse_reports");
 
   useEffect(() => {
     if (!user || isWarehouseManagement) return;

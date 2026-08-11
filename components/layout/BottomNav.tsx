@@ -4,81 +4,73 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { useSession } from "@/hooks/useSession";
+import type { FeatureKey } from "@/types/business";
 
-const retailLinks = [
+type NavItem = {
+  title: string;
+  href: string;
+  icon: string;
+  features: FeatureKey[];
+};
+
+const NAV_ITEMS: NavItem[] = [
   {
     title: "الرئيسية",
     href: "/dashboard",
     icon: "🏠",
+    features: [],
   },
   {
     title: "بيع",
     href: "/sales",
     icon: "🛒",
+    features: ["pos_sales"],
   },
   {
     title: "الأصناف",
     href: "/items",
     icon: "📦",
+    features: ["inventory"],
   },
   {
     title: "سجل",
     href: "/sales-log",
     icon: "📒",
+    features: ["pos_sales"],
   },
   {
     title: "إنهاء",
     href: "/day-close",
     icon: "🔒",
+    features: ["shifts"],
   },
   {
     title: "تزويد",
     href: "/purchases",
     icon: "🚚",
-  },
-  {
-    title: "تقارير",
-    href: "/reports",
-    icon: "📊",
-  },
-];
-
-const warehouseManagementLinks = [
-  {
-    title: "الرئيسية",
-    href: "/dashboard",
-    icon: "🏠",
-  },
-  {
-    title: "الأصناف",
-    href: "/items",
-    icon: "📦",
+    features: ["inventory"],
   },
   {
     title: "المخازن",
     href: "/warehouses",
     icon: "🏭",
-  },
-  {
-    title: "تزويد",
-    href: "/purchases",
-    icon: "🚚",
+    features: ["multi_warehouse"],
   },
   {
     title: "تقارير",
     href: "/reports",
     icon: "📊",
+    features: ["sales_reports", "warehouse_reports"],
   },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const { business } = useSession();
+  const { hasFeature } = useSession();
 
-  const links =
-    business?.app_mode === "warehouse_management"
-      ? warehouseManagementLinks
-      : retailLinks;
+  const links = NAV_ITEMS.filter(
+    (item) => item.features.length === 0 || item.features.some(hasFeature)
+  );
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-zinc-800 bg-zinc-900 md:hidden">

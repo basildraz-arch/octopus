@@ -29,7 +29,7 @@ function todayString() {
 }
 
 export default function DashboardHomePage() {
-  const { user, business } = useSession();
+  const { user, business, hasFeature } = useSession();
 
   const [items, setItems] = useState<Item[]>([]);
   const [shift, setShift] = useState<Shift | null>(null);
@@ -40,7 +40,7 @@ export default function DashboardHomePage() {
   >([]);
   const [loading, setLoading] = useState(true);
 
-  const isWarehouseManagement = business?.app_mode === "warehouse_management";
+  const isWarehouseManagement = hasFeature("multi_warehouse");
 
   useEffect(() => {
     if (!user || !business) return;

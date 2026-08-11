@@ -2,6 +2,16 @@ export type AppMode =
   | "retail"
   | "warehouse_management";
 
+export type FeatureKey =
+  | "pos_sales"
+  | "inventory"
+  | "categories"
+  | "shifts"
+  | "sales_reports"
+  | "multi_warehouse"
+  | "warehouse_reports"
+  | "discounts";
+
 export type BusinessType =
   | "pet_shop"
   | "barber"
@@ -22,6 +32,8 @@ export interface Business {
   business_type: BusinessType;
 
   app_mode: AppMode;
+
+  enabled_features: FeatureKey[];
 
   custom_business_type?: string;
 

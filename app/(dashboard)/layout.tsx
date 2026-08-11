@@ -8,8 +8,12 @@ import BottomNav from "@/components/layout/BottomNav";
 import AppHeader from "@/components/layout/AppHeader";
 
 import { useSession } from "@/hooks/useSession";
+import type { FeatureKey } from "@/types/business";
 
-const RETAIL_ONLY_PATHS = ["/day-close", "/sales-log"];
+const PATH_FEATURES: Record<string, FeatureKey> = {
+  "/day-close": "shifts",
+  "/sales-log": "pos_sales",
+};
 
 export default function DashboardLayout({
   children,
@@ -18,11 +22,10 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, business, loading } = useSession();
+  const { user, hasFeature, loading } = useSession();
 
-  const isBlockedForWarehouseManagement =
-    business?.app_mode === "warehouse_management" &&
-    RETAIL_ONLY_PATHS.includes(pathname);
+  const requiredFeature = PATH_FEATURES[pathname];
+  const isBlockedByFeature = requiredFeature ? !hasFeature(requiredFeature) : false;
 
   useEffect(() => {
     if (loading) return;
@@ -37,16 +40,16 @@ export default function DashboardLayout({
       return;
     }
 
-    if (isBlockedForWarehouseManagement) {
+    if (isBlockedByFeature) {
       router.replace("/dashboard");
     }
-  }, [loading, user, isBlockedForWarehouseManagement, router]);
+  }, [loading, user, isBlockedByFeature, router]);
 
   if (
     loading ||
     !user ||
     user.role !== "owner" ||
-    isBlockedForWarehouseManagement
+    isBlockedByFeature
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-white">

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { getCurrentUser } from "@/services/auth.service";
 import { getBusiness } from "@/repositories/business.repository";
+import { hasFeature as checkFeature } from "@/lib/features";
 import type { User } from "@/types/user";
-import type { Business } from "@/types/business";
+import type { Business, FeatureKey } from "@/types/business";
 
 export function useSession() {
   const [user, setUser] = useState<User | null>(null);
@@ -25,5 +26,10 @@ export function useSession() {
       .finally(() => setLoading(false));
   }, []);
 
-  return { user, business, loading };
+  const hasFeature = useCallback(
+    (feature: FeatureKey) => checkFeature(business, feature),
+    [business]
+  );
+
+  return { user, business, hasFeature, loading };
 }

@@ -5,9 +5,31 @@ import { useEffect, useState } from "react";
 import { changePassword } from "@/services/auth.service";
 import { getBusiness, updateBusiness } from "@/repositories/business.repository";
 import { useSession } from "@/hooks/useSession";
-import type { AppMode } from "@/types/business";
+import type { FeatureKey } from "@/types/business";
 
 const ADMIN_EMAIL = "basildraz@gmail.com";
+
+const ALL_FEATURES: FeatureKey[] = [
+  "pos_sales",
+  "inventory",
+  "categories",
+  "shifts",
+  "sales_reports",
+  "multi_warehouse",
+  "warehouse_reports",
+  "discounts",
+];
+
+const FEATURE_LABELS: Record<FeatureKey, string> = {
+  pos_sales: "نقطة البيع (بيع، مصروفات، سجل مبيعات)",
+  inventory: "المخزون الأساسي والأصناف",
+  categories: "الفئات وتصنيف الأصناف",
+  shifts: "الشيفتات وإنهاء اليوم",
+  sales_reports: "تقارير المبيعات والأرباح",
+  multi_warehouse: "المخازن المتعددة والنقل بينها",
+  warehouse_reports: "لوحة نبض المخازن",
+  discounts: "الخصم على الفاتورة",
+};
 
 export default function SettingsPage() {
   const { user } = useSession();
@@ -22,8 +44,10 @@ export default function SettingsPage() {
   const [discountSaving, setDiscountSaving] = useState(false);
   const [discountSuccess, setDiscountSuccess] = useState(false);
 
-  const [appMode, setAppMode] = useState<AppMode | null>(null);
-  const [switchingMode, setSwitchingMode] = useState(false);
+  const [enabledFeatures, setEnabledFeatures] = useState<FeatureKey[] | null>(
+    null
+  );
+  const [savingFeatures, setSavingFeatures] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -33,33 +57,32 @@ export default function SettingsPage() {
         setMaxDiscountPercent(String(business.max_discount_percent));
       }
 
-      if (business?.app_mode) {
-        setAppMode(business.app_mode);
+      if (business?.enabled_features) {
+        setEnabledFeatures(business.enabled_features);
       }
     });
   }, [user]);
 
-  async function handleSwitchAppMode() {
-    if (!user || !appMode) return;
+  async function handleToggleFeature(feature: FeatureKey) {
+    if (!user || !enabledFeatures) return;
 
-    const newMode: AppMode =
-      appMode === "retail" ? "warehouse_management" : "retail";
+    const newFeatures = enabledFeatures.includes(feature)
+      ? enabledFeatures.filter((f) => f !== feature)
+      : [...enabledFeatures, feature];
 
-    const confirmed = confirm(
-      `متأكد عايز تبدّل لوضع "${newMode}"؟ الصفحة هتتحمّل من جديد.`
-    );
-
-    if (!confirmed) return;
-
-    setSwitchingMode(true);
+    setSavingFeatures(true);
 
     try {
-      await updateBusiness(user.business_id, { app_mode: newMode });
-      window.location.reload();
+      await updateBusiness(user.business_id, {
+        enabled_features: newFeatures,
+      });
+
+      setEnabledFeatures(newFeatures);
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء تبديل النمط");
-      setSwitchingMode(false);
+      alert("حدث خطأ أثناء تحديث الميزة");
+    } finally {
+      setSavingFeatures(false);
     }
   }
 
@@ -188,24 +211,38 @@ export default function SettingsPage() {
         </form>
       </div>
 
-      {user?.email === ADMIN_EMAIL && appMode && (
+      {user?.email === ADMIN_EMAIL && enabledFeatures && (
         <div className="rounded-xl border border-amber-800 bg-amber-950/20 p-5">
           <h2 className="mb-4 text-lg font-bold">
-            🔧 أدوات المطوّر
+            🔧 أدوات المطوّر — الميزات المفعّلة
           </h2>
 
-          <p className="mb-4 text-sm text-zinc-400">
-            النمط الحالي: <span className="font-semibold text-white">{appMode}</span>
-          </p>
+          <div className="space-y-3">
+            {ALL_FEATURES.map((feature) => (
+              <label
+                key={feature}
+                className="flex items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-950 p-3"
+              >
+                <input
+                  type="checkbox"
+                  checked={enabledFeatures.includes(feature)}
+                  onChange={() => handleToggleFeature(feature)}
+                  disabled={savingFeatures}
+                  className="h-5 w-5"
+                />
+
+                <span className="text-sm">
+                  {FEATURE_LABELS[feature]}
+                </span>
+              </label>
+            ))}
+          </div>
 
           <button
-            onClick={handleSwitchAppMode}
-            disabled={switchingMode}
-            className="w-full rounded-xl bg-amber-700 p-3 font-bold text-white hover:bg-amber-800 disabled:opacity-50"
+            onClick={() => window.location.reload()}
+            className="mt-4 w-full rounded-xl bg-amber-700 p-3 font-bold text-white hover:bg-amber-800"
           >
-            {switchingMode
-              ? "جارِ التبديل..."
-              : `🔄 التبديل إلى ${appMode === "retail" ? "warehouse_management" : "retail"}`}
+            🔄 تحديث الصفحة (بعد ما تخلّص التعديل)
           </button>
         </div>
       )}
