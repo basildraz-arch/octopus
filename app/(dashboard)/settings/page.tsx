@@ -5,6 +5,9 @@ import { useEffect, useState } from "react";
 import { changePassword } from "@/services/auth.service";
 import { getBusiness, updateBusiness } from "@/repositories/business.repository";
 import { useSession } from "@/hooks/useSession";
+import type { AppMode } from "@/types/business";
+
+const ADMIN_EMAIL = "basildraz@gmail.com";
 
 export default function SettingsPage() {
   const { user } = useSession();
@@ -19,6 +22,9 @@ export default function SettingsPage() {
   const [discountSaving, setDiscountSaving] = useState(false);
   const [discountSuccess, setDiscountSuccess] = useState(false);
 
+  const [appMode, setAppMode] = useState<AppMode | null>(null);
+  const [switchingMode, setSwitchingMode] = useState(false);
+
   useEffect(() => {
     if (!user) return;
 
@@ -26,8 +32,36 @@ export default function SettingsPage() {
       if (business?.max_discount_percent != null) {
         setMaxDiscountPercent(String(business.max_discount_percent));
       }
+
+      if (business?.app_mode) {
+        setAppMode(business.app_mode);
+      }
     });
   }, [user]);
+
+  async function handleSwitchAppMode() {
+    if (!user || !appMode) return;
+
+    const newMode: AppMode =
+      appMode === "retail" ? "warehouse_management" : "retail";
+
+    const confirmed = confirm(
+      `متأكد عايز تبدّل لوضع "${newMode}"؟ الصفحة هتتحمّل من جديد.`
+    );
+
+    if (!confirmed) return;
+
+    setSwitchingMode(true);
+
+    try {
+      await updateBusiness(user.business_id, { app_mode: newMode });
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("حدث خطأ أثناء تبديل النمط");
+      setSwitchingMode(false);
+    }
+  }
 
   async function handleDiscountSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -153,6 +187,28 @@ export default function SettingsPage() {
           </button>
         </form>
       </div>
+
+      {user?.email === ADMIN_EMAIL && appMode && (
+        <div className="rounded-xl border border-amber-800 bg-amber-950/20 p-5">
+          <h2 className="mb-4 text-lg font-bold">
+            🔧 أدوات المطوّر
+          </h2>
+
+          <p className="mb-4 text-sm text-zinc-400">
+            النمط الحالي: <span className="font-semibold text-white">{appMode}</span>
+          </p>
+
+          <button
+            onClick={handleSwitchAppMode}
+            disabled={switchingMode}
+            className="w-full rounded-xl bg-amber-700 p-3 font-bold text-white hover:bg-amber-800 disabled:opacity-50"
+          >
+            {switchingMode
+              ? "جارِ التبديل..."
+              : `🔄 التبديل إلى ${appMode === "retail" ? "warehouse_management" : "retail"}`}
+          </button>
+        </div>
+      )}
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
         <h2 className="mb-4 text-lg font-bold">
