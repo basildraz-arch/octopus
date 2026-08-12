@@ -5,31 +5,10 @@ import { useEffect, useState } from "react";
 import { changePassword } from "@/services/auth.service";
 import { getBusiness, updateBusiness } from "@/repositories/business.repository";
 import { useSession } from "@/hooks/useSession";
+import { ALL_FEATURES, FEATURE_LABELS } from "@/lib/features";
 import type { FeatureKey } from "@/types/business";
 
 const ADMIN_EMAIL = "basildraz@gmail.com";
-
-const ALL_FEATURES: FeatureKey[] = [
-  "pos_sales",
-  "inventory",
-  "categories",
-  "shifts",
-  "sales_reports",
-  "multi_warehouse",
-  "warehouse_reports",
-  "discounts",
-];
-
-const FEATURE_LABELS: Record<FeatureKey, string> = {
-  pos_sales: "نقطة البيع (بيع، مصروفات، سجل مبيعات)",
-  inventory: "المخزون الأساسي والأصناف",
-  categories: "الفئات وتصنيف الأصناف",
-  shifts: "الشيفتات وإنهاء اليوم",
-  sales_reports: "تقارير المبيعات والأرباح",
-  multi_warehouse: "المخازن المتعددة والنقل بينها",
-  warehouse_reports: "لوحة نبض المخازن",
-  discounts: "الخصم على الفاتورة",
-};
 
 export default function SettingsPage() {
   const { user } = useSession();

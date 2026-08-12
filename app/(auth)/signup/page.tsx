@@ -4,8 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 
 import { registerBusiness } from "@/services/auth.service";
-
-type AppMode = "retail" | "warehouse_management";
+import { BUSINESS_TEMPLATES, type BusinessTemplateKey } from "@/lib/businessTemplates";
+import { ALL_FEATURES, FEATURE_LABELS } from "@/lib/features";
+import type { FeatureKey } from "@/types/business";
 
 export default function SignupPage() {
   const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
@@ -69,8 +70,34 @@ export default function SignupPage() {
     setStep(2);
   }
 
-  async function handleAppModeSelect(mode: AppMode) {
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<BusinessTemplateKey | null>(null);
+  const [editedFeatures, setEditedFeatures] = useState<FeatureKey[]>([]);
+
+  function handleTemplateSelect(key: BusinessTemplateKey) {
+    const template = BUSINESS_TEMPLATES.find((t) => t.key === key);
+    if (!template) return;
+
+    setSelectedTemplate(key);
+    setEditedFeatures(template.features);
+  }
+
+  function handleToggleFeature(feature: FeatureKey) {
+    setEditedFeatures((prev) =>
+      prev.includes(feature)
+        ? prev.filter((f) => f !== feature)
+        : [...prev, feature]
+    );
+  }
+
+  async function handleRegister() {
     setError("");
+
+    if (editedFeatures.length === 0) {
+      setError("لازم تختار ميزة واحدة على الأقل");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -79,7 +106,7 @@ export default function SignupPage() {
         businessName,
         email,
         password,
-        appMode: mode,
+        enabledFeatures: editedFeatures,
       });
 
       setStep(3);
@@ -220,29 +247,59 @@ export default function SignupPage() {
           </form>
         )}
 
-        {step === 2 && (
-          <div className="space-y-5">
-            <button
-              onClick={() => handleAppModeSelect("retail")}
-              disabled={loading}
-              className="w-full rounded-2xl border border-blue-500 bg-blue-600/10 p-6 text-right transition hover:bg-blue-600/20 disabled:opacity-50"
-            >
-              <h2 className="text-xl font-bold">🛍️ بيزنس عادي</h2>
-              <p className="mt-2 text-sm text-zinc-400">
-                بيع مباشر، نقطة بيع، شيفتات، تقارير مبيعات
-              </p>
-            </button>
+        {step === 2 && !selectedTemplate && (
+          <div className="space-y-4">
+            <p className="text-sm text-zinc-400">
+              اختر النوع الأقرب لنشاطك — وهتقدر تعدّل الميزات بعد كده
+            </p>
+
+            {BUSINESS_TEMPLATES.map((template) => (
+              <button
+                key={template.key}
+                onClick={() => handleTemplateSelect(template.key)}
+                className="w-full rounded-2xl border border-zinc-700 bg-zinc-800/50 p-6 text-right transition hover:border-blue-500 hover:bg-blue-600/10"
+              >
+                <h2 className="text-xl font-bold">{template.title}</h2>
+                <p className="mt-2 text-sm text-zinc-400">
+                  {template.description}
+                </p>
+              </button>
+            ))}
 
             <button
-              onClick={() => handleAppModeSelect("warehouse_management")}
-              disabled={loading}
-              className="w-full rounded-2xl border border-zinc-700 bg-zinc-800/50 p-6 text-right transition hover:bg-zinc-800 disabled:opacity-50"
+              onClick={() => setStep(1)}
+              className="w-full text-center text-sm text-zinc-400 hover:text-white"
             >
-              <h2 className="text-xl font-bold">🏭 إدارة مخازن</h2>
-              <p className="mt-2 text-sm text-zinc-400">
-                مخازن، أصناف، ونقل مخزون - من غير نقطة بيع
-              </p>
+              ← رجوع
             </button>
+          </div>
+        )}
+
+        {step === 2 && selectedTemplate && (
+          <div className="space-y-5">
+            <div>
+              <p className="mb-3 text-sm text-zinc-400">
+                الميزات المفعّلة — عدّل حسب احتياجك
+              </p>
+
+              <div className="space-y-3">
+                {ALL_FEATURES.map((feature) => (
+                  <label
+                    key={feature}
+                    className="flex items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-950 p-3"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={editedFeatures.includes(feature)}
+                      onChange={() => handleToggleFeature(feature)}
+                      disabled={loading}
+                      className="h-5 w-5"
+                    />
+                    <span className="text-sm">{FEATURE_LABELS[feature]}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
 
             {error && <p className="text-sm text-red-500">{error}</p>}
 
@@ -253,11 +310,19 @@ export default function SignupPage() {
             )}
 
             <button
-              onClick={() => setStep(1)}
+              onClick={handleRegister}
+              disabled={loading}
+              className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+            >
+              إنشاء الحساب
+            </button>
+
+            <button
+              onClick={() => setSelectedTemplate(null)}
               disabled={loading}
               className="w-full text-center text-sm text-zinc-400 hover:text-white"
             >
-              ← رجوع
+              ← تغيير القالب
             </button>
           </div>
         )}

@@ -12,6 +12,7 @@ import { getUserByAuthId } from "@/repositories/user.repository";
 import { logActivity } from "@/repositories/activity.repository";
 
 import type { User } from "@/types/user";
+import type { FeatureKey } from "@/types/business";
 
 export async function login(
   email: string,
@@ -73,7 +74,7 @@ export async function registerBusiness(params: {
   businessName: string;
   email: string;
   password: string;
-  appMode: "retail" | "warehouse_management";
+  enabledFeatures: FeatureKey[];
 }) {
   await signOut();
 
@@ -85,7 +86,7 @@ export async function registerBusiness(params: {
     {
       full_name: params.fullName,
       business_name: params.businessName,
-      app_mode: params.appMode,
+      enabled_features: params.enabledFeatures,
     },
     emailRedirectTo
   );
