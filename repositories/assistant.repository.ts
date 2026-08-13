@@ -144,3 +144,33 @@ export async function getTopSellingItem(
 
   return { name: sorted[0][0], quantity: sorted[0][1] };
 }
+
+export async function getItemNames(
+  supabase: SupabaseClient,
+  businessId: string
+): Promise<{ id: string; name: string }[]> {
+  const { data, error } = await supabase
+    .from("items")
+    .select("id, name")
+    .eq("business_id", businessId)
+    .eq("active", true);
+
+  if (error) throw error;
+
+  return data ?? [];
+}
+
+export async function getWarehouseNames(
+  supabase: SupabaseClient,
+  businessId: string
+): Promise<{ id: string; name: string }[]> {
+  const { data, error } = await supabase
+    .from("warehouses")
+    .select("id, name")
+    .eq("business_id", businessId)
+    .eq("active", true);
+
+  if (error) throw error;
+
+  return data ?? [];
+}

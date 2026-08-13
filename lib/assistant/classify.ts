@@ -41,7 +41,7 @@ export function isNavigationIntent(
   return NAVIGATION_INTENT_KEYS.has(intent);
 }
 
-function normalize(text: string): string {
+export function normalize(text: string): string {
   return text
     .trim()
     .toLowerCase()
@@ -53,7 +53,7 @@ function normalize(text: string): string {
     .replace(/\s+/g, " ");
 }
 
-const NAV_TRIGGERS = [
+export const NAV_TRIGGERS = [
   "عايز اشوف",
   "عاوز اشوف",
   "وديني",

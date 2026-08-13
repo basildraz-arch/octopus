@@ -3,10 +3,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   classifyQuestion,
   isNavigationIntent,
+  normalize,
   NAV_ROUTES,
   type DataIntent,
 } from "@/lib/assistant/classify";
 import { classifyWithGemini } from "@/lib/assistant/geminiClassify";
+import { detectEntityLookup } from "@/lib/assistant/entityLookup";
+import { fuzzyIncludes } from "@/lib/assistant/fuzzyMatch";
 import { askGemini } from "@/lib/gemini";
 import {
   getItemCount,
@@ -15,6 +18,8 @@ import {
   getSalesTotal,
   getExpensesTotal,
   getTopSellingItem,
+  getItemNames,
+  getWarehouseNames,
 } from "@/repositories/assistant.repository";
 import { incrementAndCheckGeminiUsage } from "@/repositories/assistantUsage.repository";
 
@@ -194,11 +199,88 @@ ${JSON.stringify(context, null, 2)}
   return askGemini(prompt, systemInstruction);
 }
 
+async function tryEntityLookup(
+  supabase: SupabaseClient,
+  businessId: string,
+  question: string
+): Promise<AssistantAnswer | null> {
+  const request = detectEntityLookup(question);
+  if (!request) return null;
+
+  if (request.type === "item") {
+    const items = await getItemNames(supabase, businessId);
+    const matches = items.filter((item) =>
+      fuzzyIncludes(normalize(item.name), request.nameQuery)
+    );
+
+    if (matches.length === 0) {
+      return {
+        answer: `مش لاقي صنف باسم "${request.nameQuery}". تأكد من الاسم وجرّب تاني.`,
+        source: "rules",
+      };
+    }
+
+    if (matches.length > 1) {
+      const names = matches
+        .slice(0, 5)
+        .map((m) => `"${m.name}"`)
+        .join("، ");
+      return {
+        answer: `لقيت أكتر من صنف قريب من "${request.nameQuery}": ${names}. حدد الاسم أكتر؟`,
+        source: "rules",
+      };
+    }
+
+    const item = matches[0];
+    return {
+      answer: `لقيت صنف "${item.name}" 📦`,
+      source: "navigation",
+      link: {
+        path: `/items/edit/${item.id}`,
+        label: `روح لصفحة "${item.name}" 📦`,
+      },
+    };
+  }
+
+  const warehouses = await getWarehouseNames(supabase, businessId);
+  const matches = warehouses.filter((wh) =>
+    fuzzyIncludes(normalize(wh.name), request.nameQuery)
+  );
+
+  if (matches.length === 0) {
+    return {
+      answer: `مش لاقي مخزن باسم "${request.nameQuery}". تأكد من الاسم وجرّب تاني.`,
+      source: "rules",
+    };
+  }
+
+  if (matches.length > 1) {
+    const names = matches
+      .slice(0, 5)
+      .map((m) => `"${m.name}"`)
+      .join("، ");
+    return {
+      answer: `لقيت أكتر من مخزن قريب من "${request.nameQuery}": ${names}. حدد الاسم أكتر؟`,
+      source: "rules",
+    };
+  }
+
+  const warehouse = matches[0];
+  return {
+    answer: `لقيت مخزن "${warehouse.name}" 🏭`,
+    source: "navigation",
+    link: { path: "/warehouses", label: "روح لصفحة المخازن 🏭" },
+  };
+}
+
 export async function answerQuestion(
   supabase: SupabaseClient,
   businessId: string,
   question: string
 ): Promise<AssistantAnswer> {
+  const entityAnswer = await tryEntityLookup(supabase, businessId, question);
+  if (entityAnswer) return entityAnswer;
+
   // الطبقة 1: قواعد بمطابقة تقريبية - بدون Gemini خالص
   const ruleIntent = classifyQuestion(question);
 
