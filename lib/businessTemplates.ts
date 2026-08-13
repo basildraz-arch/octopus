@@ -4,6 +4,7 @@ export type BusinessTemplateKey = "retail" | "warehouse" | "services";
 
 export interface BusinessTemplate {
   key: BusinessTemplateKey;
+  icon: string;
   title: string;
   description: string;
   features: FeatureKey[];
@@ -12,8 +13,9 @@ export interface BusinessTemplate {
 export const BUSINESS_TEMPLATES: BusinessTemplate[] = [
   {
     key: "retail",
-    title: "🛍️ بيع بالتجزئة",
-    description: "لمحلات البيع للمستهلك النهائي — زي البقالة والمحلات العادية",
+    icon: "🐾",
+    title: "محل بيع (زي محل حيوانات أو سوبر ماركت)",
+    description: "بتبيع منتجات وبضاعة للعملاء يوميًا",
     features: [
       "pos_sales",
       "inventory",
@@ -24,15 +26,17 @@ export const BUSINESS_TEMPLATES: BusinessTemplate[] = [
     ],
   },
   {
-    key: "warehouse",
-    title: "🏭 إدارة مخازن",
-    description: "لإدارة مخزون ومخازن متعددة بدون نقطة بيع مباشرة للمستهلك",
-    features: ["inventory", "multi_warehouse", "warehouse_reports"],
+    key: "services",
+    icon: "✂️",
+    title: "صالون أو خدمات",
+    description: "بتقدّم خدمة مش بضاعة — زي حلاقة أو استشارة",
+    features: ["pos_sales", "shifts", "sales_reports", "discounts"],
   },
   {
-    key: "services",
-    title: "✂️ خدمات بدون مخزون",
-    description: "لأعمال بتبيع وقت أو خدمة مش بضاعة — زي صالون أو استشارات",
-    features: ["pos_sales", "shifts", "sales_reports", "discounts"],
+    key: "warehouse",
+    icon: "🚚",
+    title: "مخازن",
+    description: "تخزين ونقل بضاعة بين أكتر من مكان",
+    features: ["inventory", "multi_warehouse", "warehouse_reports"],
   },
 ];

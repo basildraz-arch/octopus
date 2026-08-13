@@ -28,3 +28,25 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   warehouse_reports: "لوحة نبض المخازن",
   discounts: "الخصم على الفاتورة",
 };
+
+export const FEATURE_ICONS: Record<FeatureKey, string> = {
+  pos_sales: "🧾",
+  inventory: "📦",
+  categories: "🗂️",
+  shifts: "⏰",
+  sales_reports: "📊",
+  multi_warehouse: "🚚",
+  warehouse_reports: "🛰️",
+  discounts: "💰",
+};
+
+export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
+  pos_sales: "تسجّل كل عملية بيع بضغطة، وتقدر تسجّل مصروفات اليوم كمان",
+  inventory: "تعرف عندك كام قطعة من كل صنف أول بأول",
+  categories: "ترتب الأصناف في مجموعات (أكل، إكسسوارات...) عشان تلاقيها بسرعة",
+  shifts: "تقفل يومك في آخر الشيفت وتشوف حساب الكاش والمبيعات بالظبط",
+  sales_reports: "تشوف بعت بكام وكسبت كام في أي فترة تختارها",
+  multi_warehouse: "تنقل بضاعة بين أكتر من مخزن بسهولة",
+  warehouse_reports: "متابعة سريعة لحالة كل مخازنك في لحظة واحدة",
+  discounts: "تقدر تدي خصم على الفاتورة وقت البيع",
+};
