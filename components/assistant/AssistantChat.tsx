@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 import { supabase } from "@/lib/supabase";
 
 type ChatMessage = {
   role: "user" | "assistant";
   text: string;
+  link?: { path: string; label: string };
 };
 
 export default function AssistantChat() {
@@ -53,7 +55,7 @@ export default function AssistantChat() {
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", text: data.answer },
+        { role: "assistant", text: data.answer, link: data.link },
       ]);
     } catch (err) {
       const message =
@@ -100,19 +102,31 @@ export default function AssistantChat() {
         )}
 
         {messages.map((message, i) => (
-          <div
-            key={i}
-            className={`flex ${
-              message.role === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
+          <div key={i}>
             <div
-              className={`max-w-[85%] rounded-xl p-3 text-right text-sm text-white ${
-                message.role === "user" ? "bg-blue-600" : "bg-zinc-800"
+              className={`flex ${
+                message.role === "user" ? "justify-end" : "justify-start"
               }`}
             >
-              {message.text}
+              <div
+                className={`max-w-[85%] rounded-xl p-3 text-right text-sm text-white ${
+                  message.role === "user" ? "bg-blue-600" : "bg-zinc-800"
+                }`}
+              >
+                {message.text}
+              </div>
             </div>
+
+            {message.link && (
+              <div className="mt-2 flex justify-start">
+                <Link
+                  href={message.link.path}
+                  className="rounded-xl border border-blue-600 bg-blue-600/10 px-3 py-2 text-sm font-semibold text-blue-400 transition hover:bg-blue-600/20"
+                >
+                  {message.link.label}
+                </Link>
+              </div>
+            )}
           </div>
         ))}
 

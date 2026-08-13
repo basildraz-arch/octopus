@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { classifyQuestion, type AssistantIntent } from "@/lib/assistant/classify";
+import {
+  classifyQuestion,
+  isNavigationIntent,
+  NAV_ROUTES,
+  type AssistantIntent,
+  type NavigationIntent,
+} from "@/lib/assistant/classify";
 import { askGemini } from "@/lib/gemini";
 import {
   getItemCount,
@@ -9,6 +15,12 @@ import {
   getSalesTotal,
   getTopSellingItem,
 } from "@/repositories/assistant.repository";
+
+export type AssistantAnswer = {
+  answer: string;
+  source: "rules" | "ai" | "navigation";
+  link?: { path: string; label: string };
+};
 
 function startOfDayISO(date: Date): string {
   const d = new Date(date);
@@ -31,7 +43,7 @@ function startOfWeek(date: Date): Date {
 }
 
 async function answerFromRules(
-  intent: Exclude<AssistantIntent, "freeform">,
+  intent: Exclude<AssistantIntent, "freeform" | NavigationIntent>,
   supabase: SupabaseClient,
   businessId: string
 ): Promise<string> {
@@ -154,12 +166,25 @@ export async function answerQuestion(
   supabase: SupabaseClient,
   businessId: string,
   question: string
-): Promise<{ answer: string; source: "rules" | "ai" }> {
+): Promise<AssistantAnswer> {
   const intent = classifyQuestion(question);
 
   if (intent === "freeform") {
     const answer = await answerFromGemini(supabase, businessId, question);
     return { answer, source: "ai" };
+  }
+
+  if (isNavigationIntent(intent)) {
+    const route = NAV_ROUTES[intent];
+
+    return {
+      answer: `تقدر تلاقي ده في صفحة ${route.label} ${route.icon}`,
+      source: "navigation",
+      link: {
+        path: route.path,
+        label: `روح لصفحة ${route.label} ${route.icon}`,
+      },
+    };
   }
 
   const answer = await answerFromRules(intent, supabase, businessId);
