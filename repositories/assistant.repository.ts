@@ -81,6 +81,29 @@ export async function getSalesTotal(
   };
 }
 
+export async function getExpensesTotal(
+  supabase: SupabaseClient,
+  businessId: string,
+  startISO: string,
+  endISO: string
+): Promise<{ total: number; count: number }> {
+  const { data, error } = await supabase
+    .from("expenses")
+    .select("amount")
+    .eq("business_id", businessId)
+    .gte("created_at", startISO)
+    .lte("created_at", endISO);
+
+  if (error) throw error;
+
+  const rows = data ?? [];
+
+  return {
+    total: rows.reduce((sum, expense) => sum + Number(expense.amount), 0),
+    count: rows.length,
+  };
+}
+
 export async function getTopSellingItem(
   supabase: SupabaseClient,
   businessId: string,

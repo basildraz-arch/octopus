@@ -4,21 +4,29 @@ import {
   classifyQuestion,
   isNavigationIntent,
   NAV_ROUTES,
-  type AssistantIntent,
-  type NavigationIntent,
+  type DataIntent,
 } from "@/lib/assistant/classify";
+import { classifyWithGemini } from "@/lib/assistant/geminiClassify";
 import { askGemini } from "@/lib/gemini";
 import {
   getItemCount,
   getLowStockItems,
   getInventoryValue,
   getSalesTotal,
+  getExpensesTotal,
   getTopSellingItem,
 } from "@/repositories/assistant.repository";
+import { incrementAndCheckGeminiUsage } from "@/repositories/assistantUsage.repository";
+
+const DAILY_GEMINI_LIMIT =
+  Number(process.env.ASSISTANT_GEMINI_DAILY_LIMIT) || 50;
+
+const LIMIT_REACHED_MESSAGE =
+  "وصلت للحد اليومي للأسئلة الذكية النهاردة 🙏 جرّب سؤال من الأسئلة الجاهزة زي: كام صنف عندي؟";
 
 export type AssistantAnswer = {
   answer: string;
-  source: "rules" | "ai" | "navigation";
+  source: "rules" | "ai" | "navigation" | "limit";
   link?: { path: string; label: string };
 };
 
@@ -43,7 +51,7 @@ function startOfWeek(date: Date): Date {
 }
 
 async function answerFromRules(
-  intent: Exclude<AssistantIntent, "freeform" | NavigationIntent>,
+  intent: DataIntent,
   supabase: SupabaseClient,
   businessId: string
 ): Promise<string> {
@@ -91,6 +99,16 @@ async function answerFromRules(
       return `مبيعات الأسبوع ده: ${total.toFixed(2)} جنيه من ${count} عملية بيع.`;
     }
 
+    case "expenses_today": {
+      const { total, count } = await getExpensesTotal(
+        supabase,
+        businessId,
+        startOfDayISO(now),
+        endOfDayISO(now)
+      );
+      return `مصروفات النهاردة: ${total.toFixed(2)} جنيه من ${count} عملية.`;
+    }
+
     case "top_selling": {
       const top = await getTopSellingItem(
         supabase,
@@ -115,25 +133,38 @@ async function answerFromGemini(
 ): Promise<string> {
   const now = new Date();
 
-  const [itemCount, lowStock, inventoryValue, salesToday, salesWeek, topSelling] =
-    await Promise.all([
-      getItemCount(supabase, businessId),
-      getLowStockItems(supabase, businessId),
-      getInventoryValue(supabase, businessId),
-      getSalesTotal(supabase, businessId, startOfDayISO(now), endOfDayISO(now)),
-      getSalesTotal(
-        supabase,
-        businessId,
-        startOfDayISO(startOfWeek(now)),
-        endOfDayISO(now)
-      ),
-      getTopSellingItem(
-        supabase,
-        businessId,
-        startOfDayISO(startOfWeek(now)),
-        endOfDayISO(now)
-      ),
-    ]);
+  const [
+    itemCount,
+    lowStock,
+    inventoryValue,
+    salesToday,
+    salesWeek,
+    expensesToday,
+    topSelling,
+  ] = await Promise.all([
+    getItemCount(supabase, businessId),
+    getLowStockItems(supabase, businessId),
+    getInventoryValue(supabase, businessId),
+    getSalesTotal(supabase, businessId, startOfDayISO(now), endOfDayISO(now)),
+    getSalesTotal(
+      supabase,
+      businessId,
+      startOfDayISO(startOfWeek(now)),
+      endOfDayISO(now)
+    ),
+    getExpensesTotal(
+      supabase,
+      businessId,
+      startOfDayISO(now),
+      endOfDayISO(now)
+    ),
+    getTopSellingItem(
+      supabase,
+      businessId,
+      startOfDayISO(startOfWeek(now)),
+      endOfDayISO(now)
+    ),
+  ]);
 
   const context = {
     عدد_الأصناف: itemCount,
@@ -142,6 +173,7 @@ async function answerFromGemini(
     مبيعات_اليوم: Number(salesToday.total.toFixed(2)),
     عدد_عمليات_البيع_اليوم: salesToday.count,
     مبيعات_الأسبوع: Number(salesWeek.total.toFixed(2)),
+    مصروفات_اليوم: Number(expensesToday.total.toFixed(2)),
     أعلى_صنف_مبيعًا_هذا_الأسبوع: topSelling?.name ?? null,
   };
 
@@ -167,15 +199,11 @@ export async function answerQuestion(
   businessId: string,
   question: string
 ): Promise<AssistantAnswer> {
-  const intent = classifyQuestion(question);
+  // الطبقة 1: قواعد بمطابقة تقريبية - بدون Gemini خالص
+  const ruleIntent = classifyQuestion(question);
 
-  if (intent === "freeform") {
-    const answer = await answerFromGemini(supabase, businessId, question);
-    return { answer, source: "ai" };
-  }
-
-  if (isNavigationIntent(intent)) {
-    const route = NAV_ROUTES[intent];
+  if (isNavigationIntent(ruleIntent)) {
+    const route = NAV_ROUTES[ruleIntent];
 
     return {
       answer: `تقدر تلاقي ده في صفحة ${route.label} ${route.icon}`,
@@ -187,6 +215,40 @@ export async function answerQuestion(
     };
   }
 
-  const answer = await answerFromRules(intent, supabase, businessId);
-  return { answer, source: "rules" };
+  if (ruleIntent !== "freeform") {
+    const answer = await answerFromRules(ruleIntent, supabase, businessId);
+    return { answer, source: "rules" };
+  }
+
+  // الطبقة 2: تصنيف بواسطة Gemini (بدون رد مباشر)
+  const usage1 = await incrementAndCheckGeminiUsage(
+    supabase,
+    businessId,
+    DAILY_GEMINI_LIMIT
+  );
+
+  if (!usage1.allowed) {
+    return { answer: LIMIT_REACHED_MESSAGE, source: "limit" };
+  }
+
+  const geminiIntent = await classifyWithGemini(question);
+
+  if (geminiIntent !== "freeform") {
+    const answer = await answerFromRules(geminiIntent, supabase, businessId);
+    return { answer, source: "rules" };
+  }
+
+  // الطبقة 3: رد حر كامل من Gemini
+  const usage2 = await incrementAndCheckGeminiUsage(
+    supabase,
+    businessId,
+    DAILY_GEMINI_LIMIT
+  );
+
+  if (!usage2.allowed) {
+    return { answer: LIMIT_REACHED_MESSAGE, source: "limit" };
+  }
+
+  const answer = await answerFromGemini(supabase, businessId, question);
+  return { answer, source: "ai" };
 }

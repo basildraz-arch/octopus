@@ -1,3 +1,5 @@
+import { fuzzyIncludes, fuzzyIncludesAny } from "@/lib/assistant/fuzzyMatch";
+
 export type NavigationIntent =
   | "nav_warehouses"
   | "nav_categories"
@@ -12,8 +14,11 @@ export type AssistantIntent =
   | "sales_week"
   | "top_selling"
   | "inventory_value"
+  | "expenses_today"
   | NavigationIntent
   | "freeform";
+
+export type DataIntent = Exclude<AssistantIntent, "freeform" | NavigationIntent>;
 
 export const NAV_ROUTES: Record<
   NavigationIntent,
@@ -44,11 +49,8 @@ function normalize(text: string): string {
     .replace(/[أإآ]/g, "ا")
     .replace(/ى/g, "ي")
     .replace(/ة/g, "ه")
+    .replace(/[؟!.,،؛:]/g, "") // علامات ترقيم
     .replace(/\s+/g, " ");
-}
-
-function includesAny(text: string, keywords: string[]): boolean {
-  return keywords.some((keyword) => text.includes(keyword));
 }
 
 const NAV_TRIGGERS = [
@@ -63,14 +65,14 @@ const NAV_TRIGGERS = [
 ];
 
 function hasNavTrigger(text: string): boolean {
-  return includesAny(text, NAV_TRIGGERS);
+  return fuzzyIncludesAny(text, NAV_TRIGGERS);
 }
 
 export function classifyQuestion(question: string): AssistantIntent {
   const text = normalize(question);
 
   if (
-    includesAny(text, [
+    fuzzyIncludesAny(text, [
       "اعلي صنف",
       "الاكثر مبيعا",
       "اكتر صنف",
@@ -80,48 +82,54 @@ export function classifyQuestion(question: string): AssistantIntent {
     return "top_selling";
   }
 
-  if (includesAny(text, ["قيمه المخزون", "قيمه البضاعه"])) {
+  if (fuzzyIncludesAny(text, ["قيمه المخزون", "قيمه البضاعه"])) {
     return "inventory_value";
   }
 
   if (
-    includesAny(text, ["قليل", "اوشك", "خلص", "خلصت"]) &&
-    includesAny(text, ["صنف", "اصناف", "مخزون"])
+    fuzzyIncludesAny(text, ["قليل", "اوشك", "خلص", "خلصت"]) &&
+    fuzzyIncludesAny(text, ["صنف", "اصناف", "مخزون"])
   ) {
     return "low_stock";
   }
 
-  if (includesAny(text, ["كام صنف", "عدد الاصناف"])) {
+  if (fuzzyIncludesAny(text, ["كام صنف", "عدد الاصناف"])) {
     return "item_count";
   }
 
-  if (text.includes("مبيعات")) {
-    if (includesAny(text, ["الاسبوع", "اسبوع"])) {
+  if (fuzzyIncludes(text, "مبيعات")) {
+    if (fuzzyIncludesAny(text, ["الاسبوع", "اسبوع"])) {
       return "sales_week";
     }
 
-    if (includesAny(text, ["النهارده", "اليوم"])) {
+    if (fuzzyIncludesAny(text, ["النهارده", "اليوم"])) {
       return "sales_today";
     }
   }
 
-  if (hasNavTrigger(text) && includesAny(text, ["مخزون", "مخازن"])) {
+  if (fuzzyIncludesAny(text, ["مصروفات", "مصروف"])) {
+    if (fuzzyIncludesAny(text, ["النهارده", "اليوم"])) {
+      return "expenses_today";
+    }
+  }
+
+  if (hasNavTrigger(text) && fuzzyIncludesAny(text, ["مخزون", "مخازن"])) {
     return "nav_warehouses";
   }
 
-  if (hasNavTrigger(text) && text.includes("فئات")) {
+  if (hasNavTrigger(text) && fuzzyIncludes(text, "فئات")) {
     return "nav_categories";
   }
 
-  if (hasNavTrigger(text) && includesAny(text, ["تقارير", "تقرير"])) {
+  if (hasNavTrigger(text) && fuzzyIncludesAny(text, ["تقارير", "تقرير"])) {
     return "nav_reports";
   }
 
-  if (hasNavTrigger(text) && includesAny(text, ["مبيعات", "بيع"])) {
+  if (hasNavTrigger(text) && fuzzyIncludesAny(text, ["مبيعات", "بيع"])) {
     return "nav_sales";
   }
 
-  if (hasNavTrigger(text) && text.includes("اعدادات")) {
+  if (hasNavTrigger(text) && fuzzyIncludes(text, "اعدادات")) {
     return "nav_settings";
   }
 
