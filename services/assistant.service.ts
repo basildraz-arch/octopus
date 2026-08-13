@@ -199,6 +199,26 @@ ${JSON.stringify(context, null, 2)}
   return askGemini(prompt, systemInstruction);
 }
 
+async function searchItems(
+  supabase: SupabaseClient,
+  businessId: string,
+  nameQuery: string
+) {
+  const items = await getItemNames(supabase, businessId);
+  return items.filter((item) => fuzzyIncludes(normalize(item.name), nameQuery));
+}
+
+async function searchWarehouses(
+  supabase: SupabaseClient,
+  businessId: string,
+  nameQuery: string
+) {
+  const warehouses = await getWarehouseNames(supabase, businessId);
+  return warehouses.filter((wh) =>
+    fuzzyIncludes(normalize(wh.name), nameQuery)
+  );
+}
+
 async function tryEntityLookup(
   supabase: SupabaseClient,
   businessId: string,
@@ -207,69 +227,57 @@ async function tryEntityLookup(
   const request = detectEntityLookup(question);
   if (!request) return null;
 
-  if (request.type === "item") {
-    const items = await getItemNames(supabase, businessId);
-    const matches = items.filter((item) =>
-      fuzzyIncludes(normalize(item.name), request.nameQuery)
-    );
+  const candidateTypes: ("item" | "warehouse")[] =
+    request.type === "unknown" ? ["item", "warehouse"] : [request.type];
 
-    if (matches.length === 0) {
-      return {
-        answer: `مش لاقي صنف باسم "${request.nameQuery}". تأكد من الاسم وجرّب تاني.`,
-        source: "rules",
-      };
-    }
+  for (const type of candidateTypes) {
+    const matches =
+      type === "item"
+        ? await searchItems(supabase, businessId, request.nameQuery)
+        : await searchWarehouses(supabase, businessId, request.nameQuery);
+
+    if (matches.length === 0) continue;
 
     if (matches.length > 1) {
+      const label = type === "item" ? "صنف" : "مخزن";
       const names = matches
         .slice(0, 5)
         .map((m) => `"${m.name}"`)
         .join("، ");
       return {
-        answer: `لقيت أكتر من صنف قريب من "${request.nameQuery}": ${names}. حدد الاسم أكتر؟`,
+        answer: `لقيت أكتر من ${label} قريب من "${request.nameQuery}": ${names}. حدد الاسم أكتر؟`,
         source: "rules",
       };
     }
 
-    const item = matches[0];
+    const match = matches[0];
+
+    if (type === "item") {
+      return {
+        answer: `لقيت صنف "${match.name}" 📦`,
+        source: "navigation",
+        link: {
+          path: `/items/edit/${match.id}`,
+          label: `روح لصفحة "${match.name}" 📦`,
+        },
+      };
+    }
+
     return {
-      answer: `لقيت صنف "${item.name}" 📦`,
+      answer: `لقيت مخزن "${match.name}" 🏭`,
       source: "navigation",
-      link: {
-        path: `/items/edit/${item.id}`,
-        label: `روح لصفحة "${item.name}" 📦`,
-      },
+      link: { path: "/warehouses", label: "روح لصفحة المخازن 🏭" },
     };
   }
 
-  const warehouses = await getWarehouseNames(supabase, businessId);
-  const matches = warehouses.filter((wh) =>
-    fuzzyIncludes(normalize(wh.name), request.nameQuery)
-  );
-
-  if (matches.length === 0) {
-    return {
-      answer: `مش لاقي مخزن باسم "${request.nameQuery}". تأكد من الاسم وجرّب تاني.`,
-      source: "rules",
-    };
+  if (!request.strict) {
+    return null;
   }
 
-  if (matches.length > 1) {
-    const names = matches
-      .slice(0, 5)
-      .map((m) => `"${m.name}"`)
-      .join("، ");
-    return {
-      answer: `لقيت أكتر من مخزن قريب من "${request.nameQuery}": ${names}. حدد الاسم أكتر؟`,
-      source: "rules",
-    };
-  }
-
-  const warehouse = matches[0];
+  const label = request.type === "item" ? "صنف" : "مخزن";
   return {
-    answer: `لقيت مخزن "${warehouse.name}" 🏭`,
-    source: "navigation",
-    link: { path: "/warehouses", label: "روح لصفحة المخازن 🏭" },
+    answer: `مش لاقي ${label} باسم "${request.nameQuery}". تأكد من الاسم وجرّب تاني.`,
+    source: "rules",
   };
 }
 
