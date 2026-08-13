@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import DesktopSidebar from "@/components/layout/DesktopSidebar";
 import BottomNav from "@/components/layout/BottomNav";
 import AppHeader from "@/components/layout/AppHeader";
+import AssistantChat from "@/components/assistant/AssistantChat";
 
 import { useSession } from "@/hooks/useSession";
 import type { FeatureKey } from "@/types/business";
@@ -75,6 +76,8 @@ export default function DashboardLayout({
 
       {/* Bottom Navigation (mobile only) */}
       <BottomNav />
+
+      <AssistantChat />
     </div>
   );
 }
