@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 
@@ -9,9 +9,11 @@ type ChatMessage = {
   role: "user" | "assistant";
   text: string;
   link?: { path: string; label: string };
+  linkResolved?: "confirmed" | "dismissed";
 };
 
 export default function AssistantChat() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -69,6 +71,22 @@ export default function AssistantChat() {
     }
   }
 
+  function handleLinkDecision(
+    index: number,
+    decision: "confirmed" | "dismissed"
+  ) {
+    setMessages((prev) =>
+      prev.map((message, i) =>
+        i === index ? { ...message, linkResolved: decision } : message
+      )
+    );
+
+    if (decision === "confirmed") {
+      const path = messages[index].link?.path;
+      if (path) router.push(path);
+    }
+  }
+
   if (!open) {
     return (
       <button
@@ -117,15 +135,33 @@ export default function AssistantChat() {
               </div>
             </div>
 
-            {message.link && (
-              <div className="mt-2 flex justify-start">
-                <Link
-                  href={message.link.path}
-                  className="rounded-xl border border-blue-600 bg-blue-600/10 px-3 py-2 text-sm font-semibold text-blue-400 transition hover:bg-blue-600/20"
-                >
-                  {message.link.label}
-                </Link>
+            {message.link && !message.linkResolved && (
+              <div className="mt-2 max-w-[85%] space-y-2 rounded-xl border border-blue-600 bg-blue-600/10 p-3">
+                <p className="text-right text-sm text-blue-300">
+                  تحب أوديك لصفحة{" "}
+                  {message.link.label.replace("روح لصفحة ", "")} دلوقتي؟
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => handleLinkDecision(i, "dismissed")}
+                    className="rounded-lg bg-zinc-700 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-zinc-600"
+                  >
+                    ❌ لأ، خليني هنا
+                  </button>
+                  <button
+                    onClick={() => handleLinkDecision(i, "confirmed")}
+                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                  >
+                    ✅ آه وديني
+                  </button>
+                </div>
               </div>
+            )}
+
+            {message.link && message.linkResolved === "dismissed" && (
+              <p className="mt-1 text-sm text-zinc-500">
+                تمام، خليه هنا 👍
+              </p>
             )}
           </div>
         ))}
