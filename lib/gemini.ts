@@ -2,7 +2,7 @@
 // أبدًا من أي component فيه "use client" - عشان GEMINI_API_KEY
 // ميوصلش لمتصفح المستخدم أبدًا.
 
-const GEMINI_MODEL = "gemini-flash-latest";
+const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 const GEMINI_URL =
   `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
