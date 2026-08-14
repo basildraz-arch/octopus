@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useId, useRef, useState, useCallback } from "react";
 import Lottie from "lottie-react";
 
 // ---- Design tokens — matched to the octopus's own palette ----
@@ -30,7 +30,8 @@ function springStep(pos, vel, target, stiffness, damping) {
  *   - a continuous, organic idle sway (independent of the cursor)
  *   - two small overlay dots that track the cursor to fake pupil-tracking,
  *     positioned over the Lottie's own (baked, non-interactive) pupils
- *   - an ink-splash burst on click/tap
+ *   - an ink-splash burst on click/tap, using an SVG goo/turbulence filter
+ *     so the splash reads as organic branching ink, not geometric dots
  *
  * Usage:
  *   import OctopusMascot from "@/components/OctopusMascot";
@@ -47,6 +48,8 @@ export default function OctopusMascot({
   const wrapRef = useRef(null);
   const leftEyeRef = useRef(null);
   const rightEyeRef = useRef(null);
+  const inkLayerRef = useRef(null);
+  const filterId = `octopus-ink-goo-${useId().replace(/:/g, "")}`;
   const [animationData, setAnimationData] = useState(null);
 
   useEffect(() => {
@@ -134,26 +137,25 @@ export default function OctopusMascot({
 
   const spawnInk = useCallback((clientX, clientY) => {
     const wrap = wrapRef.current;
-    if (!wrap) return;
+    const inkLayer = inkLayerRef.current;
+    if (!wrap || !inkLayer) return;
     const rect = wrap.getBoundingClientRect();
     const x = clientX - rect.left;
     const y = clientY - rect.top;
 
-    for (let i = 0; i < 8; i++) {
+    // Plain circles — the goo/turbulence SVG filter on inkLayer is what
+    // gives them the organic, branching "ink diffusing in water" edge,
+    // not the shape of the elements themselves. Kept close together
+    // (small spread) so they overlap enough for the filter to merge them
+    // into one connected plume instead of separate dots.
+    for (let i = 0; i < 7; i++) {
       const drop = document.createElement("div");
-      const dropSize = 4 + Math.random() * 22;
+      const dropSize = 10 + Math.random() * 26;
       const angle = Math.random() * Math.PI * 2;
-      const dist = 25 + Math.random() * 70;
+      const dist = 15 + Math.random() * 55;
       const dx = Math.cos(angle) * dist;
       const dy = Math.sin(angle) * dist;
       const color = INK_COLORS[Math.floor(Math.random() * INK_COLORS.length)];
-
-      // irregular blob shape (not a perfect circle) so it reads as ink, not a bubble
-      const blobRadius = `${40 + Math.random() * 30}% ${40 + Math.random() * 30}% ${
-        40 + Math.random() * 30
-      }% ${40 + Math.random() * 30}% / ${40 + Math.random() * 30}% ${
-        40 + Math.random() * 30
-      }% ${40 + Math.random() * 30}% ${40 + Math.random() * 30}%`;
 
       Object.assign(drop.style, {
         position: "absolute",
@@ -161,16 +163,17 @@ export default function OctopusMascot({
         top: `${y}px`,
         width: "3px",
         height: "3px",
-        borderRadius: blobRadius,
+        borderRadius: "50%",
         background: color,
-        opacity: "0.95",
+        opacity: "0.75",
         pointerEvents: "none",
-        // size/position spread over 0.6s, but opacity fades faster (0.4s) —
-        // reads as ink being absorbed rather than a bubble drifting off
+        // size/position spread over 0.7s so the goo filter has time to
+        // show a connected, branching shape; opacity fades later and
+        // faster, like ink dispersing/being absorbed into water
         transition:
-          "left 0.6s cubic-bezier(0.16, 1, 0.3, 1), top 0.6s cubic-bezier(0.16, 1, 0.3, 1), width 0.6s cubic-bezier(0.16, 1, 0.3, 1), height 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease-out",
+          "left 0.7s cubic-bezier(0.16, 1, 0.3, 1), top 0.7s cubic-bezier(0.16, 1, 0.3, 1), width 0.7s cubic-bezier(0.16, 1, 0.3, 1), height 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease-in 0.25s",
       });
-      wrap.appendChild(drop);
+      inkLayer.appendChild(drop);
 
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -182,7 +185,7 @@ export default function OctopusMascot({
         });
       });
 
-      setTimeout(() => drop.remove(), 650);
+      setTimeout(() => drop.remove(), 800);
     }
 
     // excited bounce, read by the animation loop each frame so it
@@ -215,6 +218,34 @@ export default function OctopusMascot({
     >
       {animationData && (
         <>
+          <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
+            <defs>
+              <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
+                <feColorMatrix
+                  in="blur"
+                  mode="matrix"
+                  values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 25 -10"
+                  result="goo"
+                />
+                <feTurbulence
+                  type="fractalNoise"
+                  baseFrequency="0.025 0.05"
+                  numOctaves="2"
+                  seed="7"
+                  result="noise"
+                />
+                <feDisplacementMap
+                  in="goo"
+                  in2="noise"
+                  scale="30"
+                  xChannelSelector="R"
+                  yChannelSelector="G"
+                />
+              </filter>
+            </defs>
+          </svg>
+
           <Lottie
             animationData={animationData}
             loop
@@ -223,6 +254,16 @@ export default function OctopusMascot({
           />
           <div ref={leftEyeRef} style={eyeDotStyle(EYE_REST.left)} />
           <div ref={rightEyeRef} style={eyeDotStyle(EYE_REST.right)} />
+          <div
+            ref={inkLayerRef}
+            style={{
+              position: "absolute",
+              inset: 0,
+              filter: `url(#${filterId})`,
+              mixBlendMode: "screen",
+              pointerEvents: "none",
+            }}
+          />
         </>
       )}
     </div>
