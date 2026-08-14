@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { AlertTriangle, Loader2 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
 import { finishSignup } from "@/services/auth.service";
@@ -70,11 +71,11 @@ export default function SignupCompletePage() {
       : "");
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-6">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center shadow-2xl">
+    <main className="flex min-h-screen items-center justify-center bg-ink-950 px-6">
+      <div className="w-full max-w-md rounded-2xl border border-ink-600 bg-ink-800 p-8 text-center shadow-2xl">
         {displayError ? (
           <>
-            <p className="text-5xl">⚠️</p>
+            <AlertTriangle size={48} className="mx-auto text-red-400" />
 
             <p className="mt-4 text-red-400">
               {displayError}
@@ -82,16 +83,16 @@ export default function SignupCompletePage() {
 
             <Link
               href="/login"
-              className="mt-6 inline-block text-sm text-zinc-400 hover:text-white"
+              className="mt-6 inline-block text-sm text-mist hover:text-paper"
             >
               الرجوع لتسجيل الدخول
             </Link>
           </>
         ) : (
           <>
-            <p className="text-5xl">⏳</p>
+            <Loader2 size={48} className="mx-auto animate-spin text-splash" />
 
-            <p className="mt-4 text-zinc-300">
+            <p className="mt-4 text-mist">
               جارِ إعداد حسابك...
             </p>
           </>

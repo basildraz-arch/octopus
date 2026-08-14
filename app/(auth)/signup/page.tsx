@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { CheckCircle2, Rocket, Mail, ArrowRight } from "lucide-react";
 
 import { registerBusiness } from "@/services/auth.service";
 import { BUSINESS_TEMPLATES, type BusinessTemplateKey } from "@/lib/businessTemplates";
@@ -138,20 +139,18 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-6 py-12">
-      <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-2xl">
+    <main className="flex min-h-screen items-center justify-center bg-ink-950 px-6 py-12">
+      <div className="w-full max-w-lg rounded-2xl border border-ink-600 bg-ink-800 p-8 shadow-2xl">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold">
-            🐙 Octopus
-          </h1>
+          <h1 className="text-4xl font-bold">Octopus</h1>
 
-          <p className="mt-3 text-zinc-400">{subtitles[step]}</p>
+          <p className="mt-3 text-mist">{subtitles[step]}</p>
         </div>
 
         {step === 0 && (
           <form onSubmit={handleInviteSubmit} className="space-y-5">
             <div>
-              <label className="mb-2 block text-sm text-zinc-300">
+              <label className="mb-2 block text-sm text-mist">
                 كود الدعوة
               </label>
               <input
@@ -159,7 +158,7 @@ export default function SignupPage() {
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value)}
                 required
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+                className="w-full rounded-xl border border-ink-600 bg-ink-900 px-4 py-3 text-paper outline-none transition focus:border-splash"
               />
             </div>
 
@@ -170,7 +169,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={verifyingInvite}
-              className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+              className="w-full rounded-xl bg-splash py-3 font-semibold text-ink-950 transition hover:bg-splash-deep disabled:opacity-50"
             >
               {verifyingInvite ? "جارِ التحقق..." : "متابعة"}
             </button>
@@ -180,7 +179,7 @@ export default function SignupPage() {
         {step === 1 && (
           <form onSubmit={handleStep1Submit} className="space-y-5">
             <div>
-              <label className="mb-2 block text-sm text-zinc-300">
+              <label className="mb-2 block text-sm text-mist">
                 اسمك
               </label>
               <input
@@ -188,12 +187,12 @@ export default function SignupPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+                className="w-full rounded-xl border border-ink-600 bg-ink-900 px-4 py-3 text-paper outline-none transition focus:border-splash"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm text-zinc-300">
+              <label className="mb-2 block text-sm text-mist">
                 اسم البيزنس
               </label>
               <input
@@ -201,12 +200,12 @@ export default function SignupPage() {
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 required
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+                className="w-full rounded-xl border border-ink-600 bg-ink-900 px-4 py-3 text-paper outline-none transition focus:border-splash"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm text-zinc-300">
+              <label className="mb-2 block text-sm text-mist">
                 البريد الإلكتروني
               </label>
               <input
@@ -215,12 +214,12 @@ export default function SignupPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="example@email.com"
                 required
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+                className="w-full rounded-xl border border-ink-600 bg-ink-900 px-4 py-3 text-paper outline-none transition focus:border-splash"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm text-zinc-300">
+              <label className="mb-2 block text-sm text-mist">
                 كلمة المرور
               </label>
               <input
@@ -228,12 +227,12 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+                className="w-full rounded-xl border border-ink-600 bg-ink-900 px-4 py-3 text-paper outline-none transition focus:border-splash"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm text-zinc-300">
+              <label className="mb-2 block text-sm text-mist">
                 تأكيد كلمة المرور
               </label>
               <input
@@ -241,7 +240,7 @@ export default function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+                className="w-full rounded-xl border border-ink-600 bg-ink-900 px-4 py-3 text-paper outline-none transition focus:border-splash"
               />
             </div>
 
@@ -249,7 +248,7 @@ export default function SignupPage() {
 
             <button
               type="submit"
-              className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700"
+              className="w-full rounded-xl bg-splash py-3 font-semibold text-ink-950 transition hover:bg-splash-deep"
             >
               التالي
             </button>
@@ -258,7 +257,7 @@ export default function SignupPage() {
 
         {step === 2 && (
           <div className="space-y-4">
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-mist">
               اختر الشكل الأقرب لمحلك
             </p>
 
@@ -266,14 +265,14 @@ export default function SignupPage() {
               <button
                 key={template.key}
                 onClick={() => handleShapeSelect(template.key)}
-                className="flex w-full items-center gap-4 rounded-2xl border border-zinc-700 bg-zinc-800/50 p-6 text-right transition hover:border-blue-500 hover:bg-blue-600/10"
+                className="flex w-full items-center gap-4 rounded-2xl border border-ink-600 bg-ink-700/50 p-6 text-right transition hover:border-splash hover:bg-splash/10"
               >
                 <span className="text-5xl">{template.icon}</span>
                 <span>
                   <span className="block text-lg font-bold">
                     {template.title}
                   </span>
-                  <span className="mt-1 block text-sm text-zinc-400">
+                  <span className="mt-1 block text-sm text-mist">
                     {template.description}
                   </span>
                 </span>
@@ -282,18 +281,19 @@ export default function SignupPage() {
 
             <button
               onClick={() => setStep(1)}
-              className="w-full text-center text-sm text-zinc-400 hover:text-white"
+              className="flex w-full items-center justify-center gap-1 text-center text-sm text-mist hover:text-paper"
             >
-              ← رجوع
+              <ArrowRight size={14} />
+              رجوع
             </button>
           </div>
         )}
 
         {step === 3 && (
           <div className="space-y-6 text-center">
-            <p className="text-5xl">✅</p>
+            <CheckCircle2 size={48} className="mx-auto text-splash" />
 
-            <p className="text-zinc-300">
+            <p className="text-mist">
               هنجهزلك حساب بيزنسك بالإعدادات المناسبة لنوع نشاطك تلقائيًا
             </p>
 
@@ -302,15 +302,22 @@ export default function SignupPage() {
             <button
               onClick={handleRegister}
               disabled={loading}
-              className="w-full rounded-xl bg-blue-600 py-4 text-lg font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-splash py-4 text-lg font-bold text-ink-950 transition hover:bg-splash-deep disabled:opacity-50"
             >
-              {loading ? "جارِ إنشاء الحساب..." : "ابدأ الآن 🚀"}
+              {loading ? (
+                "جارِ إنشاء الحساب..."
+              ) : (
+                <>
+                  <Rocket size={20} />
+                  ابدأ الآن
+                </>
+              )}
             </button>
 
             <button
               onClick={() => setStep(4)}
               disabled={loading}
-              className="block w-full text-center text-sm text-zinc-400 hover:text-white"
+              className="block w-full text-center text-sm text-mist hover:text-paper"
             >
               عايز تعدل الإعدادات؟
             </button>
@@ -318,16 +325,17 @@ export default function SignupPage() {
             <button
               onClick={() => setStep(2)}
               disabled={loading}
-              className="block w-full text-center text-sm text-zinc-500 hover:text-white"
+              className="flex w-full items-center justify-center gap-1 text-center text-sm text-mist hover:text-paper"
             >
-              ← رجوع
+              <ArrowRight size={14} />
+              رجوع
             </button>
           </div>
         )}
 
         {step === 4 && (
           <div className="space-y-5">
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-mist">
               الميزات الموصى بها معلّمة تلقائيًا — عدّل زي ما يريحك
             </p>
 
@@ -335,7 +343,7 @@ export default function SignupPage() {
               {ALL_FEATURES.map((feature) => (
                 <label
                   key={feature}
-                  className="flex items-start gap-3 rounded-lg border border-zinc-700 bg-zinc-950 p-3"
+                  className="flex items-start gap-3 rounded-lg border border-ink-600 bg-ink-900 p-3"
                 >
                   <input
                     type="checkbox"
@@ -349,7 +357,7 @@ export default function SignupPage() {
                     <span className="block text-sm font-semibold">
                       {FEATURE_LABELS[feature]}
                     </span>
-                    <span className="mt-1 block text-sm text-zinc-400">
+                    <span className="mt-1 block text-sm text-mist">
                       {FEATURE_DESCRIPTIONS[feature]}
                     </span>
                   </span>
@@ -360,7 +368,7 @@ export default function SignupPage() {
             {error && <p className="text-sm text-red-500">{error}</p>}
 
             {loading && (
-              <p className="text-center text-sm text-zinc-400">
+              <p className="text-center text-sm text-mist">
                 جارِ إنشاء الحساب...
               </p>
             )}
@@ -368,7 +376,7 @@ export default function SignupPage() {
             <button
               onClick={handleRegister}
               disabled={loading}
-              className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+              className="w-full rounded-xl bg-splash py-3 font-semibold text-ink-950 transition hover:bg-splash-deep disabled:opacity-50"
             >
               إنشاء الحساب
             </button>
@@ -376,19 +384,21 @@ export default function SignupPage() {
             <button
               onClick={() => setStep(3)}
               disabled={loading}
-              className="w-full text-center text-sm text-zinc-400 hover:text-white"
+              className="flex w-full items-center justify-center gap-1 text-center text-sm text-mist hover:text-paper"
             >
-              ← رجوع
+              <ArrowRight size={14} />
+              رجوع
             </button>
           </div>
         )}
 
         {step === 5 && (
           <div className="space-y-5 text-center">
-            <p className="text-5xl">📧</p>
-            <p className="text-zinc-300">
+            <Mail size={48} className="mx-auto text-splash" />
+
+            <p className="text-mist">
               بعتنالك رابط تأكيد على{" "}
-              <span className="font-semibold text-white">{email}</span>.
+              <span className="font-semibold text-paper">{email}</span>.
               افتح بريدك ودوس على الرابط عشان تفعّل حسابك.
             </p>
           </div>
@@ -396,7 +406,7 @@ export default function SignupPage() {
 
         {step !== 5 && (
           <div className="mt-6 flex justify-center text-sm">
-            <Link href="/login" className="text-zinc-400 hover:text-white">
+            <Link href="/login" className="text-mist hover:text-paper">
               عندك حساب بالفعل؟ سجّل دخولك
             </Link>
           </div>
