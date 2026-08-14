@@ -95,7 +95,7 @@ export default function AssistantChat() {
         aria-label="اسأل الأخطبوط"
       >
         <img
-          src="/hebr-mascot1.jpg"
+          src="/hebr-final-1.jpg"
           alt="حبر"
           className="h-full w-full rounded-full object-cover"
         />
@@ -108,7 +108,7 @@ export default function AssistantChat() {
       <div className="flex items-center justify-between border-b border-zinc-800 p-4">
         <h2 className="flex items-center gap-2 font-bold">
           <img
-            src="/hebr-mascot1.jpg"
+            src="/hebr-final-1.jpg"
             alt="حبر"
             className="h-6 w-6 animate-pulse rounded-full object-cover"
           />

@@ -7,14 +7,20 @@ export default function LoginPage() {
   const router = useRouter();
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-6">
+    <main className="flex min-h-screen items-center justify-center bg-[#05070E] px-6">
 
-      <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
+      <div className="w-full max-w-lg rounded-2xl border border-[#2A2F42] bg-[#12151F] p-8">
 
-        <div className="mb-10 text-center">
+        <div className="mb-10 flex flex-col items-center text-center">
 
-          <h1 className="text-4xl font-bold">
-            🐙 Octopus
+          <img
+            src="/hebr-final-1.jpg"
+            alt="حبر"
+            className="h-[140px] w-[140px] rounded-full object-cover shadow-lg"
+          />
+
+          <h1 className="mt-5 text-3xl font-bold">
+            Octopus
           </h1>
 
           <p className="mt-3 text-zinc-400">
@@ -27,7 +33,7 @@ export default function LoginPage() {
 
           <button
             onClick={() => router.push("/login/owner")}
-            className="w-full rounded-2xl border border-blue-500 bg-blue-600/10 p-6 text-right transition hover:bg-blue-600/20"
+            className="w-full rounded-2xl border border-[#17C3B2] bg-[#17C3B2]/10 p-6 text-right transition hover:bg-[#17C3B2]/20"
           >
             <h2 className="text-xl font-bold">
               👑 صاحب النشاط
@@ -40,7 +46,7 @@ export default function LoginPage() {
 
           <button
             onClick={() => router.push("/login/employee")}
-            className="w-full rounded-2xl border border-zinc-700 bg-zinc-800/50 p-6 text-right transition hover:bg-zinc-800"
+            className="w-full rounded-2xl border border-[#2A2F42] bg-[#12151F]/50 p-6 text-right transition hover:bg-[#1B1F2E]"
           >
             <h2 className="text-xl font-bold">
               👨‍💼 موظف
