@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Package, Warehouse, Tag, Plus, Search } from "lucide-react";
 
 import ProductTable from "@/components/items/ItemTable";
 
@@ -52,11 +53,12 @@ export default function ItemsPage() {
     <main className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">
-            📦 إدارة الأصناف
+          <h1 className="flex items-center gap-2 text-3xl font-bold">
+            <Package size={28} />
+            إدارة الأصناف
           </h1>
 
-          <p className="mt-1 text-zinc-400">
+          <p className="mt-1 text-mist">
             إجمالي الأصناف: {items.length}
           </p>
         </div>
@@ -64,30 +66,33 @@ export default function ItemsPage() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link
             href="/warehouses"
-            className="rounded-lg bg-zinc-700 px-5 py-3 text-center font-semibold transition hover:bg-zinc-600"
+            className="flex items-center justify-center gap-2 rounded-lg bg-ink-700 px-5 py-3 text-center font-semibold transition hover:bg-ink-600"
           >
-            🏭 إدارة المخازن
+            <Warehouse size={18} />
+            إدارة المخازن
           </Link>
 
           <Link
             href="/categories"
-            className="rounded-lg bg-zinc-700 px-5 py-3 text-center font-semibold transition hover:bg-zinc-600"
+            className="flex items-center justify-center gap-2 rounded-lg bg-ink-700 px-5 py-3 text-center font-semibold transition hover:bg-ink-600"
           >
-            🏷️ إدارة الفئات
+            <Tag size={18} />
+            إدارة الفئات
           </Link>
 
           <Link
             href="/items/new"
-            className="rounded-lg bg-blue-600 px-5 py-3 text-center font-semibold transition hover:bg-blue-700"
+            className="flex items-center justify-center gap-2 rounded-lg bg-splash px-5 py-3 text-center font-semibold text-ink-950 transition hover:bg-splash-deep"
           >
-            ➕ إضافة صنف
+            <Plus size={18} />
+            إضافة صنف
           </Link>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+          <p className="text-sm text-mist">
             عدد الأصناف
           </p>
 
@@ -96,8 +101,8 @@ export default function ItemsPage() {
           </h2>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+          <p className="text-sm text-mist">
             قيمة المخزون
           </p>
 
@@ -106,8 +111,8 @@ export default function ItemsPage() {
           </h2>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+          <p className="text-sm text-mist">
             أصناف قليلة
           </p>
 
@@ -123,14 +128,21 @@ export default function ItemsPage() {
         </div>
       </div>
 
-      <input
-        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-4 outline-none"
-        placeholder="🔍 ابحث باسم الصنف أو الباركود..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <div className="relative">
+        <Search
+          size={18}
+          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-mist"
+        />
 
-      <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+        <input
+          className="w-full rounded-xl border border-ink-600 bg-ink-800 p-4 pr-11 outline-none"
+          placeholder="ابحث باسم الصنف أو الباركود..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-ink-600 bg-ink-800">
         {loading ? (
           <div className="p-8 text-center">
             جار تحميل الأصناف...

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Package, Sparkles, Pencil, Pause, Play } from "lucide-react";
 import type { Item } from "@/types/item";
 
 type Props = {
@@ -32,7 +33,7 @@ export default function ProductTable({
           return (
             <div
               key={item.id}
-              className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+              className="rounded-xl border border-ink-600 bg-ink-900 p-4"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -40,14 +41,19 @@ export default function ProductTable({
                     {item.name}
                   </h3>
 
-                  <p className="mt-1 text-xs text-zinc-400">
-                    {item.item_type === "service" ? "💈 خدمة" : "📦 منتج"}
+                  <p className="mt-1 flex items-center gap-1 text-xs text-mist">
+                    {item.item_type === "service" ? (
+                      <Sparkles size={13} />
+                    ) : (
+                      <Package size={13} />
+                    )}
+                    {item.item_type === "service" ? "خدمة" : "منتج"}
                     {item.barcode ? ` · ${item.barcode}` : ""}
                   </p>
                 </div>
 
                 {!item.active ? (
-                  <span className="shrink-0 rounded bg-zinc-700 px-2 py-1 text-xs">
+                  <span className="shrink-0 rounded bg-ink-600 px-2 py-1 text-xs">
                     متوقف
                   </span>
                 ) : low ? (
@@ -62,7 +68,7 @@ export default function ProductTable({
               </div>
 
               <div className="mt-3 flex items-center justify-between text-sm">
-                <span className="text-zinc-400">
+                <span className="text-mist">
                   البيع:{" "}
                   <span className="font-bold text-green-400">
                     {item.sell_price}
@@ -70,9 +76,9 @@ export default function ProductTable({
                 </span>
 
                 {item.has_stock && (
-                  <span className="text-zinc-400">
+                  <span className="text-mist">
                     المخزون:{" "}
-                    <span className="font-semibold text-white">
+                    <span className="font-semibold text-paper">
                       {item.stock}
                     </span>
                   </span>
@@ -82,20 +88,31 @@ export default function ProductTable({
               <div className="mt-4 flex gap-2">
                 <Link
                   href={`/items/edit/${item.id}`}
-                  className="flex-1 rounded bg-blue-600 px-3 py-2 text-center text-sm text-white hover:bg-blue-700"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded bg-splash px-3 py-2 text-center text-sm text-ink-950 hover:bg-splash-deep"
                 >
-                  ✏️ تعديل
+                  <Pencil size={14} />
+                  تعديل
                 </Link>
 
                 <button
                   onClick={() => onToggleActive(item)}
-                  className={`flex-1 rounded px-3 py-2 text-sm text-white transition ${
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded px-3 py-2 text-sm text-paper transition ${
                     item.active
-                      ? "bg-zinc-700 hover:bg-zinc-600"
+                      ? "bg-ink-700 hover:bg-ink-600"
                       : "bg-green-600 hover:bg-green-700"
                   }`}
                 >
-                  {item.active ? "⏸ تعطيل" : "▶ تفعيل"}
+                  {item.active ? (
+                    <>
+                      <Pause size={14} />
+                      تعطيل
+                    </>
+                  ) : (
+                    <>
+                      <Play size={14} />
+                      تفعيل
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -105,7 +122,7 @@ export default function ProductTable({
 
       {/* Desktop: Table */}
       <table className="hidden w-full md:table">
-        <thead className="bg-zinc-800">
+        <thead className="bg-ink-700">
           <tr>
             <th className="p-4 text-right">الباركود</th>
             <th className="p-4 text-right">اسم الصنف</th>
@@ -128,7 +145,7 @@ export default function ProductTable({
             return (
               <tr
                 key={item.id}
-                className="border-t border-zinc-800 hover:bg-zinc-800/40"
+                className="border-t border-ink-600 hover:bg-ink-700/40"
               >
                 <td className="p-4">
                   {item.barcode || "-"}
@@ -138,10 +155,15 @@ export default function ProductTable({
                   {item.name}
                 </td>
 
-                <td className="p-4 text-center">
-                  {item.item_type === "service"
-                    ? "💈 خدمة"
-                    : "📦 منتج"}
+                <td className="p-4">
+                  <div className="flex items-center justify-center gap-1.5">
+                    {item.item_type === "service" ? (
+                      <Sparkles size={15} />
+                    ) : (
+                      <Package size={15} />
+                    )}
+                    {item.item_type === "service" ? "خدمة" : "منتج"}
+                  </div>
                 </td>
 
                 <td className="p-4 text-center">
@@ -164,7 +186,7 @@ export default function ProductTable({
 
                 <td className="p-4 text-center">
                   {!item.active ? (
-                    <span className="rounded bg-zinc-700 px-3 py-1 text-xs">
+                    <span className="rounded bg-ink-600 px-3 py-1 text-xs">
                       متوقف
                     </span>
                   ) : low ? (
@@ -182,20 +204,31 @@ export default function ProductTable({
                   <div className="flex justify-center gap-2">
                     <Link
                       href={`/items/edit/${item.id}`}
-                      className="rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700"
+                      className="flex items-center gap-1.5 rounded bg-splash px-3 py-1 text-sm text-ink-950 hover:bg-splash-deep"
                     >
-                      ✏️ تعديل
+                      <Pencil size={14} />
+                      تعديل
                     </Link>
 
                     <button
                       onClick={() => onToggleActive(item)}
-                      className={`rounded px-3 py-1 text-sm text-white transition ${
+                      className={`flex items-center gap-1.5 rounded px-3 py-1 text-sm text-paper transition ${
                         item.active
-                          ? "bg-zinc-700 hover:bg-zinc-600"
+                          ? "bg-ink-700 hover:bg-ink-600"
                           : "bg-green-600 hover:bg-green-700"
                       }`}
                     >
-                      {item.active ? "⏸ تعطيل" : "▶ تفعيل"}
+                      {item.active ? (
+                        <>
+                          <Pause size={14} />
+                          تعطيل
+                        </>
+                      ) : (
+                        <>
+                          <Play size={14} />
+                          تفعيل
+                        </>
+                      )}
                     </button>
                   </div>
                 </td>
