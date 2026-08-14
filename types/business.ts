@@ -57,6 +57,10 @@ export interface Business {
 
   trial_end?: string;
 
+  trial_ends_at: string;
+
+  subscription_expires_at: string | null;
+
   created_at: string;
 
   updated_at: string;
