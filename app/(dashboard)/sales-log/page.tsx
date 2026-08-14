@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { ClipboardList } from "lucide-react";
 
 import {
   getSalesByDateRange,
@@ -61,17 +62,18 @@ function SalesLogContent() {
   return (
     <main className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">
-          📒 سجل المبيعات
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          <ClipboardList size={28} />
+          سجل المبيعات
         </h1>
 
-        <p className="mt-1 text-zinc-400">
+        <p className="mt-1 text-mist">
           تابع مبيعات محلك أول بأول
         </p>
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <p className="text-sm text-zinc-400">
+      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+        <p className="text-sm text-mist">
           إجمالي المبيعات في الفترة المحددة
         </p>
 
@@ -79,14 +81,14 @@ function SalesLogContent() {
           {periodTotal.toFixed(2)} ج
         </h2>
 
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-mist">
           {sales.length} عملية بيع
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-1 block text-sm text-zinc-400">
+          <label className="mb-1 block text-sm text-mist">
             من
           </label>
 
@@ -94,12 +96,12 @@ function SalesLogContent() {
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-800 p-3 text-paper outline-none"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm text-zinc-400">
+          <label className="mb-1 block text-sm text-mist">
             إلى
           </label>
 
@@ -107,17 +109,17 @@ function SalesLogContent() {
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-800 p-3 text-paper outline-none"
           />
         </div>
       </div>
 
       {loading ? (
-        <div className="p-8 text-center text-zinc-400">
+        <div className="p-8 text-center text-mist">
           جارِ التحميل...
         </div>
       ) : sales.length === 0 ? (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-8 text-center text-mist">
           لا توجد مبيعات في هذه الفترة
         </div>
       ) : (
@@ -125,10 +127,10 @@ function SalesLogContent() {
           {sales.map((sale) => (
             <details
               key={sale.id}
-              className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+              className="rounded-xl border border-ink-600 bg-ink-800 p-4"
             >
               <summary className="flex cursor-pointer items-center justify-between">
-                <span className="text-sm text-zinc-400">
+                <span className="text-sm text-mist">
                   {new Date(sale.created_at).toLocaleString("ar-EG", {
                     dateStyle: "medium",
                     timeStyle: "short",
@@ -140,11 +142,11 @@ function SalesLogContent() {
                 </span>
               </summary>
 
-              <div className="mt-3 space-y-1 border-t border-zinc-800 pt-3">
+              <div className="mt-3 space-y-1 border-t border-ink-600 pt-3">
                 {sale.sale_items.map((line) => (
                   <div
                     key={line.id}
-                    className="flex justify-between text-sm text-zinc-300"
+                    className="flex justify-between text-sm text-mist"
                   >
                     <span>
                       {line.items?.name ?? "صنف محذوف"} × {line.quantity.toFixed(2)}
@@ -168,7 +170,7 @@ export default function SalesLogPage() {
   return (
     <Suspense
       fallback={
-        <main className="p-8 text-center text-zinc-400">
+        <main className="p-8 text-center text-mist">
           جارِ التحميل...
         </main>
       }
