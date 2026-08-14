@@ -3,13 +3,15 @@
 import { ReactNode, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import { ShoppingCart, Wallet } from "lucide-react";
 
 import { useSession } from "@/hooks/useSession";
 import { logout } from "@/services/auth.service";
+import AssistantChat from "@/components/assistant/AssistantChat";
 
 const tabs = [
-  { title: "🛒 بيع", href: "/sales" },
-  { title: "💸 مصروف", href: "/expenses" },
+  { title: "بيع", href: "/sales", icon: ShoppingCart },
+  { title: "مصروف", href: "/expenses", icon: Wallet },
 ];
 
 export default function PosLayout({
@@ -41,41 +43,46 @@ export default function PosLayout({
 
   if (loading || !user || !hasFeature("pos_sales")) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-white">
+      <div className="flex min-h-screen items-center justify-center bg-ink-950 text-paper">
         جارِ التحميل...
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
+    <div className="min-h-screen bg-ink-950 text-paper">
 
-      <header className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 py-3">
+      <header className="flex items-center justify-between border-b border-ink-600 bg-ink-800 px-4 py-3">
         <div className="flex items-center gap-4">
           <h1 className="text-lg font-bold">
             🐙 Octopus
           </h1>
 
           <nav className="flex gap-2">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                  pathname === tab.href
-                    ? "bg-blue-600 text-white"
-                    : "text-zinc-400 hover:bg-zinc-800"
-                }`}
-              >
-                {tab.title}
-              </Link>
-            ))}
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                    pathname === tab.href
+                      ? "bg-splash text-ink-950"
+                      : "text-mist hover:bg-ink-700"
+                  }`}
+                >
+                  <Icon size={16} />
+                  {tab.title}
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
         <button
           onClick={handleLogout}
-          className="rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700 transition"
+          className="rounded-lg bg-ink-700 px-3 py-2 text-sm hover:bg-ink-600 transition"
         >
           خروج
         </button>
@@ -85,10 +92,7 @@ export default function PosLayout({
         {children}
       </main>
 
-      {/* مساحة محجوزة لمساعد الأخطبوط الذكي - هتتفعل في مرحلة لاحقة */}
-      <div className="fixed bottom-4 left-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-2xl shadow-lg">
-        🐙
-      </div>
+      <AssistantChat />
 
     </div>
   );
