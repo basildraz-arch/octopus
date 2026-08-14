@@ -105,8 +105,8 @@ export default function Navigation() {
             className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all
               ${
                 active
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-zinc-800 text-zinc-300"
+                  ? "bg-splash text-ink-950"
+                  : "hover:bg-ink-700 text-mist"
               }`}
           >
             <span className="text-xl">

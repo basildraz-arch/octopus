@@ -53,14 +53,14 @@ export default function DashboardLayout({
     isBlockedByFeature
   ) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-white">
+      <div className="flex min-h-screen items-center justify-center bg-ink-950 text-paper">
         جارِ التحميل...
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-zinc-950 text-white">
+    <div className="flex min-h-screen bg-ink-950 text-paper">
       {/* Desktop Sidebar */}
       <DesktopSidebar />
 

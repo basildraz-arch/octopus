@@ -17,9 +17,9 @@ export default function LoginPage() {
   }, []);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#05070E] px-6">
+    <main className="flex min-h-screen items-center justify-center bg-ink-950 px-6">
 
-      <div className="w-full max-w-lg rounded-2xl border border-[#2A2F42] bg-[#12151F] p-8">
+      <div className="w-full max-w-lg rounded-2xl border border-ink-600 bg-ink-800 p-8">
 
         <div className="mb-10 flex flex-col items-center text-center">
 
@@ -38,11 +38,11 @@ export default function LoginPage() {
             />
           )}
 
-          <h1 className="mt-5 text-3xl font-bold">
+          <h1 className="mt-5 text-3xl font-bold text-paper">
             Octopus
           </h1>
 
-          <p className="mt-3 text-zinc-400">
+          <p className="mt-3 text-mist">
             اختر طريقة تسجيل الدخول
           </p>
 
@@ -52,26 +52,26 @@ export default function LoginPage() {
 
           <button
             onClick={() => router.push("/login/owner")}
-            className="w-full rounded-2xl border border-[#17C3B2] bg-[#17C3B2]/10 p-6 text-right transition hover:bg-[#17C3B2]/20"
+            className="w-full rounded-2xl border border-splash bg-splash/10 p-6 text-right transition hover:bg-splash/20"
           >
             <h2 className="text-xl font-bold">
               👑 صاحب النشاط
             </h2>
 
-            <p className="mt-2 text-sm text-zinc-400">
+            <p className="mt-2 text-sm text-mist">
               إدارة كاملة للنشاط والفروع والموظفين
             </p>
           </button>
 
           <button
             onClick={() => router.push("/login/employee")}
-            className="w-full rounded-2xl border border-[#2A2F42] bg-[#12151F]/50 p-6 text-right transition hover:bg-[#1B1F2E]"
+            className="w-full rounded-2xl border border-ink-600 bg-ink-800/50 p-6 text-right transition hover:bg-ink-700"
           >
             <h2 className="text-xl font-bold">
               👨‍💼 موظف
             </h2>
 
-            <p className="mt-2 text-sm text-zinc-400">
+            <p className="mt-2 text-sm text-mist">
               الدخول إلى شاشة الكاشير والمبيعات
             </p>
           </button>
@@ -81,7 +81,7 @@ export default function LoginPage() {
         <div className="mt-8 flex justify-center text-sm">
           <Link
             href="/signup"
-            className="text-zinc-400 hover:text-white"
+            className="text-mist hover:text-paper"
           >
             مفيش حساب؟ سجّل بيزنسك الآن
           </Link>

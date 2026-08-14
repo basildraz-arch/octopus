@@ -4,6 +4,25 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@theme {
+  --color-ink-950: #05070E;
+  --color-ink-900: #0A0D17;
+  --color-ink-800: #12151F;
+  --color-ink-700: #1B1F2E;
+  --color-ink-600: #2A2F42;
+
+  --color-mist: #9AA1B8;
+  --color-paper: #F3F4F9;
+
+  --color-splash: #17C3B2;
+  --color-splash-deep: #0C8377;
+  --color-splash-dim: #0E3B37;
+
+  --color-quill: #9B7FF5;
+  --color-quill-deep: #6B4FD6;
+  --color-quill-dim: #241C42;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

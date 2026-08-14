@@ -88,7 +88,7 @@ export default function DashboardHomePage() {
 
   if (loading) {
     return (
-      <main className="p-8 text-center text-zinc-400">
+      <main className="p-8 text-center text-mist">
         جارِ التحميل...
       </main>
     );
@@ -102,14 +102,14 @@ export default function DashboardHomePage() {
             🐙 الرئيسية
           </h1>
 
-          <p className="mt-1 text-zinc-400">
+          <p className="mt-1 text-mist">
             نظرة سريعة على مخازنك
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-            <p className="text-sm text-zinc-400">
+          <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+            <p className="text-sm text-mist">
               عدد المخازن
             </p>
 
@@ -118,8 +118,8 @@ export default function DashboardHomePage() {
             </h3>
           </div>
 
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-            <p className="text-sm text-zinc-400">
+          <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+            <p className="text-sm text-mist">
               عدد الأصناف
             </p>
 
@@ -129,8 +129,8 @@ export default function DashboardHomePage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+          <p className="text-sm text-mist">
             قيمة المخزون
           </p>
 
@@ -139,13 +139,13 @@ export default function DashboardHomePage() {
           </h2>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
           <h2 className="mb-4 text-lg font-bold">
             🔀 آخر عمليات النقل
           </h2>
 
           {recentTransfers.length === 0 ? (
-            <p className="text-zinc-400">
+            <p className="text-mist">
               لا توجد عمليات نقل بعد
             </p>
           ) : (
@@ -153,21 +153,21 @@ export default function DashboardHomePage() {
               {recentTransfers.map((transfer) => (
                 <div
                   key={transfer.id}
-                  className="rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-sm"
+                  className="rounded-lg border border-ink-600 bg-ink-950 p-3 text-sm"
                 >
                   <div className="flex justify-between">
                     <span className="font-semibold">
                       {transfer.items?.name ?? "صنف محذوف"}
                     </span>
 
-                    <span className="text-zinc-400">
+                    <span className="text-mist">
                       {new Date(transfer.created_at).toLocaleDateString(
                         "ar-EG"
                       )}
                     </span>
                   </div>
 
-                  <p className="mt-1 text-zinc-400">
+                  <p className="mt-1 text-mist">
                     {transfer.quantity} {transfer.items?.unit ?? ""} من "
                     {transfer.from_warehouse?.name ?? "؟"}" إلى "
                     {transfer.to_warehouse?.name ?? "؟"}"
@@ -181,14 +181,14 @@ export default function DashboardHomePage() {
         <div className="grid grid-cols-2 gap-3">
           <Link
             href="/warehouses"
-            className="rounded-xl bg-blue-600 p-4 text-center font-semibold text-white transition hover:bg-blue-700"
+            className="rounded-xl bg-splash p-4 text-center font-semibold text-ink-950 transition hover:bg-splash-deep"
           >
             🏭 المخازن
           </Link>
 
           <Link
             href="/items"
-            className="rounded-xl bg-zinc-800 p-4 text-center font-semibold text-white transition hover:bg-zinc-700"
+            className="rounded-xl bg-ink-700 p-4 text-center font-semibold text-paper transition hover:bg-ink-600"
           >
             📦 الأصناف
           </Link>
@@ -204,14 +204,14 @@ export default function DashboardHomePage() {
           🐙 الرئيسية
         </h1>
 
-        <p className="mt-1 text-zinc-400">
+        <p className="mt-1 text-mist">
           نظرة سريعة على محلك
         </p>
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-mist">
             حالة اليوم
           </p>
 
@@ -219,7 +219,7 @@ export default function DashboardHomePage() {
             className={`rounded-full px-3 py-1 text-xs font-semibold ${
               shift
                 ? "bg-green-600 text-white"
-                : "bg-zinc-700 text-zinc-300"
+                : "bg-ink-600 text-mist"
             }`}
           >
             {shift ? "مفتوح" : "لسه ما بدأش"}
@@ -230,13 +230,13 @@ export default function DashboardHomePage() {
           {(todayReport?.totalSales ?? 0).toFixed(2)} ج
         </h2>
 
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-mist">
           {todayReport?.saleCount ?? 0} عملية بيع لحد دلوقتي
         </p>
 
         {shift && todayReport && (
-          <div className="mt-3 border-t border-zinc-800 pt-3">
-            <p className="text-sm text-zinc-400">
+          <div className="mt-3 border-t border-ink-600 pt-3">
+            <p className="text-sm text-mist">
               صافي ربح اليوم
             </p>
 
@@ -260,8 +260,8 @@ export default function DashboardHomePage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+          <p className="text-sm text-mist">
             عدد الأصناف
           </p>
 
@@ -270,8 +270,8 @@ export default function DashboardHomePage() {
           </h3>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+          <p className="text-sm text-mist">
             قيمة المخزون
           </p>
 
@@ -284,28 +284,28 @@ export default function DashboardHomePage() {
       <div className="grid grid-cols-2 gap-3">
         <Link
           href="/sales-log"
-          className="rounded-xl bg-blue-600 p-4 text-center font-semibold text-white transition hover:bg-blue-700"
+          className="rounded-xl bg-splash p-4 text-center font-semibold text-ink-950 transition hover:bg-splash-deep"
         >
           📒 سجل المبيعات
         </Link>
 
         <Link
           href="/day-close"
-          className="rounded-xl bg-zinc-800 p-4 text-center font-semibold text-white transition hover:bg-zinc-700"
+          className="rounded-xl bg-ink-700 p-4 text-center font-semibold text-paper transition hover:bg-ink-600"
         >
           🔒 إنهاء اليوم
         </Link>
 
         <Link
           href="/purchases"
-          className="rounded-xl bg-zinc-800 p-4 text-center font-semibold text-white transition hover:bg-zinc-700"
+          className="rounded-xl bg-ink-700 p-4 text-center font-semibold text-paper transition hover:bg-ink-600"
         >
           🚚 تزويد المخزون
         </Link>
 
         <Link
           href="/reports"
-          className="rounded-xl bg-zinc-800 p-4 text-center font-semibold text-white transition hover:bg-zinc-700"
+          className="rounded-xl bg-ink-700 p-4 text-center font-semibold text-paper transition hover:bg-ink-600"
         >
           📊 التقارير
         </Link>
