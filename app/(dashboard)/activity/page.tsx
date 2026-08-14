@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Activity } from "lucide-react";
 
 import {
   getActivityByDate,
@@ -53,11 +54,12 @@ export default function ActivityPage() {
   return (
     <main className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">
-          📈 نشاط المستخدمين
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          <Activity size={28} />
+          نشاط المستخدمين
         </h1>
 
-        <p className="mt-1 text-zinc-400">
+        <p className="mt-1 text-mist">
           صفحة شخصية - غير مرتبطة بأي بيزنس محدد
         </p>
       </div>
@@ -66,15 +68,15 @@ export default function ActivityPage() {
         type="date"
         value={date}
         onChange={(e) => setDate(e.target.value)}
-        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-white outline-none"
+        className="w-full rounded-xl border border-ink-600 bg-ink-800 p-4 text-paper outline-none"
       />
 
       {loading ? (
-        <div className="p-8 text-center text-zinc-400">
+        <div className="p-8 text-center text-mist">
           جارِ التحميل...
         </div>
       ) : data.length === 0 ? (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-8 text-center text-mist">
           لا يوجد نشاط في هذا اليوم
         </div>
       ) : (
@@ -82,24 +84,24 @@ export default function ActivityPage() {
           {data.map((row) => (
             <div
               key={row.userId}
-              className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+              className="rounded-xl border border-ink-600 bg-ink-800 p-4"
             >
               <div className="flex items-center justify-between">
-                <span className="font-bold text-white">
+                <span className="font-bold text-paper">
                   {row.userName}
                 </span>
 
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-mist">
                   {row.businessName}
                 </span>
               </div>
 
-              <div className="mt-2 flex justify-between text-sm text-zinc-400">
+              <div className="mt-2 flex justify-between text-sm text-mist">
                 <span>أول نشاط: {formatTime(row.firstActivity)}</span>
                 <span>آخر نشاط: {formatTime(row.lastActivity)}</span>
               </div>
 
-              <div className="mt-2 text-center font-bold text-blue-400">
+              <div className="mt-2 text-center font-bold text-splash">
                 المدى التقريبي: {formatDuration(row.firstActivity, row.lastActivity)}
               </div>
             </div>
