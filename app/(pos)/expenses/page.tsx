@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Wallet, Save, Trash2 } from "lucide-react";
 
 import {
   createExpense,
@@ -87,17 +88,18 @@ export default function ExpensesPage() {
   const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
 
   return (
-    <main className="min-h-screen bg-gray-950 p-4 text-white md:p-6">
-      <h1 className="mb-6 text-3xl font-bold">
-        💸 مصروفات اليوم
+    <main className="min-h-screen bg-ink-950 p-4 text-paper md:p-6">
+      <h1 className="mb-6 flex items-center gap-2 text-3xl font-bold">
+        <Wallet size={28} />
+        مصروفات اليوم
       </h1>
 
       <form
         onSubmit={handleSubmit}
-        className="mb-6 space-y-3 rounded-xl bg-gray-900 p-4"
+        className="mb-6 space-y-3 rounded-xl border border-ink-600 bg-ink-800 p-4"
       >
         <div>
-          <label className="mb-1 block text-sm text-gray-400">
+          <label className="mb-1 block text-sm text-mist">
             المبلغ
           </label>
 
@@ -107,12 +109,12 @@ export default function ExpensesPage() {
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0"
             required
-            className="w-full rounded-xl bg-gray-800 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm text-gray-400">
+          <label className="mb-1 block text-sm text-mist">
             في إيه؟
           </label>
 
@@ -122,16 +124,23 @@ export default function ExpensesPage() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="مثال: أكل غدا، بنزين..."
             required
-            className="w-full rounded-xl bg-gray-800 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           />
         </div>
 
         <button
           type="submit"
           disabled={saving}
-          className="w-full rounded-xl bg-blue-600 p-3 font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-splash p-3 font-bold text-ink-950 hover:bg-splash-deep disabled:opacity-50"
         >
-          {saving ? "جارِ الحفظ..." : "💾 حفظ المصروف"}
+          {saving ? (
+            "جارِ الحفظ..."
+          ) : (
+            <>
+              <Save size={18} />
+              حفظ المصروف
+            </>
+          )}
         </button>
       </form>
 
@@ -146,11 +155,11 @@ export default function ExpensesPage() {
       </div>
 
       {loading ? (
-        <div className="p-8 text-center text-gray-400">
+        <div className="p-8 text-center text-mist">
           جارِ التحميل...
         </div>
       ) : expenses.length === 0 ? (
-        <div className="rounded-xl bg-gray-900 p-8 text-center text-gray-400">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-8 text-center text-mist">
           لا توجد مصروفات النهاردة
         </div>
       ) : (
@@ -158,14 +167,14 @@ export default function ExpensesPage() {
           {expenses.map((expense) => (
             <div
               key={expense.id}
-              className="flex items-center justify-between rounded-xl bg-gray-900 p-4"
+              className="flex items-center justify-between rounded-xl border border-ink-600 bg-ink-800 p-4"
             >
               <div>
                 <p className="font-semibold">
                   {expense.description}
                 </p>
 
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-mist">
                   {expense.amount.toFixed(2)} ج
                 </p>
               </div>
@@ -174,7 +183,7 @@ export default function ExpensesPage() {
                 onClick={() => handleDelete(expense.id)}
                 className="rounded-lg bg-red-600 px-3 py-2 text-sm hover:bg-red-700"
               >
-                🗑
+                <Trash2 size={16} />
               </button>
             </div>
           ))}
