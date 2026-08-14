@@ -6,21 +6,35 @@ import Lottie from "lottie-react";
 // ---- Design tokens — matched to the octopus's own palette ----
 const INK_COLORS = ["#2FD9C4", "#6C5CE7", "#1FAE9C", "#4C3FB5"];
 
+// Pupil rest position as a fraction of the container size, measured
+// pixel-by-pixel from the rendered artwork (see git history for the
+// measurement script) — not a guess.
+const EYE_REST = {
+  left: { x: 0.408, y: 0.436 },
+  right: { x: 0.570, y: 0.442 },
+};
+const EYE_MAX_OFFSET = 3; // px the pupil overlay is allowed to travel
+
+function springStep(pos, vel, target, stiffness, damping) {
+  const force = (target - pos) * stiffness;
+  const newVel = (vel + force) * damping;
+  return [pos + newVel, newVel];
+}
+
 /**
  * OctopusMascot
  *
  * Renders the real Octopus Lottie animation (public/animations/octopus.json)
  * and layers on top of it:
- *   - a subtle 3D parallax tilt that follows the cursor
+ *   - a spring-driven 3D parallax tilt that follows the cursor
+ *   - a continuous, organic idle sway (independent of the cursor)
+ *   - two small overlay dots that track the cursor to fake pupil-tracking,
+ *     positioned over the Lottie's own (baked, non-interactive) pupils
  *   - an ink-splash burst on click/tap
  *
  * Usage:
  *   import OctopusMascot from "@/components/OctopusMascot";
  *   <OctopusMascot size={220} />
- *
- * Drop this once in your root layout (app/layout.tsx) with `fixed`
- * positioning if you want it persistent across every page, or place it
- * inline on a specific page (e.g. the login screen you already have it on).
  *
  * Uses lottie-react (already a project dependency) instead of lottie-web
  * directly, matching the pattern already used in AssistantChat.tsx.
@@ -31,6 +45,8 @@ export default function OctopusMascot({
   className = "",
 }) {
   const wrapRef = useRef(null);
+  const leftEyeRef = useRef(null);
+  const rightEyeRef = useRef(null);
   const [animationData, setAnimationData] = useState(null);
 
   useEffect(() => {
@@ -48,7 +64,9 @@ export default function OctopusMascot({
     };
   }, [animationPath]);
 
-  // Cursor-follow parallax tilt
+  // Cursor-follow parallax tilt + idle sway + eye tracking, all driven by
+  // one shared animation loop so they compose into a single transform
+  // instead of fighting each other.
   useEffect(() => {
     if (!animationData) return;
     const wrap = wrapRef.current;
@@ -58,6 +76,10 @@ export default function OctopusMascot({
       targetY = 0,
       curX = 0,
       curY = 0,
+      velX = 0,
+      velY = 0,
+      idlePhase = Math.random() * 100,
+      bounceScale = 1,
       raf;
 
     const handleMove = (e) => {
@@ -74,15 +96,34 @@ export default function OctopusMascot({
     };
 
     const tick = () => {
-      curX += (targetX - curX) * 0.15;
-      curY += (targetY - curY) * 0.15;
-      wrap.style.transform = `perspective(600px) rotateY(${curX}deg) rotateX(${-curY}deg)`;
+      idlePhase += 0.02;
+      const idleTiltX = Math.sin(idlePhase * 0.6) * 1.5 + Math.sin(idlePhase * 0.23) * 0.8;
+      const idleBobY = Math.sin(idlePhase * 0.4) * 3;
+
+      [curX, velX] = springStep(curX, velX, targetX, 0.09, 0.82);
+      [curY, velY] = springStep(curY, velY, targetY, 0.09, 0.82);
+      bounceScale += (1 - bounceScale) * 0.2;
+
+      wrap.style.transform = `perspective(600px) translateY(${idleBobY}px) rotateY(${
+        curX + idleTiltX
+      }deg) rotateX(${-curY}deg) scale(${bounceScale})`;
+
+      const eyeOffsetX = (curX / 18) * EYE_MAX_OFFSET;
+      const eyeOffsetY = (curY / 10) * EYE_MAX_OFFSET;
+      const eyeTransform = `translate(${eyeOffsetX}px, ${eyeOffsetY}px)`;
+      if (leftEyeRef.current) leftEyeRef.current.style.transform = eyeTransform;
+      if (rightEyeRef.current) rightEyeRef.current.style.transform = eyeTransform;
+
       raf = requestAnimationFrame(tick);
     };
 
     window.addEventListener("mousemove", handleMove);
     wrap.addEventListener("mouseleave", handleLeave);
     tick();
+
+    wrap.__setBounce = (v) => {
+      bounceScale = v;
+    };
 
     return () => {
       window.removeEventListener("mousemove", handleMove);
@@ -144,13 +185,21 @@ export default function OctopusMascot({
       setTimeout(() => drop.remove(), 650);
     }
 
-    // small excited bounce
-    wrap.style.transition = "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)";
-    wrap.style.transform += " scale(1.08)";
-    setTimeout(() => {
-      wrap.style.transition = "transform 0.15s ease-out";
-    }, 250);
+    // excited bounce, read by the animation loop each frame so it
+    // doesn't get overwritten by the tilt/idle transform
+    if (wrap.__setBounce) wrap.__setBounce(1.08);
   }, []);
+
+  const eyeDotStyle = (rest) => ({
+    position: "absolute",
+    left: `${rest.x * size - 3}px`,
+    top: `${rest.y * size - 3}px`,
+    width: 6,
+    height: 6,
+    borderRadius: "50%",
+    background: "#12151F",
+    pointerEvents: "none",
+  });
 
   return (
     <div
@@ -165,12 +214,16 @@ export default function OctopusMascot({
       }}
     >
       {animationData && (
-        <Lottie
-          animationData={animationData}
-          loop
-          autoplay
-          style={{ width: "100%", height: "100%" }}
-        />
+        <>
+          <Lottie
+            animationData={animationData}
+            loop
+            autoplay
+            style={{ width: "100%", height: "100%" }}
+          />
+          <div ref={leftEyeRef} style={eyeDotStyle(EYE_REST.left)} />
+          <div ref={rightEyeRef} style={eyeDotStyle(EYE_REST.right)} />
+        </>
       )}
     </div>
   );
