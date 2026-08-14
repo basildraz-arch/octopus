@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ArrowLeftRight, ArrowDown } from "lucide-react";
 
 import { getItems } from "@/repositories/item.repository";
 import { getWarehouses } from "@/repositories/warehouse.repository";
@@ -84,7 +85,7 @@ export default function StockTransferPage() {
         quantityValue
       );
 
-      alert(`✅ اتنقل ${quantityValue} ${selectedItem?.unit ?? ""} بنجاح`);
+      alert(`اتنقل ${quantityValue} ${selectedItem?.unit ?? ""} بنجاح`);
 
       setQuantity("");
 
@@ -104,7 +105,7 @@ export default function StockTransferPage() {
 
   if (loading) {
     return (
-      <main className="p-8 text-center text-zinc-400">
+      <main className="p-8 text-center text-mist">
         جارِ التحميل...
       </main>
     );
@@ -113,21 +114,22 @@ export default function StockTransferPage() {
   return (
     <main className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">
-          🔀 نقل مخزون
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          <ArrowLeftRight size={28} />
+          نقل مخزون
         </h1>
 
-        <p className="mt-1 text-zinc-400">
+        <p className="mt-1 text-mist">
           انقل كمية من صنف بين مخزنين
         </p>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900 p-5"
+        className="space-y-4 rounded-xl border border-ink-600 bg-ink-800 p-5"
       >
         <div>
-          <label className="mb-2 block text-sm text-zinc-300">
+          <label className="mb-2 block text-sm text-mist">
             الصنف
           </label>
 
@@ -135,7 +137,7 @@ export default function StockTransferPage() {
             value={selectedItemId}
             onChange={(e) => setSelectedItemId(e.target.value)}
             required
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           >
             <option value="">اختر صنف...</option>
 
@@ -148,7 +150,7 @@ export default function StockTransferPage() {
         </div>
 
         <div>
-          <label className="mb-2 block text-sm text-zinc-300">
+          <label className="mb-2 block text-sm text-mist">
             من مخزن
           </label>
 
@@ -156,7 +158,7 @@ export default function StockTransferPage() {
             value={fromWarehouseId}
             onChange={(e) => setFromWarehouseId(e.target.value)}
             required
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           >
             <option value="">اختر مخزن...</option>
 
@@ -169,20 +171,20 @@ export default function StockTransferPage() {
         </div>
 
         {selectedItem && fromWarehouseId && (
-          <div className="rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-center">
-            <span className="text-sm text-zinc-400">المتاح في المخزن المصدر: </span>
-            <span className="font-bold text-white">
+          <div className="rounded-lg border border-ink-600 bg-ink-900 p-3 text-center">
+            <span className="text-sm text-mist">المتاح في المخزن المصدر: </span>
+            <span className="font-bold text-paper">
               {availableInFromWarehouse} {selectedItem.unit}
             </span>
           </div>
         )}
 
-        <div className="text-center text-2xl text-zinc-500">
-          ⬇️
+        <div className="flex justify-center text-mist">
+          <ArrowDown size={24} />
         </div>
 
         <div>
-          <label className="mb-2 block text-sm text-zinc-300">
+          <label className="mb-2 block text-sm text-mist">
             إلى مخزن
           </label>
 
@@ -190,7 +192,7 @@ export default function StockTransferPage() {
             value={toWarehouseId}
             onChange={(e) => setToWarehouseId(e.target.value)}
             required
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           >
             <option value="">اختر مخزن...</option>
 
@@ -205,7 +207,7 @@ export default function StockTransferPage() {
         </div>
 
         <div>
-          <label className="mb-2 block text-sm text-zinc-300">
+          <label className="mb-2 block text-sm text-mist">
             الكمية
           </label>
 
@@ -215,16 +217,23 @@ export default function StockTransferPage() {
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
             required
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           />
         </div>
 
         <button
           type="submit"
           disabled={saving || !selectedItemId || !fromWarehouseId || !toWarehouseId}
-          className="w-full rounded-xl bg-blue-600 p-4 font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-splash p-4 font-bold text-ink-950 hover:bg-splash-deep disabled:opacity-50"
         >
-          {saving ? "جارِ النقل..." : "🔀 نقل المخزون"}
+          {saving ? (
+            "جارِ النقل..."
+          ) : (
+            <>
+              <ArrowLeftRight size={18} />
+              نقل المخزون
+            </>
+          )}
         </button>
       </form>
     </main>

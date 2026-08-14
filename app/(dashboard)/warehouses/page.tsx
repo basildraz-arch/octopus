@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import {
+  Warehouse as WarehouseIcon,
+  ArrowLeftRight,
+  Plus,
+  Save,
+  CheckCircle2,
+  Pencil,
+  Pause,
+  Play,
+} from "lucide-react";
 
 import {
   getWarehouses,
@@ -121,11 +131,12 @@ export default function WarehousesPage() {
     <main className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">
-            🏭 المخازن
+          <h1 className="flex items-center gap-2 text-3xl font-bold">
+            <WarehouseIcon size={28} />
+            المخازن
           </h1>
 
-          <p className="mt-1 text-zinc-400">
+          <p className="mt-1 text-mist">
             إدارة مواقع تخزين المخزون
           </p>
         </div>
@@ -133,16 +144,18 @@ export default function WarehousesPage() {
         {activeWarehousesCount > 1 && (
           <Link
             href="/warehouses/transfer"
-            className="rounded-lg bg-zinc-700 px-5 py-3 text-center font-semibold transition hover:bg-zinc-600 sm:w-auto"
+            className="flex items-center justify-center gap-2 rounded-lg bg-ink-700 px-5 py-3 text-center font-semibold transition hover:bg-ink-600 sm:w-auto"
           >
-            🔀 نقل مخزون
+            <ArrowLeftRight size={18} />
+            نقل مخزون
           </Link>
         )}
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <h2 className="mb-4 text-lg font-bold">
-          ➕ إضافة مخزن جديد
+      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
+          <Plus size={18} />
+          إضافة مخزن جديد
         </h2>
 
         <form
@@ -154,25 +167,32 @@ export default function WarehousesPage() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="اسم المخزن (مثال: مخزن الفرع الثاني)"
-            className="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            className="flex-1 rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           />
 
           <button
             type="submit"
             disabled={adding || !newName.trim()}
-            className="rounded-xl bg-blue-600 px-6 py-3 font-bold text-white hover:bg-blue-700 disabled:opacity-50 sm:w-auto"
+            className="flex items-center justify-center gap-2 rounded-xl bg-splash px-6 py-3 font-bold text-ink-950 hover:bg-splash-deep disabled:opacity-50 sm:w-auto"
           >
-            {adding ? "جارِ الإضافة..." : "💾 إضافة"}
+            {adding ? (
+              "جارِ الإضافة..."
+            ) : (
+              <>
+                <Save size={18} />
+                إضافة
+              </>
+            )}
           </button>
         </form>
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-8 text-center">
           جارِ تحميل المخازن...
         </div>
       ) : warehouses.length === 0 ? (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-8 text-center text-mist">
           لا توجد مخازن بعد.
         </div>
       ) : (
@@ -180,7 +200,7 @@ export default function WarehousesPage() {
           {warehouses.map((warehouse) => (
             <div
               key={warehouse.id}
-              className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+              className="rounded-xl border border-ink-600 bg-ink-800 p-4"
             >
               {editingId === warehouse.id ? (
                 <input
@@ -188,7 +208,7 @@ export default function WarehousesPage() {
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   autoFocus
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+                  className="w-full rounded-lg border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
                 />
               ) : (
                 <div>
@@ -199,13 +219,13 @@ export default function WarehousesPage() {
                   {(warehouse.is_default || !warehouse.active) && (
                     <div className="mt-1 flex gap-2">
                       {warehouse.is_default && (
-                        <span className="rounded bg-blue-600 px-2 py-1 text-xs">
+                        <span className="rounded bg-splash px-2 py-1 text-xs text-ink-950">
                           افتراضي
                         </span>
                       )}
 
                       {!warehouse.active && (
-                        <span className="rounded bg-zinc-700 px-2 py-1 text-xs">
+                        <span className="rounded bg-ink-600 px-2 py-1 text-xs">
                           معطّل
                         </span>
                       )}
@@ -220,14 +240,15 @@ export default function WarehousesPage() {
                     <button
                       onClick={() => saveEdit(warehouse.id)}
                       disabled={savingEdit || !editName.trim()}
-                      className="flex-1 rounded bg-green-600 px-3 py-2.5 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded bg-green-600 px-3 py-2.5 text-sm text-white hover:bg-green-700 disabled:opacity-50"
                     >
-                      ✅ حفظ
+                      <CheckCircle2 size={15} />
+                      حفظ
                     </button>
 
                     <button
                       onClick={cancelEdit}
-                      className="flex-1 rounded bg-zinc-700 px-3 py-2.5 text-sm text-white hover:bg-zinc-600"
+                      className="flex-1 rounded bg-ink-700 px-3 py-2.5 text-sm text-paper hover:bg-ink-600"
                     >
                       إلغاء
                     </button>
@@ -236,21 +257,32 @@ export default function WarehousesPage() {
                   <>
                     <button
                       onClick={() => startEdit(warehouse)}
-                      className="flex-1 rounded bg-blue-600 px-3 py-2.5 text-sm text-white hover:bg-blue-700"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded bg-splash px-3 py-2.5 text-sm text-ink-950 hover:bg-splash-deep"
                     >
-                      ✏️ تعديل
+                      <Pencil size={14} />
+                      تعديل
                     </button>
 
                     <button
                       onClick={() => toggleActive(warehouse)}
                       disabled={warehouse.is_default && warehouse.active}
-                      className={`flex-1 rounded px-3 py-2.5 text-sm text-white transition disabled:opacity-40 ${
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded px-3 py-2.5 text-sm text-paper transition disabled:opacity-40 ${
                         warehouse.active
-                          ? "bg-zinc-700 hover:bg-zinc-600"
+                          ? "bg-ink-700 hover:bg-ink-600"
                           : "bg-green-600 hover:bg-green-700"
                       }`}
                     >
-                      {warehouse.active ? "⏸ تعطيل" : "▶ تفعيل"}
+                      {warehouse.active ? (
+                        <>
+                          <Pause size={14} />
+                          تعطيل
+                        </>
+                      ) : (
+                        <>
+                          <Play size={14} />
+                          تفعيل
+                        </>
+                      )}
                     </button>
                   </>
                 )}
