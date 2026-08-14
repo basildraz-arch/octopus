@@ -100,7 +100,7 @@ export default function AssistantChat() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 left-4 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-[#12151F] shadow-lg transition hover:scale-105 md:bottom-6"
+        className="fixed bottom-20 left-4 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-ink-800 shadow-lg transition hover:scale-105 md:bottom-6"
         aria-label="اسأل الأخطبوط"
       >
         {animationData ? (
@@ -122,8 +122,8 @@ export default function AssistantChat() {
   }
 
   return (
-    <div className="fixed inset-x-4 bottom-20 z-50 flex max-h-[70vh] flex-col rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-96">
-      <div className="flex items-center justify-between border-b border-zinc-800 p-4">
+    <div className="fixed inset-x-4 bottom-20 z-50 flex max-h-[70vh] flex-col rounded-2xl border border-ink-600 bg-ink-800 shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-96">
+      <div className="flex items-center justify-between border-b border-ink-600 p-4">
         <h2 className="flex items-center gap-2 font-bold">
           {animationData ? (
             <Lottie
@@ -143,7 +143,7 @@ export default function AssistantChat() {
         </h2>
         <button
           onClick={() => setOpen(false)}
-          className="text-zinc-400 hover:text-white"
+          className="text-mist hover:text-paper"
           aria-label="إغلاق"
         >
           ✕
@@ -152,7 +152,7 @@ export default function AssistantChat() {
 
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.length === 0 && (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-mist">
             اسألني أي حاجة عن بيزنسك، زي &quot;قد إيه مبيعاتي النهاردة؟&quot;
           </p>
         )}
@@ -165,8 +165,10 @@ export default function AssistantChat() {
               }`}
             >
               <div
-                className={`max-w-[85%] rounded-xl p-3 text-right text-sm text-white ${
-                  message.role === "user" ? "bg-blue-600" : "bg-zinc-800"
+                className={`max-w-[85%] rounded-xl p-3 text-right text-sm ${
+                  message.role === "user"
+                    ? "bg-splash text-ink-950"
+                    : "bg-ink-700 text-paper"
                 }`}
               >
                 {message.text}
@@ -174,21 +176,21 @@ export default function AssistantChat() {
             </div>
 
             {message.link && !message.linkResolved && (
-              <div className="mt-2 max-w-[85%] space-y-2 rounded-xl border border-blue-600 bg-blue-600/10 p-3">
-                <p className="text-right text-sm text-blue-300">
+              <div className="mt-2 max-w-[85%] space-y-2 rounded-xl border border-splash/40 bg-splash-dim p-3">
+                <p className="text-right text-sm text-splash">
                   تحب أوديك لصفحة{" "}
                   {message.link.label.replace("روح لصفحة ", "")} دلوقتي؟
                 </p>
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={() => handleLinkDecision(i, "dismissed")}
-                    className="rounded-lg bg-zinc-700 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-zinc-600"
+                    className="rounded-lg bg-ink-700 px-3 py-1.5 text-sm font-semibold text-paper transition hover:bg-ink-600"
                   >
                     ❌ لأ، خليني هنا
                   </button>
                   <button
                     onClick={() => handleLinkDecision(i, "confirmed")}
-                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    className="rounded-lg bg-splash px-3 py-1.5 text-sm font-semibold text-ink-950 transition hover:bg-splash-deep"
                   >
                     ✅ آه وديني
                   </button>
@@ -197,33 +199,33 @@ export default function AssistantChat() {
             )}
 
             {message.link && message.linkResolved === "dismissed" && (
-              <p className="mt-1 text-sm text-zinc-500">
+              <p className="mt-1 text-sm text-mist">
                 تمام، خليه هنا 👍
               </p>
             )}
           </div>
         ))}
 
-        {loading && <p className="text-sm text-zinc-500">جارِ التفكير...</p>}
+        {loading && <p className="text-sm text-mist">جارِ التفكير...</p>}
 
         {error && <p className="text-sm text-red-500">{error}</p>}
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="flex gap-2 border-t border-zinc-800 p-3"
+        className="flex gap-2 border-t border-ink-600 p-3"
       >
         <input
           type="text"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="اكتب سؤالك..."
-          className="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
+          className="flex-1 rounded-xl border border-ink-600 bg-ink-900 px-3 py-2 text-sm text-paper outline-none focus:border-splash"
         />
         <button
           type="submit"
           disabled={loading}
-          className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-xl bg-splash px-4 py-2 text-sm font-semibold text-ink-950 transition hover:bg-splash-deep disabled:opacity-50"
         >
           ابعت
         </button>
