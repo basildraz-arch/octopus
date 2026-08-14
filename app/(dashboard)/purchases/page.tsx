@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Truck, Save } from "lucide-react";
 
 import { getItems } from "@/repositories/item.repository";
 import { createPurchase } from "@/repositories/purchase.repository";
@@ -74,7 +75,7 @@ export default function PurchasesPage() {
       );
 
       alert(
-        `✅ اتضاف ${quantityValue} ${selectedItem.unit} لمخزون "${selectedItem.name}"`
+        `اتضاف ${quantityValue} ${selectedItem.unit} لمخزون "${selectedItem.name}"`
       );
 
       setSelectedItemId("");
@@ -92,7 +93,7 @@ export default function PurchasesPage() {
 
   if (loading) {
     return (
-      <main className="p-8 text-center text-zinc-400">
+      <main className="p-8 text-center text-mist">
         جارِ التحميل...
       </main>
     );
@@ -101,22 +102,23 @@ export default function PurchasesPage() {
   return (
     <main className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">
-          🚚 تزويد المخزون
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          <Truck size={28} />
+          تزويد المخزون
         </h1>
 
-        <p className="mt-1 text-zinc-400">
+        <p className="mt-1 text-mist">
           سجّل عملية شراء عشان تضيفها للمخزون
         </p>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900 p-5"
+        className="space-y-4 rounded-xl border border-ink-600 bg-ink-800 p-5"
       >
         {warehouses.length > 1 && (
           <div>
-            <label className="mb-2 block text-sm text-zinc-300">
+            <label className="mb-2 block text-sm text-mist">
               المخزن
             </label>
 
@@ -124,7 +126,7 @@ export default function PurchasesPage() {
               value={selectedWarehouseId}
               onChange={(e) => selectWarehouse(e.target.value)}
               required
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+              className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
             >
               {warehouses.map((warehouse) => (
                 <option key={warehouse.id} value={warehouse.id}>
@@ -136,7 +138,7 @@ export default function PurchasesPage() {
         )}
 
         <div>
-          <label className="mb-2 block text-sm text-zinc-300">
+          <label className="mb-2 block text-sm text-mist">
             الصنف
           </label>
 
@@ -144,7 +146,7 @@ export default function PurchasesPage() {
             value={selectedItemId}
             onChange={(e) => handleSelectItem(e.target.value)}
             required
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           >
             <option value="">اختر صنف...</option>
 
@@ -157,14 +159,14 @@ export default function PurchasesPage() {
         </div>
 
         {selectedItem && (
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-mist">
             المخزون الحالي: {selectedItem.stock} {selectedItem.unit} — سعر
             الشراء الحالي: {selectedItem.buy_price} ج
           </p>
         )}
 
         <div>
-          <label className="mb-2 block text-sm text-zinc-300">
+          <label className="mb-2 block text-sm text-mist">
             الكمية اللي اشتريتها
           </label>
 
@@ -174,12 +176,12 @@ export default function PurchasesPage() {
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
             required
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-sm text-zinc-300">
+          <label className="mb-2 block text-sm text-mist">
             سعر الشراء (اختياري لو اتغيّر)
           </label>
 
@@ -189,16 +191,23 @@ export default function PurchasesPage() {
             value={buyPrice}
             onChange={(e) => setBuyPrice(e.target.value)}
             required
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           />
         </div>
 
         <button
           type="submit"
           disabled={saving || !selectedItem || !selectedWarehouseId}
-          className="w-full rounded-xl bg-blue-600 p-3 font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-splash p-3 font-bold text-ink-950 hover:bg-splash-deep disabled:opacity-50"
         >
-          {saving ? "جارِ الحفظ..." : "💾 حفظ الشراء"}
+          {saving ? (
+            "جارِ الحفظ..."
+          ) : (
+            <>
+              <Save size={18} />
+              حفظ الشراء
+            </>
+          )}
         </button>
       </form>
     </main>
