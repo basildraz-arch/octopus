@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CreditCard } from "lucide-react";
 
 import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/lib/supabase";
@@ -70,7 +71,7 @@ export default function SubscribePage() {
 
   if (sessionLoading || !business) {
     return (
-      <main className="flex min-h-[50vh] items-center justify-center text-zinc-400">
+      <main className="flex min-h-[50vh] items-center justify-center text-mist">
         جارِ التحميل...
       </main>
     );
@@ -88,21 +89,24 @@ export default function SubscribePage() {
   return (
     <main className="mx-auto max-w-lg space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">💳 الاشتراك</h1>
-        <p className="mt-1 text-zinc-400">حالة اشتراكك وطريقة الدفع</p>
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          <CreditCard size={28} />
+          الاشتراك
+        </h1>
+        <p className="mt-1 text-mist">حالة اشتراكك وطريقة الدفع</p>
       </div>
 
       <div
         className={`rounded-xl border p-5 ${
           isActive
-            ? "border-zinc-800 bg-zinc-900"
+            ? "border-ink-600 bg-ink-800"
             : "border-red-800 bg-red-950/30"
         }`}
       >
         {trialActive && (
-          <p className="text-zinc-200">
+          <p className="text-mist">
             باقيلك{" "}
-            <span className="font-bold text-white">
+            <span className="font-bold text-paper">
               {daysRemaining(business.trial_ends_at)}
             </span>{" "}
             يوم في فترتك التجريبية (لحد {formatDate(business.trial_ends_at)}).
@@ -110,9 +114,9 @@ export default function SubscribePage() {
         )}
 
         {!trialActive && subscriptionActive && (
-          <p className="text-zinc-200">
+          <p className="text-mist">
             اشتراكك فعّال لحد{" "}
-            <span className="font-bold text-white">
+            <span className="font-bold text-paper">
               {formatDate(business.subscription_expires_at!)}
             </span>
             .
@@ -127,10 +131,10 @@ export default function SubscribePage() {
         )}
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5 text-center">
-        <p className="text-sm text-zinc-400">الاشتراك الشهري</p>
+      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5 text-center">
+        <p className="text-sm text-mist">الاشتراك الشهري</p>
 
-        <p className="mt-2 text-4xl font-bold text-white">
+        <p className="mt-2 text-4xl font-bold text-paper">
           {priceEgp !== null ? `${priceEgp} جنيه` : "..."}
         </p>
 
@@ -140,12 +144,19 @@ export default function SubscribePage() {
           <button
             onClick={handlePay}
             disabled={paying || priceEgp === null}
-            className="mt-5 w-full rounded-xl bg-blue-600 py-3 font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-splash py-3 font-bold text-ink-950 transition hover:bg-splash-deep disabled:opacity-50"
           >
-            {paying ? "جارِ التحويل لبوابة الدفع..." : "💳 ادفع الآن"}
+            {paying ? (
+              "جارِ التحويل لبوابة الدفع..."
+            ) : (
+              <>
+                <CreditCard size={18} />
+                ادفع الآن
+              </>
+            )}
           </button>
         ) : (
-          <p className="mt-5 text-sm text-zinc-500">
+          <p className="mt-5 text-sm text-mist">
             الدفع متاح لصاحب النشاط فقط.
           </p>
         )}
