@@ -45,13 +45,20 @@ export async function POST(request: NextRequest) {
 
   const { data: appUser, error: userError } = await supabase
     .from("users")
-    .select("business_id")
+    .select("business_id, role")
     .eq("auth_user_id", authUser.id)
     .single();
 
   if (userError || !appUser) {
     return NextResponse.json(
       { error: "تعذر التحقق من الحساب" },
+      { status: 403 }
+    );
+  }
+
+  if (appUser.role !== "owner") {
+    return NextResponse.json(
+      { error: "الأخطبوط متاح لصاحب النشاط فقط" },
       { status: 403 }
     );
   }

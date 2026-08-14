@@ -92,7 +92,7 @@ export default function PosLayout({
         {children}
       </main>
 
-      <AssistantChat />
+      {user.role === "owner" && <AssistantChat />}
 
     </div>
   );
