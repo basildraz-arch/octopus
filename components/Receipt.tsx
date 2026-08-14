@@ -1,5 +1,7 @@
 "use client";
 
+import { Printer } from "lucide-react";
+
 import type { CartItem } from "@/components/Cart";
 
 type Props = {
@@ -74,9 +76,10 @@ export default function Receipt({
         <div className="mt-6 flex gap-2 print:hidden">
           <button
             onClick={() => window.print()}
-            className="flex-1 rounded-xl bg-blue-600 p-3 font-bold text-white hover:bg-blue-700"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 p-3 font-bold text-white hover:bg-blue-700"
           >
-            🖨️ طباعة
+            <Printer size={18} />
+            طباعة
           </button>
 
           <button

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Plus } from "lucide-react";
+
 import type { Item } from "@/types/item";
 
 type Props = {
@@ -43,16 +45,16 @@ export default function SalePopup({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-gray-900 p-6">
-        <h2 className="mb-1 text-xl font-bold text-white">
+      <div className="w-full max-w-sm rounded-2xl border border-ink-600 bg-ink-800 p-6">
+        <h2 className="mb-1 text-xl font-bold text-paper">
           {item.name}
         </h2>
 
-        <p className="mb-6 text-sm text-gray-400">
+        <p className="mb-6 text-sm text-mist">
           {item.sell_price} جنيه / {item.unit}
         </p>
 
-        <label className="mb-2 block text-sm text-gray-300">
+        <label className="mb-2 block text-sm text-mist">
           {LABELS[item.sale_method]}
           {item.sale_method === "weight" ? ` (${item.unit})` : ""}
         </label>
@@ -63,19 +65,20 @@ export default function SalePopup({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={item.sale_method === "piece" ? "1" : "0"}
-          className="mb-4 w-full rounded-xl bg-gray-800 p-4 text-white outline-none"
+          className="mb-4 w-full rounded-xl border border-ink-600 bg-ink-900 p-4 text-paper outline-none"
         />
 
         <button
           onClick={handleAdd}
-          className="mb-3 w-full rounded-xl bg-green-600 p-4 font-bold text-white hover:bg-green-700"
+          className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 p-4 font-bold text-white hover:bg-green-700"
         >
-          ➕ إضافة للسلة
+          <Plus size={18} />
+          إضافة للسلة
         </button>
 
         <button
           onClick={onClose}
-          className="w-full rounded-xl bg-gray-700 p-4 text-white hover:bg-gray-600"
+          className="w-full rounded-xl bg-ink-700 p-4 text-paper hover:bg-ink-600"
         >
           إلغاء
         </button>

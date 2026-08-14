@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ShoppingCart } from "lucide-react";
 
 import ItemList from "@/components/ItemList";
 import Cart, { type CartItem } from "@/components/Cart";
@@ -171,21 +172,22 @@ export default function SalesPage() {
 
   return (
     <>
-      <main className="min-h-screen bg-gray-950 p-4 text-white md:p-6 print:hidden">
-        <h1 className="mb-6 text-3xl font-bold md:mb-8 md:text-4xl">
-          🛒 عملية بيع
+      <main className="min-h-screen bg-ink-950 p-4 text-paper md:p-6 print:hidden">
+        <h1 className="mb-6 flex items-center gap-2 text-3xl font-bold md:mb-8 md:text-4xl">
+          <ShoppingCart size={28} />
+          عملية بيع
         </h1>
 
         {warehouses.length > 1 && (
           <div className="mb-6">
-            <label className="mb-1 block text-sm text-gray-400">
+            <label className="mb-1 block text-sm text-mist">
               البيع من مخزن
             </label>
 
             <select
               value={selectedWarehouseId}
               onChange={(e) => selectWarehouse(e.target.value)}
-              className="w-full max-w-xs rounded-xl bg-gray-800 p-3 text-white outline-none"
+              className="w-full max-w-xs rounded-xl border border-ink-600 bg-ink-800 p-3 text-paper outline-none"
             >
               {warehouses.map((warehouse) => (
                 <option key={warehouse.id} value={warehouse.id}>

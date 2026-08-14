@@ -1,3 +1,5 @@
+import { Receipt as ReceiptIcon, Trash2, Banknote, Smartphone, CreditCard, CheckCircle2, type LucideIcon } from "lucide-react";
+
 import type { Item } from "@/types/item";
 import type { PaymentMethod } from "@/types/sale";
 
@@ -18,10 +20,10 @@ type Props = {
   onCheckout: () => void;
 };
 
-const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
-  { value: "cash", label: "💵 كاش" },
-  { value: "vodafone_cash", label: "📱 فودافون كاش" },
-  { value: "instapay", label: "💳 إنستاباي" },
+const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: LucideIcon }[] = [
+  { value: "cash", label: "كاش", icon: Banknote },
+  { value: "vodafone_cash", label: "فودافون كاش", icon: Smartphone },
+  { value: "instapay", label: "إنستاباي", icon: CreditCard },
 ];
 
 export default function Cart({
@@ -46,12 +48,13 @@ export default function Cart({
 
   return (
     <div>
-      <h2 className="mb-4 text-2xl text-white">
-        🧾 السلة
+      <h2 className="mb-4 flex items-center gap-2 text-2xl text-paper">
+        <ReceiptIcon size={22} />
+        السلة
       </h2>
 
       {cart.length === 0 ? (
-        <p className="text-gray-500">
+        <p className="text-mist">
           لا توجد أصناف في السلة
         </p>
       ) : (
@@ -60,13 +63,13 @@ export default function Cart({
             {cart.map((line) => (
               <div
                 key={line.item.id}
-                className="rounded-xl bg-gray-800 p-4"
+                className="rounded-xl border border-ink-600 bg-ink-800 p-4"
               >
-                <div className="font-bold text-white">
+                <div className="font-bold text-paper">
                   {line.item.name}
                 </div>
 
-                <div className="text-gray-400">
+                <div className="text-mist">
                   الكمية: {line.quantity.toFixed(2)} {line.item.unit}
                 </div>
 
@@ -76,9 +79,10 @@ export default function Cart({
 
                 <button
                   onClick={() => onDelete(line.item.id)}
-                  className="w-full rounded-lg bg-red-600 p-2 hover:bg-red-700"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-red-600 p-2 hover:bg-red-700"
                 >
-                  🗑️ حذف
+                  <Trash2 size={15} />
+                  حذف
                 </button>
               </div>
             ))}
@@ -86,7 +90,7 @@ export default function Cart({
 
           {maxDiscountPercent != null && (
             <div className="mt-4">
-              <p className="mb-2 text-sm text-gray-400">
+              <p className="mb-2 text-sm text-mist">
                 خصم على الفاتورة (اختياري) - أقصى خصم مسموح{" "}
                 {maxAllowedDiscount.toFixed(2)} جنيه
               </p>
@@ -96,57 +100,63 @@ export default function Cart({
                 value={discountAmount}
                 onChange={(e) => onDiscountAmountChange(e.target.value)}
                 placeholder="0"
-                className="w-full rounded-xl bg-gray-800 p-4 text-white outline-none"
+                className="w-full rounded-xl border border-ink-600 bg-ink-800 p-4 text-paper outline-none"
               />
             </div>
           )}
 
-          <div className="mt-4 space-y-1 rounded-xl bg-gray-800/50 p-3 text-sm">
-            <div className="flex justify-between text-gray-400">
+          <div className="mt-4 space-y-1 rounded-xl bg-ink-800/50 p-3 text-sm">
+            <div className="flex justify-between text-mist">
               <span>الإجمالي قبل الخصم</span>
               <span>{subtotal.toFixed(2)} جنيه</span>
             </div>
 
             {discountValue > 0 && (
-              <div className="flex justify-between text-gray-400">
+              <div className="flex justify-between text-mist">
                 <span>الخصم</span>
                 <span>{discountValue.toFixed(2)} جنيه</span>
               </div>
             )}
 
-            <div className="flex justify-between border-t border-gray-700 pt-1 text-lg font-bold text-white">
+            <div className="flex justify-between border-t border-ink-600 pt-1 text-lg font-bold text-paper">
               <span>الإجمالي النهائي</span>
               <span>{finalTotal.toFixed(2)} جنيه</span>
             </div>
           </div>
 
           <div className="mt-4">
-            <p className="mb-2 text-sm text-gray-400">
+            <p className="mb-2 text-sm text-mist">
               طريقة الدفع
             </p>
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {PAYMENT_METHODS.map((method) => (
-                <button
-                  key={method.value}
-                  onClick={() => onPaymentMethodChange(method.value)}
-                  className={`rounded-xl p-3 text-sm font-semibold transition ${
-                    paymentMethod === method.value
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-                  }`}
-                >
-                  {method.label}
-                </button>
-              ))}
+              {PAYMENT_METHODS.map((method) => {
+                const Icon = method.icon;
+
+                return (
+                  <button
+                    key={method.value}
+                    onClick={() => onPaymentMethodChange(method.value)}
+                    className={`flex items-center justify-center gap-1.5 rounded-xl p-3 text-sm font-semibold transition ${
+                      paymentMethod === method.value
+                        ? "bg-splash text-ink-950"
+                        : "bg-ink-700 text-mist hover:bg-ink-600"
+                    }`}
+                  >
+                    <Icon size={16} />
+                    {method.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           <button
             onClick={onCheckout}
-            className="mt-4 w-full rounded-xl bg-green-600 p-4 text-lg font-bold text-white hover:bg-green-700"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 p-4 text-lg font-bold text-white hover:bg-green-700"
           >
-            ✅ إنهاء الفاتورة
+            <CheckCircle2 size={20} />
+            إنهاء الفاتورة
           </button>
         </>
       )}

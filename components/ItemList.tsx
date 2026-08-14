@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Search, Mic } from "lucide-react";
 
 import type { Item } from "@/types/item";
 import type { Category } from "@/repositories/category.repository";
@@ -93,29 +94,36 @@ export default function ItemList({
 
   return (
     <div>
-      <h2 className="mb-4 text-2xl text-white">
+      <h2 className="mb-4 text-2xl text-paper">
         الأصناف
       </h2>
 
       <div className="mb-5 flex gap-2">
-        <input
-          type="text"
-          placeholder="🔍 ابحث عن صنف..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 rounded-xl bg-gray-800 p-4 text-white outline-none"
-        />
+        <div className="relative flex-1">
+          <Search
+            size={18}
+            className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-mist"
+          />
+
+          <input
+            type="text"
+            placeholder="ابحث عن صنف..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-xl border border-ink-600 bg-ink-800 p-4 pr-11 text-paper outline-none"
+          />
+        </div>
 
         {voiceSupported && (
           <button
             onClick={startVoice}
-            className={`shrink-0 rounded-xl px-5 text-xl transition ${
+            className={`shrink-0 rounded-xl px-5 transition ${
               listening
-                ? "bg-red-600"
-                : "bg-blue-600 hover:bg-blue-700"
+                ? "bg-red-600 text-white"
+                : "bg-splash text-ink-950 hover:bg-splash-deep"
             }`}
           >
-            🎤
+            <Mic size={20} />
           </button>
         )}
       </div>
@@ -126,8 +134,8 @@ export default function ItemList({
             onClick={() => setSelectedCategoryId(null)}
             className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
               selectedCategoryId === null
-                ? "bg-blue-600 text-white"
-                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                ? "bg-splash text-ink-950"
+                : "bg-ink-700 text-mist hover:bg-ink-600"
             }`}
           >
             الكل
@@ -139,8 +147,8 @@ export default function ItemList({
               onClick={() => setSelectedCategoryId(category.id)}
               className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
                 selectedCategoryId === category.id
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                  ? "bg-splash text-ink-950"
+                  : "bg-ink-700 text-mist hover:bg-ink-600"
               }`}
             >
               {category.name}
@@ -154,20 +162,20 @@ export default function ItemList({
           <button
             key={item.id}
             onClick={() => onSelect(item)}
-            className="w-full rounded-xl bg-gray-800 p-4 text-right hover:bg-gray-700"
+            className="w-full rounded-xl border border-ink-600 bg-ink-800 p-4 text-right hover:bg-ink-700"
           >
-            <div className="font-bold text-white">
+            <div className="font-bold text-paper">
               {item.name}
             </div>
 
-            <div className="text-gray-400">
+            <div className="text-mist">
               {item.sell_price} جنيه / {item.unit}
             </div>
           </button>
         ))}
 
         {filteredItems.length === 0 && (
-          <div className="rounded-xl bg-gray-800 p-4 text-center text-gray-400">
+          <div className="rounded-xl border border-ink-600 bg-ink-800 p-4 text-center text-mist">
             لا توجد نتائج
           </div>
         )}
