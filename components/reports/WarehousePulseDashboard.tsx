@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ArrowLeftRight, Truck, Filter, ClipboardList } from "lucide-react";
 
 import {
   getWarehouseStockSummary,
@@ -29,6 +30,14 @@ function formatRelativeTime(dateString: string) {
 
   const diffDays = Math.floor(diffHours / 24);
   return `منذ ${diffDays} يوم`;
+}
+
+function ActivityIcon({ type, size }: { type: "transfer" | "purchase"; size: number }) {
+  return type === "transfer" ? (
+    <ArrowLeftRight size={size} />
+  ) : (
+    <Truck size={size} />
+  );
 }
 
 export default function WarehousePulseDashboard() {
@@ -86,7 +95,7 @@ export default function WarehousePulseDashboard() {
 
   if (loading) {
     return (
-      <div className="p-8 text-center text-zinc-400">
+      <div className="p-8 text-center text-mist">
         جارِ التحميل...
       </div>
     );
@@ -98,9 +107,9 @@ export default function WarehousePulseDashboard() {
         {summary.map((warehouse) => (
           <div
             key={warehouse.warehouse_id}
-            className="rounded-xl border border-zinc-800 bg-zinc-900 p-5"
+            className="rounded-xl border border-ink-600 bg-ink-800 p-5"
           >
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-mist">
               {warehouse.warehouse_name}
             </p>
 
@@ -111,37 +120,43 @@ export default function WarehousePulseDashboard() {
         ))}
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <p className="text-sm text-zinc-400">
+      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+        <p className="text-sm text-mist">
           آخر نشاط
         </p>
 
         {lastActivity ? (
-          <p className="mt-2 text-white">
-            {lastActivity.type === "transfer"
-              ? `🔀 نقل ${lastActivity.quantity} ${lastActivity.itemUnit} من "${lastActivity.itemName}" من "${lastActivity.fromWarehouseName}" إلى "${lastActivity.toWarehouseName}"`
-              : `🚚 شراء ${lastActivity.quantity} ${lastActivity.itemUnit} من "${lastActivity.itemName}" إلى "${lastActivity.toWarehouseName}"`}{" "}
-            <span className="text-sm text-zinc-500">
+          <p className="mt-2 flex flex-wrap items-center gap-1.5 text-paper">
+            <ActivityIcon type={lastActivity.type} size={16} />
+
+            <span>
+              {lastActivity.type === "transfer"
+                ? `نقل ${lastActivity.quantity} ${lastActivity.itemUnit} من "${lastActivity.itemName}" من "${lastActivity.fromWarehouseName}" إلى "${lastActivity.toWarehouseName}"`
+                : `شراء ${lastActivity.quantity} ${lastActivity.itemUnit} من "${lastActivity.itemName}" إلى "${lastActivity.toWarehouseName}"`}
+            </span>
+
+            <span className="text-sm text-mist">
               — {formatRelativeTime(lastActivity.createdAt)}
             </span>
           </p>
         ) : (
-          <p className="mt-2 text-zinc-500">
+          <p className="mt-2 text-mist">
             لا يوجد نشاط بعد
           </p>
         )}
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <h2 className="mb-4 text-lg font-bold">
-          🔍 فلترة
+      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
+          <Filter size={18} />
+          فلترة
         </h2>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <select
             value={warehouseId}
             onChange={(e) => setWarehouseId(e.target.value)}
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           >
             <option value="">كل المخازن</option>
 
@@ -155,7 +170,7 @@ export default function WarehousePulseDashboard() {
           <select
             value={itemId}
             onChange={(e) => setItemId(e.target.value)}
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           >
             <option value="">كل الأصناف</option>
 
@@ -170,25 +185,26 @@ export default function WarehousePulseDashboard() {
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           />
 
           <input
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           />
         </div>
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <h2 className="mb-4 text-lg font-bold">
-          📋 سجل النشاط
+      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
+          <ClipboardList size={18} />
+          سجل النشاط
         </h2>
 
         {feed.length === 0 ? (
-          <p className="text-center text-zinc-400">
+          <p className="text-center text-mist">
             لا توجد عمليات في الفترة المحددة
           </p>
         ) : (
@@ -196,27 +212,28 @@ export default function WarehousePulseDashboard() {
             {feed.map((event) => (
               <div
                 key={event.id}
-                className="rounded-lg border border-zinc-800 bg-zinc-950 p-4"
+                className="rounded-lg border border-ink-600 bg-ink-900 p-4"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold">
-                    {event.type === "transfer" ? "🔀 نقل" : "🚚 شراء"} —{" "}
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <ActivityIcon type={event.type} size={14} />
+                    {event.type === "transfer" ? "نقل" : "شراء"} —{" "}
                     {event.itemName}
                   </span>
 
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-mist">
                     {formatRelativeTime(event.createdAt)}
                   </span>
                 </div>
 
-                <p className="mt-1 text-sm text-zinc-400">
+                <p className="mt-1 text-sm text-mist">
                   {event.quantity} {event.itemUnit}
                   {event.type === "transfer"
                     ? ` — من "${event.fromWarehouseName}" إلى "${event.toWarehouseName}"`
                     : ` — إلى "${event.toWarehouseName}"`}
                 </p>
 
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-xs text-mist">
                   بواسطة {event.createdByName}
                 </p>
               </div>

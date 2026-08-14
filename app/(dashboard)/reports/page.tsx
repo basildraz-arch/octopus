@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { BarChart3, AlertTriangle, ClipboardList } from "lucide-react";
 
 import {
   getReportSummary,
@@ -85,11 +86,12 @@ export default function ReportsPage() {
     return (
       <main className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">
-            📊 لوحة نبض المخازن
+          <h1 className="flex items-center gap-2 text-3xl font-bold">
+            <BarChart3 size={28} />
+            لوحة نبض المخازن
           </h1>
 
-          <p className="mt-1 text-zinc-400">
+          <p className="mt-1 text-mist">
             متابعة شبه لحظية لمخازنك ونشاطها
           </p>
         </div>
@@ -102,11 +104,12 @@ export default function ReportsPage() {
   return (
     <main className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">
-          📊 التقارير
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          <BarChart3 size={28} />
+          التقارير
         </h1>
 
-        <p className="mt-1 text-zinc-400">
+        <p className="mt-1 text-mist">
           أداء بيزنسك خلال أي فترة
         </p>
       </div>
@@ -116,7 +119,7 @@ export default function ReportsPage() {
           <button
             key={preset.label}
             onClick={() => applyPreset(preset.getStart)}
-            className="rounded-lg bg-zinc-800 px-4 py-2 text-sm font-medium hover:bg-zinc-700"
+            className="rounded-lg bg-ink-700 px-4 py-2 text-sm font-medium hover:bg-ink-600"
           >
             {preset.label}
           </button>
@@ -125,7 +128,7 @@ export default function ReportsPage() {
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-1 block text-sm text-zinc-400">
+          <label className="mb-1 block text-sm text-mist">
             من
           </label>
 
@@ -133,12 +136,12 @@ export default function ReportsPage() {
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-800 p-3 text-paper outline-none"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm text-zinc-400">
+          <label className="mb-1 block text-sm text-mist">
             إلى
           </label>
 
@@ -146,26 +149,27 @@ export default function ReportsPage() {
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white outline-none"
+            className="w-full rounded-xl border border-ink-600 bg-ink-800 p-3 text-paper outline-none"
           />
         </div>
       </div>
 
       {loading ? (
-        <div className="p-8 text-center text-zinc-400">
+        <div className="p-8 text-center text-mist">
           جارِ التحميل...
         </div>
       ) : summary ? (
         <div className="space-y-3">
           {summary.hasIncompleteCostData && (
-            <div className="rounded-xl border border-amber-800 bg-amber-950/30 p-4 text-sm text-amber-300">
-              ⚠️ تكلفة غير محسوبة لبعض عمليات البيع القديمة في هذه
+            <div className="flex items-start gap-2 rounded-xl border border-amber-800 bg-amber-950/30 p-4 text-sm text-amber-300">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+              تكلفة غير محسوبة لبعض عمليات البيع القديمة في هذه
               الفترة — صافي الربح المعروض ممكن يكون أعلى من الحقيقي.
             </div>
           )}
 
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-            <p className="text-sm text-zinc-400">
+          <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+            <p className="text-sm text-mist">
               إجمالي المبيعات
             </p>
 
@@ -173,14 +177,14 @@ export default function ReportsPage() {
               {summary.totalSales.toFixed(2)} ج
             </h2>
 
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-mist">
               {summary.saleCount} عملية بيع
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-              <p className="text-sm text-zinc-400">
+            <div className="rounded-xl border border-ink-600 bg-ink-800 p-4">
+              <p className="text-sm text-mist">
                 تكلفة البضاعة المباعة
               </p>
 
@@ -189,8 +193,8 @@ export default function ReportsPage() {
               </p>
             </div>
 
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-              <p className="text-sm text-zinc-400">
+            <div className="rounded-xl border border-ink-600 bg-ink-800 p-4">
+              <p className="text-sm text-mist">
                 إجمالي المصروفات
               </p>
 
@@ -200,8 +204,8 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-blue-800 bg-blue-950/30 p-5">
-            <p className="text-sm text-zinc-400">
+          <div className="rounded-xl border border-splash/40 bg-splash-dim p-5">
+            <p className="text-sm text-mist">
               صافي الربح
             </p>
 
@@ -216,9 +220,10 @@ export default function ReportsPage() {
 
           <Link
             href={`/sales-log?from=${startDate}&to=${endDate}`}
-            className="block rounded-xl bg-zinc-800 p-4 text-center font-semibold text-white transition hover:bg-zinc-700"
+            className="flex items-center justify-center gap-2 rounded-xl bg-ink-700 p-4 text-center font-semibold text-paper transition hover:bg-ink-600"
           >
-            📋 عرض التفاصيل
+            <ClipboardList size={18} />
+            عرض التفاصيل
           </Link>
         </div>
       ) : null}
