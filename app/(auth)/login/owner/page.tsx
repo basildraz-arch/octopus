@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Crown, ArrowRight } from "lucide-react";
 
 import { login } from "@/services/auth.service";
 
@@ -37,17 +38,18 @@ export default function OwnerLoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-6">
+    <main className="flex min-h-screen items-center justify-center bg-ink-950 px-6">
 
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl border border-ink-600 bg-ink-800 p-8 shadow-2xl">
 
         <div className="mb-8 text-center">
 
-          <h1 className="text-4xl font-bold">
-            👑 Owner Login
+          <h1 className="flex items-center justify-center gap-2 text-4xl font-bold">
+            <Crown size={32} />
+            Owner Login
           </h1>
 
-          <p className="mt-3 text-zinc-400">
+          <p className="mt-3 text-mist">
             تسجيل دخول صاحب النشاط
           </p>
 
@@ -60,7 +62,7 @@ export default function OwnerLoginPage() {
 
           <div>
 
-            <label className="mb-2 block text-sm text-zinc-300">
+            <label className="mb-2 block text-sm text-mist">
               البريد الإلكتروني
             </label>
 
@@ -70,14 +72,14 @@ export default function OwnerLoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="example@email.com"
               required
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+              className="w-full rounded-xl border border-ink-600 bg-ink-900 px-4 py-3 text-paper outline-none transition focus:border-splash"
             />
 
           </div>
 
           <div>
 
-            <label className="mb-2 block text-sm text-zinc-300">
+            <label className="mb-2 block text-sm text-mist">
               كلمة المرور
             </label>
 
@@ -87,7 +89,7 @@ export default function OwnerLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="********"
               required
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+              className="w-full rounded-xl border border-ink-600 bg-ink-900 px-4 py-3 text-paper outline-none transition focus:border-splash"
             />
 
           </div>
@@ -101,7 +103,7 @@ export default function OwnerLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded-xl bg-splash py-3 font-semibold text-ink-950 transition hover:bg-splash-deep disabled:opacity-50"
           >
             {loading ? "جارِ الدخول..." : "تسجيل الدخول"}
           </button>
@@ -112,9 +114,10 @@ export default function OwnerLoginPage() {
 
           <Link
             href="/login"
-            className="text-zinc-400 hover:text-white"
+            className="flex items-center gap-1 text-mist hover:text-paper"
           >
-            ← رجوع
+            <ArrowRight size={14} />
+            رجوع
           </Link>
 
         </div>
