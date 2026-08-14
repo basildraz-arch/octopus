@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { Pencil } from "lucide-react";
 
 import ItemForm from "@/components/items/form/ItemForm";
 import { getItemById } from "@/repositories/item.repository";
@@ -22,7 +23,7 @@ export default function EditItemPage() {
 
   if (loading) {
     return (
-      <main className="p-8 text-center">
+      <main className="p-8 text-center text-mist">
         جارِ التحميل...
       </main>
     );
@@ -30,7 +31,7 @@ export default function EditItemPage() {
 
   if (!item) {
     return (
-      <main className="p-8 text-center">
+      <main className="p-8 text-center text-mist">
         الصنف غير موجود.
       </main>
     );
@@ -39,16 +40,17 @@ export default function EditItemPage() {
   return (
     <main className="mx-auto max-w-6xl space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">
-          ✏️ تعديل الصنف
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          <Pencil size={28} />
+          تعديل الصنف
         </h1>
 
-        <p className="mt-2 text-zinc-400">
+        <p className="mt-2 text-mist">
           {item.name}
         </p>
       </div>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
+      <div className="rounded-2xl border border-ink-600 bg-ink-800 p-8">
         <ItemForm item={item} />
       </div>
     </main>

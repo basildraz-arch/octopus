@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertTriangle, Save } from "lucide-react";
 
 import {
   createItem,
@@ -200,6 +201,7 @@ export default function ItemForm({ item }: Props) {
           <Input
             {...register("name")}
             placeholder="اسم الصنف"
+            className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
           />
 
           <p className="mt-1 text-sm text-red-500">
@@ -207,15 +209,18 @@ export default function ItemForm({ item }: Props) {
           </p>
 
           {duplicateItem && (
-            <div className="mt-2 rounded-lg border border-amber-700 bg-amber-950/40 p-3 text-sm text-amber-300">
-              ⚠️ يوجد صنف بنفس الاسم "{duplicateItem.name}" بالفعل.{" "}
-              <Link
-                href={`/items/edit/${duplicateItem.id}`}
-                className="font-bold text-blue-400 underline"
-              >
-                اضغط هنا لتعديله
-              </Link>{" "}
-              بدل إضافة صنف مكرر.
+            <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-700 bg-amber-950/40 p-3 text-sm text-amber-300">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+              <span>
+                يوجد صنف بنفس الاسم "{duplicateItem.name}" بالفعل.{" "}
+                <Link
+                  href={`/items/edit/${duplicateItem.id}`}
+                  className="font-bold text-splash underline"
+                >
+                  اضغط هنا لتعديله
+                </Link>{" "}
+                بدل إضافة صنف مكرر.
+              </span>
             </div>
           )}
         </div>
@@ -228,6 +233,7 @@ export default function ItemForm({ item }: Props) {
           <Input
             {...register("barcode")}
             placeholder="الباركود"
+            className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
           />
         </div>
 
@@ -238,7 +244,7 @@ export default function ItemForm({ item }: Props) {
 
           <select
             {...register("category_id")}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white"
+            className="w-full rounded-lg border border-ink-600 bg-ink-900 px-3 py-2 text-paper"
           >
             <option value="">بدون فئة</option>
 
@@ -260,10 +266,10 @@ export default function ItemForm({ item }: Props) {
 
           <select
             {...register("item_type")}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white"
+            className="w-full rounded-lg border border-ink-600 bg-ink-900 px-3 py-2 text-paper"
           >
-            <option value="product">📦 منتج</option>
-            <option value="service">💈 خدمة</option>
+            <option value="product">منتج</option>
+            <option value="service">خدمة</option>
           </select>
         </div>
 
@@ -274,7 +280,7 @@ export default function ItemForm({ item }: Props) {
 
           <select
             {...register("sale_method")}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white"
+            className="w-full rounded-lg border border-ink-600 bg-ink-900 px-3 py-2 text-paper"
           >
             {itemType === "service" ? (
               <option value="piece">لكل مرة</option>
@@ -297,6 +303,7 @@ export default function ItemForm({ item }: Props) {
             <Input
               {...register("unit")}
               placeholder="مثال: قطعة، كيلو، جرام"
+              className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
             />
 
             <p className="mt-1 text-sm text-red-500">
@@ -315,6 +322,7 @@ export default function ItemForm({ item }: Props) {
               type="number"
               step="0.01"
               {...register("buy_price")}
+              className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
             />
 
             <p className="mt-1 text-sm text-red-500">
@@ -332,6 +340,7 @@ export default function ItemForm({ item }: Props) {
             type="number"
             step="0.01"
             {...register("sell_price")}
+            className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
           />
 
           <p className="mt-1 text-sm text-red-500">
@@ -350,6 +359,7 @@ export default function ItemForm({ item }: Props) {
                 type="number"
                 step="0.01"
                 {...register("stock")}
+                className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
               />
             </div>
 
@@ -362,12 +372,13 @@ export default function ItemForm({ item }: Props) {
                 type="number"
                 step="0.01"
                 {...register("minimum_stock")}
+                className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
               />
             </div>
 
             {warehouseStocks.length > 0 && (
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 md:col-span-2">
-                <p className="mb-2 text-sm font-semibold text-zinc-300">
+              <div className="rounded-lg border border-ink-600 bg-ink-900 p-4 md:col-span-2">
+                <p className="mb-2 text-sm font-semibold text-mist">
                   المخزون حسب المخزن
                 </p>
 
@@ -375,10 +386,10 @@ export default function ItemForm({ item }: Props) {
                   {warehouseStocks.map((w) => (
                     <div
                       key={w.warehouse_id}
-                      className="flex justify-between text-zinc-400"
+                      className="flex justify-between text-mist"
                     >
                       <span>{w.warehouse_name}</span>
-                      <span className="font-semibold text-white">
+                      <span className="font-semibold text-paper">
                         {w.quantity}
                       </span>
                     </div>
@@ -394,12 +405,16 @@ export default function ItemForm({ item }: Props) {
       <Button
         type="submit"
         disabled={isSubmitting || (!item && !user)}
+        className="gap-2 bg-splash text-ink-950 hover:bg-splash-deep"
       >
-        {isSubmitting
-          ? "جار الحفظ..."
-          : item
-          ? "💾 حفظ التعديلات"
-          : "💾 حفظ الصنف"}
+        {isSubmitting ? (
+          "جار الحفظ..."
+        ) : (
+          <>
+            <Save size={18} />
+            {item ? "حفظ التعديلات" : "حفظ الصنف"}
+          </>
+        )}
       </Button>
     </form>
   );
