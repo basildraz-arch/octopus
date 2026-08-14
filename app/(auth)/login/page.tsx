@@ -1,20 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Lottie from "lottie-react";
+import OctopusMascot from "@/components/OctopusMascot";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [animationData, setAnimationData] = useState<object | null>(null);
-
-  useEffect(() => {
-    fetch("/hebr-animation.json")
-      .then((res) => res.json())
-      .then(setAnimationData)
-      .catch(() => setAnimationData(null));
-  }, []);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-ink-950 px-6">
@@ -23,20 +14,7 @@ export default function LoginPage() {
 
         <div className="mb-10 flex flex-col items-center text-center">
 
-          {animationData ? (
-            <Lottie
-              animationData={animationData}
-              loop
-              autoplay
-              style={{ width: 160, height: 160 }}
-            />
-          ) : (
-            <img
-              src="/hebr-final-1.jpg"
-              alt="حبر"
-              className="h-[160px] w-[160px] rounded-full object-cover shadow-lg"
-            />
-          )}
+          <OctopusMascot size={160} />
 
           <h1 className="mt-5 text-3xl font-bold text-paper">
             Octopus
