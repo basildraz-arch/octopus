@@ -1,10 +1,20 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Lottie from "lottie-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [animationData, setAnimationData] = useState<object | null>(null);
+
+  useEffect(() => {
+    fetch("/hebr-animation.json")
+      .then((res) => res.json())
+      .then(setAnimationData)
+      .catch(() => setAnimationData(null));
+  }, []);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#05070E] px-6">
@@ -13,11 +23,20 @@ export default function LoginPage() {
 
         <div className="mb-10 flex flex-col items-center text-center">
 
-          <img
-            src="/hebr-final-1.jpg"
-            alt="حبر"
-            className="h-[140px] w-[140px] rounded-full object-cover shadow-lg"
-          />
+          {animationData ? (
+            <Lottie
+              animationData={animationData}
+              loop
+              autoplay
+              style={{ width: 160, height: 160 }}
+            />
+          ) : (
+            <img
+              src="/hebr-final-1.jpg"
+              alt="حبر"
+              className="h-[160px] w-[160px] rounded-full object-cover shadow-lg"
+            />
+          )}
 
           <h1 className="mt-5 text-3xl font-bold">
             Octopus
