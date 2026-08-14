@@ -100,7 +100,7 @@ export default function AssistantChat() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 left-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#12151F] shadow-lg transition hover:scale-105 md:bottom-6"
+        className="fixed bottom-20 left-4 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-[#12151F] shadow-lg transition hover:scale-105 md:bottom-6"
         aria-label="اسأل الأخطبوط"
       >
         {animationData ? (
@@ -108,7 +108,7 @@ export default function AssistantChat() {
             animationData={animationData}
             loop
             autoplay
-            style={{ width: 32, height: 32 }}
+            style={{ width: 44, height: 44 }}
           />
         ) : (
           <img
@@ -130,13 +130,13 @@ export default function AssistantChat() {
               animationData={animationData}
               loop
               autoplay
-              style={{ width: 28, height: 28 }}
+              style={{ width: 40, height: 40 }}
             />
           ) : (
             <img
               src="/hebr-final-1.jpg"
               alt="حبر"
-              className="h-6 w-6 rounded-full object-cover"
+              className="h-10 w-10 rounded-full object-cover"
             />
           )}
           اسأل الأخطبوط
