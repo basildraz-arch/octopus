@@ -1,6 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Lock,
+  RotateCcw,
+  Banknote,
+  Smartphone,
+  CreditCard,
+  CheckCircle2,
+  type LucideIcon,
+} from "lucide-react";
 
 import {
   getOpenShift,
@@ -13,10 +22,10 @@ import {
 } from "@/repositories/shift.repository";
 import { useSession } from "@/hooks/useSession";
 
-const METHOD_LABELS: Record<string, string> = {
-  cash: "💵 كاش",
-  vodafone_cash: "📱 فودافون كاش",
-  instapay: "💳 إنستاباي",
+const PAYMENT_METHOD_INFO: Record<string, { label: string; icon: LucideIcon }> = {
+  cash: { label: "كاش", icon: Banknote },
+  vodafone_cash: { label: "فودافون كاش", icon: Smartphone },
+  instapay: { label: "إنستاباي", icon: CreditCard },
 };
 
 export default function DayClosePage() {
@@ -98,7 +107,7 @@ export default function DayClosePage() {
 
   if (loading) {
     return (
-      <main className="p-8 text-center text-zinc-400">
+      <main className="p-8 text-center text-mist">
         جارِ التحميل...
       </main>
     );
@@ -107,11 +116,12 @@ export default function DayClosePage() {
   if (!shift || !summary) {
     return (
       <main className="space-y-6">
-        <h1 className="text-3xl font-bold">
-          🔒 إنهاء اليوم
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          <Lock size={28} />
+          إنهاء اليوم
         </h1>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-8 text-center text-mist">
           لسه مفيش أي مبيعات النهاردة.
         </div>
       </main>
@@ -128,19 +138,20 @@ export default function DayClosePage() {
   return (
     <main className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">
-          🔒 إنهاء اليوم
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          <Lock size={28} />
+          إنهاء اليوم
         </h1>
 
-        <p className="mt-1 text-zinc-400">
+        <p className="mt-1 text-mist">
           {isOpen
             ? "اليوم مفتوح دلوقتي"
             : `اتقفل ${new Date(shift.closed_at as string).toLocaleString("ar-EG")}`}
         </p>
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <p className="text-sm text-zinc-400">
+      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+        <p className="text-sm text-mist">
           إجمالي المبيعات
         </p>
 
@@ -148,30 +159,36 @@ export default function DayClosePage() {
           {summary.totalSales.toFixed(2)} ج
         </h2>
 
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-mist">
           {summary.saleCount} عملية بيع
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {Object.entries(summary.byPaymentMethod).map(([method, amount]) => (
-          <div
-            key={method}
-            className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
-          >
-            <p className="text-sm text-zinc-400">
-              {METHOD_LABELS[method] ?? method}
-            </p>
+        {Object.entries(summary.byPaymentMethod).map(([method, amount]) => {
+          const info = PAYMENT_METHOD_INFO[method];
+          const Icon = info?.icon;
 
-            <p className="mt-1 text-xl font-bold">
-              {amount.toFixed(2)} ج
-            </p>
-          </div>
-        ))}
+          return (
+            <div
+              key={method}
+              className="rounded-xl border border-ink-600 bg-ink-800 p-4"
+            >
+              <p className="flex items-center gap-1.5 text-sm text-mist">
+                {Icon && <Icon size={14} />}
+                {info?.label ?? method}
+              </p>
+
+              <p className="mt-1 text-xl font-bold">
+                {amount.toFixed(2)} ج
+              </p>
+            </div>
+          );
+        })}
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <p className="text-sm text-zinc-400">
+      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+        <p className="text-sm text-mist">
           إجمالي المصروفات
         </p>
 
@@ -180,8 +197,8 @@ export default function DayClosePage() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <p className="text-sm text-zinc-400">
+      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+        <p className="text-sm text-mist">
           الكاش المتوقع في الدرج
         </p>
 
@@ -189,7 +206,7 @@ export default function DayClosePage() {
           {summary.expectedCash.toFixed(2)} ج
         </p>
 
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-mist">
           (مبيعات الكاش − المصروفات)
         </p>
       </div>
@@ -199,9 +216,10 @@ export default function DayClosePage() {
           {!confirming ? (
             <button
               onClick={() => setConfirming(true)}
-              className="w-full rounded-xl bg-red-600 p-4 text-lg font-bold text-white hover:bg-red-700"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 p-4 text-lg font-bold text-white hover:bg-red-700"
             >
-              🔒 إنهاء اليوم
+              <Lock size={20} />
+              إنهاء اليوم
             </button>
           ) : (
             <div className="space-y-4 rounded-xl border border-red-800 bg-red-950/30 p-5">
@@ -210,7 +228,7 @@ export default function DayClosePage() {
               </p>
 
               <div>
-                <label className="mb-2 block text-sm text-zinc-300">
+                <label className="mb-2 block text-sm text-mist">
                   الكاش الفعلي في الدرج (اختياري)
                 </label>
 
@@ -219,7 +237,7 @@ export default function DayClosePage() {
                   value={countedCash}
                   onChange={(e) => setCountedCash(e.target.value)}
                   placeholder={summary.expectedCash.toFixed(2)}
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+                  className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
                 />
               </div>
 
@@ -234,7 +252,7 @@ export default function DayClosePage() {
 
                 <button
                   onClick={() => setConfirming(false)}
-                  className="flex-1 rounded-xl bg-zinc-700 p-3 font-bold text-white hover:bg-zinc-600"
+                  className="flex-1 rounded-xl bg-ink-700 p-3 font-bold text-paper hover:bg-ink-600"
                 >
                   إلغاء
                 </button>
@@ -243,8 +261,8 @@ export default function DayClosePage() {
           )}
         </>
       ) : (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+          <p className="text-sm text-mist">
             الكاش الفعلي المدخل
           </p>
 
@@ -256,19 +274,24 @@ export default function DayClosePage() {
 
           {difference !== null && (
             <p
-              className={`mt-2 text-sm font-semibold ${
+              className={`mt-2 flex items-center gap-1.5 text-sm font-semibold ${
                 difference === 0
                   ? "text-green-400"
                   : difference > 0
-                  ? "text-blue-400"
+                  ? "text-splash"
                   : "text-red-400"
               }`}
             >
-              {difference === 0
-                ? "مطابق تمامًا ✅"
-                : difference > 0
-                ? `زيادة ${difference.toFixed(2)} ج`
-                : `عجز ${Math.abs(difference).toFixed(2)} ج`}
+              {difference === 0 ? (
+                <>
+                  <CheckCircle2 size={16} />
+                  مطابق تمامًا
+                </>
+              ) : difference > 0 ? (
+                `زيادة ${difference.toFixed(2)} ج`
+              ) : (
+                `عجز ${Math.abs(difference).toFixed(2)} ج`
+              )}
             </p>
           )}
         </div>
@@ -278,9 +301,16 @@ export default function DayClosePage() {
         <button
           onClick={handleReopen}
           disabled={reopening}
-          className="w-full rounded-xl bg-zinc-700 p-4 text-lg font-bold text-white hover:bg-zinc-600 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-ink-700 p-4 text-lg font-bold text-paper hover:bg-ink-600 disabled:opacity-50"
         >
-          {reopening ? "جارِ إعادة الفتح..." : "↩️ إعادة فتح اليوم"}
+          {reopening ? (
+            "جارِ إعادة الفتح..."
+          ) : (
+            <>
+              <RotateCcw size={18} />
+              إعادة فتح اليوم
+            </>
+          )}
         </button>
       )}
     </main>
