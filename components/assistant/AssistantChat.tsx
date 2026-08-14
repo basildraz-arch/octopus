@@ -91,10 +91,14 @@ export default function AssistantChat() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 left-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-2xl shadow-lg transition hover:bg-blue-700 md:bottom-6"
+        className="fixed bottom-20 left-4 z-50 h-14 w-14 overflow-hidden rounded-full shadow-lg transition hover:scale-105 md:bottom-6"
         aria-label="اسأل الأخطبوط"
       >
-        🐙
+        <img
+          src="/hebr-mascot1.jpg"
+          alt="حبر"
+          className="h-full w-full rounded-full object-cover"
+        />
       </button>
     );
   }
@@ -102,7 +106,14 @@ export default function AssistantChat() {
   return (
     <div className="fixed inset-x-4 bottom-20 z-50 flex max-h-[70vh] flex-col rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-96">
       <div className="flex items-center justify-between border-b border-zinc-800 p-4">
-        <h2 className="font-bold">🐙 اسأل الأخطبوط</h2>
+        <h2 className="flex items-center gap-2 font-bold">
+          <img
+            src="/hebr-mascot1.jpg"
+            alt="حبر"
+            className="h-6 w-6 animate-pulse rounded-full object-cover"
+          />
+          اسأل الأخطبوط
+        </h2>
         <button
           onClick={() => setOpen(false)}
           className="text-zinc-400 hover:text-white"
