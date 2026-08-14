@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Tag, Plus, Save, CheckCircle2, Pencil, Trash2 } from "lucide-react";
 
 import {
   getCategories,
@@ -116,18 +117,20 @@ export default function CategoriesPage() {
   return (
     <main className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">
-          🏷️ الفئات
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          <Tag size={28} />
+          الفئات
         </h1>
 
-        <p className="mt-1 text-zinc-400">
+        <p className="mt-1 text-mist">
           تصنيف الأصناف لتسهيل البيع والتنظيم
         </p>
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <h2 className="mb-4 text-lg font-bold">
-          ➕ إضافة فئة جديدة
+      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
+          <Plus size={18} />
+          إضافة فئة جديدة
         </h2>
 
         <form
@@ -139,25 +142,32 @@ export default function CategoriesPage() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="اسم الفئة (مثال: ألبان)"
-            className="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+            className="flex-1 rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           />
 
           <button
             type="submit"
             disabled={adding || !newName.trim()}
-            className="rounded-xl bg-blue-600 px-6 py-3 font-bold text-white hover:bg-blue-700 disabled:opacity-50 sm:w-auto"
+            className="flex items-center justify-center gap-2 rounded-xl bg-splash px-6 py-3 font-bold text-ink-950 hover:bg-splash-deep disabled:opacity-50 sm:w-auto"
           >
-            {adding ? "جارِ الإضافة..." : "💾 إضافة"}
+            {adding ? (
+              "جارِ الإضافة..."
+            ) : (
+              <>
+                <Save size={18} />
+                إضافة
+              </>
+            )}
           </button>
         </form>
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-8 text-center">
           جارِ تحميل الفئات...
         </div>
       ) : categories.length === 0 ? (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-8 text-center text-mist">
           لا توجد فئات بعد.
         </div>
       ) : (
@@ -165,7 +175,7 @@ export default function CategoriesPage() {
           {categories.map((category) => (
             <div
               key={category.id}
-              className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+              className="rounded-xl border border-ink-600 bg-ink-800 p-4"
             >
               {editingId === category.id ? (
                 <input
@@ -173,7 +183,7 @@ export default function CategoriesPage() {
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   autoFocus
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
+                  className="w-full rounded-lg border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
                 />
               ) : (
                 <h3 className="font-semibold">
@@ -187,14 +197,15 @@ export default function CategoriesPage() {
                     <button
                       onClick={() => saveEdit(category.id)}
                       disabled={savingEdit || !editName.trim()}
-                      className="flex-1 rounded bg-green-600 px-3 py-2.5 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded bg-green-600 px-3 py-2.5 text-sm text-white hover:bg-green-700 disabled:opacity-50"
                     >
-                      ✅ حفظ
+                      <CheckCircle2 size={15} />
+                      حفظ
                     </button>
 
                     <button
                       onClick={cancelEdit}
-                      className="flex-1 rounded bg-zinc-700 px-3 py-2.5 text-sm text-white hover:bg-zinc-600"
+                      className="flex-1 rounded bg-ink-700 px-3 py-2.5 text-sm text-paper hover:bg-ink-600"
                     >
                       إلغاء
                     </button>
@@ -203,16 +214,18 @@ export default function CategoriesPage() {
                   <>
                     <button
                       onClick={() => startEdit(category)}
-                      className="flex-1 rounded bg-blue-600 px-3 py-2.5 text-sm text-white hover:bg-blue-700"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded bg-splash px-3 py-2.5 text-sm text-ink-950 hover:bg-splash-deep"
                     >
-                      ✏️ تعديل
+                      <Pencil size={14} />
+                      تعديل
                     </button>
 
                     <button
                       onClick={() => handleDelete(category)}
-                      className="flex-1 rounded bg-red-600 px-3 py-2.5 text-sm text-white hover:bg-red-700"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded bg-red-600 px-3 py-2.5 text-sm text-white hover:bg-red-700"
                     >
-                      🗑️ حذف
+                      <Trash2 size={14} />
+                      حذف
                     </button>
                   </>
                 )}
