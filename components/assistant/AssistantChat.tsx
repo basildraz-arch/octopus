@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Lottie from "lottie-react";
 
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/hooks/useSession";
+import { useAssistantChat } from "@/hooks/useAssistantChat";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -13,9 +15,20 @@ type ChatMessage = {
   linkResolved?: "confirmed" | "dismissed";
 };
 
+const CLOSE_ANIMATION_MS = 250;
+
 export default function AssistantChat() {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const { user } = useSession();
+  const { isOpen, close } = useAssistantChat();
+
+  // isOpen (context) is the single source of truth for whether the chat
+  // should be open. visible/closing are purely local, derived state for
+  // letting the exit animation play before actually unmounting - closing
+  // must go back to false once the unmount happens, otherwise the panel
+  // can never render again after the very first close.
+  const [visible, setVisible] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -28,6 +41,29 @@ export default function AssistantChat() {
       .then(setAnimationData)
       .catch(() => setAnimationData(null));
   }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      setVisible(true);
+      setClosing(false);
+      return;
+    }
+
+    if (!visible) return;
+
+    setClosing(true);
+    const timer = setTimeout(() => {
+      setVisible(false);
+      setClosing(false);
+    }, CLOSE_ANIMATION_MS);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  function handleClose() {
+    close();
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -96,33 +132,25 @@ export default function AssistantChat() {
     }
   }
 
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-20 left-4 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-ink-800 shadow-lg transition hover:scale-105 md:bottom-6"
-        aria-label="اسأل الأخطبوط"
-      >
-        {animationData ? (
-          <Lottie
-            animationData={animationData}
-            loop
-            autoplay
-            style={{ width: 44, height: 44 }}
-          />
-        ) : (
-          <img
-            src="/hebr-final-1.jpg"
-            alt="حبر"
-            className="h-full w-full rounded-full object-cover"
-          />
-        )}
-      </button>
-    );
-  }
+  // Same protection as before: rendered globally now (the mascot that
+  // opens it lives on every page), but must never mount its interactive
+  // UI for anyone but the business owner - the real enforcement is
+  // server-side in app/api/assistant/route.ts, this is defense in depth
+  // matching the existing pattern of not even showing the trigger.
+  if (!user || user.role !== "owner") return null;
+
+  if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-4 bottom-20 z-50 flex max-h-[70vh] flex-col rounded-2xl border border-ink-600 bg-ink-800 shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-96">
+    <div
+      className="fixed inset-x-4 bottom-20 z-50 flex max-h-[70vh] flex-col overflow-hidden border border-ink-600 bg-ink-800 shadow-2xl md:inset-x-auto md:bottom-6 md:left-4 md:w-96"
+      style={{
+        transformOrigin: "bottom left",
+        animation: closing
+          ? "assistant-out 0.25s ease-in forwards"
+          : "assistant-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+      }}
+    >
       <div className="flex items-center justify-between border-b border-ink-600 p-4">
         <h2 className="flex items-center gap-2 font-bold">
           {animationData ? (
@@ -142,7 +170,7 @@ export default function AssistantChat() {
           اسأل الأخطبوط
         </h2>
         <button
-          onClick={() => setOpen(false)}
+          onClick={handleClose}
           className="text-mist hover:text-paper"
           aria-label="إغلاق"
         >

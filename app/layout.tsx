@@ -3,6 +3,8 @@ import { Cairo } from "next/font/google";
 import "./globals.css";
 
 import ToastProvider from "@/components/toast/ToastProvider";
+import AssistantChatProvider from "@/components/assistant/AssistantChatProvider";
+import AssistantChat from "@/components/assistant/AssistantChat";
 import OctopusMascot from "@/components/OctopusMascot";
 
 const cairo = Cairo({
@@ -27,8 +29,13 @@ export default function RootLayout({
       className={`${cairo.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-ink-950 overflow-x-hidden">
-        <ToastProvider>{children}</ToastProvider>
-        <OctopusMascot />
+        <ToastProvider>
+          <AssistantChatProvider>
+            {children}
+            <AssistantChat />
+            <OctopusMascot />
+          </AssistantChatProvider>
+        </ToastProvider>
       </body>
     </html>
   );

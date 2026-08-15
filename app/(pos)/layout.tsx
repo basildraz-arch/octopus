@@ -7,7 +7,6 @@ import { ShoppingCart, Wallet } from "lucide-react";
 
 import { useSession } from "@/hooks/useSession";
 import { logout } from "@/services/auth.service";
-import AssistantChat from "@/components/assistant/AssistantChat";
 
 const tabs = [
   { title: "بيع", href: "/sales", icon: ShoppingCart },
@@ -91,8 +90,6 @@ export default function PosLayout({
       <main className="p-4">
         {children}
       </main>
-
-      {user.role === "owner" && <AssistantChat />}
 
     </div>
   );

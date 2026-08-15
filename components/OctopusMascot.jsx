@@ -3,6 +3,9 @@
 import { useEffect, useId, useRef, useState, useCallback } from "react";
 import Lottie from "lottie-react";
 
+import { useSession } from "@/hooks/useSession";
+import { useAssistantChat } from "@/hooks/useAssistantChat";
+
 // ---- Real octopus ink: near-black, not the old teal/purple ----
 // A handful of very-close-to-black shades (not one flat value) so the
 // goo-merged cloud has some depth instead of reading as a single flat
@@ -104,6 +107,8 @@ export default function OctopusMascot({
   const filterId = `octopus-ink-goo-${useId().replace(/:/g, "")}`;
   const [animationData, setAnimationData] = useState(null);
   const [effectiveSize, setEffectiveSize] = useState(size);
+  const { user } = useSession();
+  const { open: openAssistantChat } = useAssistantChat();
 
   // Smaller footprint on narrow screens - a 120px mascot is a big chunk
   // of a ~390px-wide phone screen.
@@ -344,6 +349,24 @@ export default function OctopusMascot({
     [effectiveSize]
   );
 
+  // Clicking the mascot itself always sprays ink. If the current user is
+  // the business owner, it also opens the assistant chat - the ink
+  // "becomes" the chat panel (see the assistant-in keyframes). Anyone
+  // else (employee, or logged out on /login) only gets the ink; there is
+  // no attempt to open the chat, since AssistantChat itself refuses to
+  // render for non-owners anyway - the real access control is the 403 in
+  // app/api/assistant/route.ts, this is just not offering a UI that
+  // would do nothing.
+  const handleMascotClick = useCallback(
+    (e) => {
+      spawnInk(e.clientX, e.clientY);
+      if (user?.role === "owner") {
+        openAssistantChat();
+      }
+    },
+    [spawnInk, user, openAssistantChat]
+  );
+
   const eyeDotStyle = (rest) => {
     const w = rest.rx * effectiveSize * 2;
     const h = rest.ry * effectiveSize * 2;
@@ -376,7 +399,7 @@ export default function OctopusMascot({
     >
       <div
         ref={wrapRef}
-        onClick={(e) => spawnInk(e.clientX, e.clientY)}
+        onClick={handleMascotClick}
         style={{
           position: "relative",
           width: effectiveSize,
