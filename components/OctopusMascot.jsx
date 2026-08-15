@@ -3,8 +3,25 @@
 import { useEffect, useId, useRef, useState, useCallback } from "react";
 import Lottie from "lottie-react";
 
-// ---- Design tokens — matched to the octopus's own palette ----
-const INK_COLORS = ["#2FD9C4", "#6C5CE7", "#1FAE9C", "#4C3FB5"];
+// ---- Real octopus ink: near-black, not the old teal/purple ----
+// A handful of very-close-to-black shades (not one flat value) so the
+// goo-merged cloud has some depth instead of reading as a single flat
+// silhouette. Slightly lighter/cooler than the page's own ink-950
+// (#05070E) so it still registers as "darker than the background",
+// not identical to it.
+const INK_COLORS = ["#0B0B12", "#08080D", "#0E0E17", "#050508"];
+// Sparse, very dim cool highlights mixed in with the black particles -
+// like light catching the surface of wet ink - so the cloud doesn't
+// vanish into the dark background. These use screen blending
+// individually; the black particles use normal blending.
+const INK_HIGHLIGHT_COLORS = ["#4FD8C4", "#8B7CF0"];
+const INK_HIGHLIGHT_CHANCE = 0.25;
+
+// Where the ink actually erupts from — the base of the mantle, right
+// above the tentacles (measured pixel-by-pixel from the rendered
+// artwork, same method as EYE_REST below, not a guess). Fraction of
+// the container size.
+const INK_ORIGIN = { x: 0.437, y: 0.65 };
 
 // Pupil rest position as a fraction of the container size, measured
 // pixel-by-pixel from the rendered artwork (see git history for the
@@ -224,63 +241,79 @@ export default function OctopusMascot({
     };
   }, [animationData, effectiveSize]);
 
-  const spawnInk = useCallback((clientX, clientY) => {
-    const wrap = wrapRef.current;
-    const inkLayer = inkLayerRef.current;
-    if (!wrap || !inkLayer) return;
-    const rect = wrap.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
+  const spawnInk = useCallback(
+    (clientX, clientY) => {
+      const wrap = wrapRef.current;
+      const inkLayer = inkLayerRef.current;
+      if (!wrap || !inkLayer) return;
+      const rect = wrap.getBoundingClientRect();
 
-    // Plain circles — the goo/turbulence SVG filter on inkLayer is what
-    // gives them the organic, branching "ink diffusing in water" edge,
-    // not the shape of the elements themselves. Kept close together
-    // (small spread) so they overlap enough for the filter to merge them
-    // into one connected plume instead of separate dots.
-    for (let i = 0; i < 7; i++) {
-      const drop = document.createElement("div");
-      const dropSize = 10 + Math.random() * 26;
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 15 + Math.random() * 55;
-      const dx = Math.cos(angle) * dist;
-      const dy = Math.sin(angle) * dist;
-      const color = INK_COLORS[Math.floor(Math.random() * INK_COLORS.length)];
+      // The ink always erupts from the fixed body point, not from
+      // wherever was clicked/tapped - it "squirts", it doesn't just
+      // appear under the cursor. The click point only steers which
+      // direction it sprays in.
+      const originX = INK_ORIGIN.x * effectiveSize;
+      const originY = INK_ORIGIN.y * effectiveSize;
+      const clickX = clientX - rect.left;
+      const clickY = clientY - rect.top;
+      const baseAngle = Math.atan2(clickY - originY, clickX - originX);
 
-      Object.assign(drop.style, {
-        position: "absolute",
-        left: `${x}px`,
-        top: `${y}px`,
-        width: "3px",
-        height: "3px",
-        borderRadius: "50%",
-        background: color,
-        opacity: "0.75",
-        pointerEvents: "none",
-        // size/position spread over 0.7s so the goo filter has time to
-        // show a connected, branching shape; opacity fades later and
-        // faster, like ink dispersing/being absorbed into water
-        transition:
-          "left 0.7s cubic-bezier(0.16, 1, 0.3, 1), top 0.7s cubic-bezier(0.16, 1, 0.3, 1), width 0.7s cubic-bezier(0.16, 1, 0.3, 1), height 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease-in 0.25s",
-      });
-      inkLayer.appendChild(drop);
+      // Plain circles — the goo/turbulence SVG filter on inkLayer is what
+      // gives them the organic, branching "ink diffusing in water" edge,
+      // not the shape of the elements themselves. A cone of angles around
+      // baseAngle (not a full 360 burst) so it reads as a directional jet
+      // from the body rather than an omnidirectional pop.
+      for (let i = 0; i < 8; i++) {
+        const drop = document.createElement("div");
+        const dropSize = 10 + Math.random() * 26;
+        const angle = baseAngle + (Math.random() - 0.5) * 1.7; // ~±49°
+        const dist = 20 + Math.random() * 65;
+        const dx = Math.cos(angle) * dist;
+        const dy = Math.sin(angle) * dist;
 
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          drop.style.left = `${x + dx}px`;
-          drop.style.top = `${y + dy}px`;
-          drop.style.width = `${dropSize}px`;
-          drop.style.height = `${dropSize}px`;
-          drop.style.opacity = "0";
+        const isHighlight = Math.random() < INK_HIGHLIGHT_CHANCE;
+        const color = isHighlight
+          ? INK_HIGHLIGHT_COLORS[Math.floor(Math.random() * INK_HIGHLIGHT_COLORS.length)]
+          : INK_COLORS[Math.floor(Math.random() * INK_COLORS.length)];
+
+        Object.assign(drop.style, {
+          position: "absolute",
+          left: `${originX}px`,
+          top: `${originY}px`,
+          width: "3px",
+          height: "3px",
+          borderRadius: "50%",
+          background: color,
+          opacity: isHighlight ? "0.35" : "0.92",
+          mixBlendMode: isHighlight ? "screen" : "normal",
+          pointerEvents: "none",
+          // size/position spread over 0.7s so the goo filter has time to
+          // show a connected, branching shape; opacity fades later and
+          // faster, like ink dispersing/being absorbed into water
+          transition:
+            "left 0.7s cubic-bezier(0.16, 1, 0.3, 1), top 0.7s cubic-bezier(0.16, 1, 0.3, 1), width 0.7s cubic-bezier(0.16, 1, 0.3, 1), height 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease-in 0.25s",
         });
-      });
+        inkLayer.appendChild(drop);
 
-      setTimeout(() => drop.remove(), 800);
-    }
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            drop.style.left = `${originX + dx}px`;
+            drop.style.top = `${originY + dy}px`;
+            drop.style.width = `${dropSize}px`;
+            drop.style.height = `${dropSize}px`;
+            drop.style.opacity = "0";
+          });
+        });
 
-    // excited bounce, read by the animation loop each frame so it
-    // doesn't get overwritten by the tilt/idle transform
-    if (wrap.__setBounce) wrap.__setBounce(1.08);
-  }, []);
+        setTimeout(() => drop.remove(), 800);
+      }
+
+      // excited bounce, read by the animation loop each frame so it
+      // doesn't get overwritten by the tilt/idle transform
+      if (wrap.__setBounce) wrap.__setBounce(1.08);
+    },
+    [effectiveSize]
+  );
 
   const eyeDotStyle = (rest) => ({
     position: "absolute",
@@ -364,7 +397,6 @@ export default function OctopusMascot({
                 position: "absolute",
                 inset: 0,
                 filter: `url(#${filterId})`,
-                mixBlendMode: "screen",
                 pointerEvents: "none",
               }}
             />
