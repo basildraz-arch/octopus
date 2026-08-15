@@ -11,12 +11,14 @@ import {
 } from "@/repositories/stockBatch.repository";
 import { createTransfer } from "@/repositories/stockTransfer.repository";
 import { useSession } from "@/hooks/useSession";
+import { useToast } from "@/hooks/useToast";
 
 import type { Item } from "@/types/item";
 import type { Warehouse } from "@/types/warehouse";
 
 export default function StockTransferPage() {
   const { user } = useSession();
+  const toast = useToast();
 
   const [items, setItems] = useState<Item[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -85,7 +87,7 @@ export default function StockTransferPage() {
         quantityValue
       );
 
-      alert(`اتنقل ${quantityValue} ${selectedItem?.unit ?? ""} بنجاح`);
+      toast.success(`اتنقل ${quantityValue} ${selectedItem?.unit ?? ""} بنجاح`);
 
       setQuantity("");
 
@@ -97,7 +99,7 @@ export default function StockTransferPage() {
       const message =
         err instanceof Error ? err.message : "حدث خطأ أثناء نقل المخزون";
 
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
