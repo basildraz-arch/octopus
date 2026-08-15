@@ -19,10 +19,12 @@ import {
   updateWarehouse,
 } from "@/repositories/warehouse.repository";
 import { useSession } from "@/hooks/useSession";
+import { useToast } from "@/hooks/useToast";
 import type { Warehouse } from "@/types/warehouse";
 
 export default function WarehousesPage() {
   const { user } = useSession();
+  const toast = useToast();
 
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +75,7 @@ export default function WarehousesPage() {
       await loadWarehouses();
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء إضافة المخزن");
+      toast.error("حدث خطأ أثناء إضافة المخزن");
     } finally {
       setAdding(false);
     }
@@ -104,7 +106,7 @@ export default function WarehousesPage() {
       await loadWarehouses();
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء حفظ التعديل");
+      toast.error("حدث خطأ أثناء حفظ التعديل");
     } finally {
       setSavingEdit(false);
     }
@@ -112,7 +114,7 @@ export default function WarehousesPage() {
 
   async function toggleActive(warehouse: Warehouse) {
     if (warehouse.is_default && warehouse.active) {
-      alert("لا يمكن تعطيل المخزن الافتراضي");
+      toast.error("لا يمكن تعطيل المخزن الافتراضي");
       return;
     }
 
@@ -121,7 +123,7 @@ export default function WarehousesPage() {
       await loadWarehouses();
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء تحديث حالة المخزن");
+      toast.error("حدث خطأ أثناء تحديث حالة المخزن");
     }
   }
 
