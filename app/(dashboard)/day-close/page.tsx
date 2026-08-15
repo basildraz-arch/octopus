@@ -21,6 +21,7 @@ import {
   type ShiftSummary,
 } from "@/repositories/shift.repository";
 import { useSession } from "@/hooks/useSession";
+import { useToast } from "@/hooks/useToast";
 
 const PAYMENT_METHOD_INFO: Record<string, { label: string; icon: LucideIcon }> = {
   cash: { label: "كاش", icon: Banknote },
@@ -30,6 +31,7 @@ const PAYMENT_METHOD_INFO: Record<string, { label: string; icon: LucideIcon }> =
 
 export default function DayClosePage() {
   const { user } = useSession();
+  const toast = useToast();
 
   const [shift, setShift] = useState<Shift | null>(null);
   const [summary, setSummary] = useState<ShiftSummary | null>(null);
@@ -82,7 +84,7 @@ export default function DayClosePage() {
       await load();
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء إنهاء اليوم");
+      toast.error("حدث خطأ أثناء إنهاء اليوم");
     } finally {
       setClosing(false);
     }
@@ -99,7 +101,7 @@ export default function DayClosePage() {
       await load();
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء إعادة فتح اليوم");
+      toast.error("حدث خطأ أثناء إعادة فتح اليوم");
     } finally {
       setReopening(false);
     }
