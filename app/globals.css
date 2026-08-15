@@ -146,3 +146,32 @@
     @apply font-sans;
   }
 }
+
+@keyframes toast-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) translateY(-10px);
+    border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%;
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.04) translateY(0);
+    border-radius: 45% 55% 42% 58% / 55% 42% 58% 45%;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    border-radius: 1rem;
+  }
+}
+
+@keyframes toast-out {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.85) translateY(-6px);
+  }
+}
