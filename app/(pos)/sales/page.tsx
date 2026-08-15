@@ -14,6 +14,7 @@ import { getBusiness } from "@/repositories/business.repository";
 import { getCategories, type Category } from "@/repositories/category.repository";
 import { useSession } from "@/hooks/useSession";
 import { useWarehouseSelection } from "@/hooks/useWarehouseSelection";
+import { useToast } from "@/hooks/useToast";
 
 import type { Item } from "@/types/item";
 import type { PaymentMethod } from "@/types/sale";
@@ -29,6 +30,7 @@ export default function SalesPage() {
   const { user } = useSession();
   const { warehouses, selectedWarehouseId, selectWarehouse } =
     useWarehouseSelection(user?.business_id);
+  const toast = useToast();
 
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +130,7 @@ export default function SalesPage() {
           : 0;
 
       if (discountValue > maxAllowedDiscount) {
-        alert(`أقصى خصم مسموح ${maxAllowedDiscount.toFixed(2)} جنيه`);
+        toast.error(`أقصى خصم مسموح ${maxAllowedDiscount.toFixed(2)} جنيه`);
         return;
       }
     }
@@ -164,7 +166,7 @@ export default function SalesPage() {
           ? err.message
           : "حدث خطأ أثناء إتمام البيع";
 
-      alert(message);
+      toast.error(message);
     } finally {
       setCheckingOut(false);
     }
