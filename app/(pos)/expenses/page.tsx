@@ -11,9 +11,11 @@ import {
 } from "@/repositories/expense.repository";
 import { getOpenShift } from "@/repositories/shift.repository";
 import { useSession } from "@/hooks/useSession";
+import { useToast } from "@/hooks/useToast";
 
 export default function ExpensesPage() {
   const { user } = useSession();
+  const toast = useToast();
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,7 +71,7 @@ export default function ExpensesPage() {
       await load();
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء حفظ المصروف");
+      toast.error("حدث خطأ أثناء حفظ المصروف");
     } finally {
       setSaving(false);
     }
@@ -81,7 +83,7 @@ export default function ExpensesPage() {
       await load();
     } catch (err) {
       console.error(err);
-      alert("تعذر حذف المصروف");
+      toast.error("تعذر حذف المصروف");
     }
   }
 
