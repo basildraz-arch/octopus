@@ -21,6 +21,7 @@ import {
 import { getWarehouses } from "@/repositories/warehouse.repository";
 import { getStockByWarehouse } from "@/repositories/stockBatch.repository";
 import { useSession } from "@/hooks/useSession";
+import { useToast } from "@/hooks/useToast";
 
 import { itemSchema, ItemSchema } from "./validation";
 
@@ -36,6 +37,7 @@ type Props = {
 export default function ItemForm({ item }: Props) {
   const router = useRouter();
   const { user } = useSession();
+  const toast = useToast();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [duplicateItem, setDuplicateItem] = useState<Item | null>(null);
@@ -179,9 +181,9 @@ export default function ItemForm({ item }: Props) {
       const code = (err as { code?: string })?.code;
 
       if (code === "23505") {
-        alert("يوجد صنف بنفس الاسم بالفعل. عدّل الصنف الموجود بدل إضافة واحد جديد.");
+        toast.error("يوجد صنف بنفس الاسم بالفعل. عدّل الصنف الموجود بدل إضافة واحد جديد.");
       } else {
-        alert("حدث خطأ أثناء الحفظ");
+        toast.error("حدث خطأ أثناء الحفظ");
       }
     }
   }
