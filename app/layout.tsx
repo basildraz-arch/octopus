@@ -3,6 +3,7 @@ import { Cairo } from "next/font/google";
 import "./globals.css";
 
 import ToastProvider from "@/components/toast/ToastProvider";
+import OctopusMascot from "@/components/OctopusMascot";
 
 const cairo = Cairo({
   variable: "--font-cairo",
@@ -27,6 +28,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-ink-950 overflow-x-hidden">
         <ToastProvider>{children}</ToastProvider>
+        <OctopusMascot />
       </body>
     </html>
   );

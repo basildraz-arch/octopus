@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import OctopusMascot from "@/components/OctopusMascot";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,9 +13,7 @@ export default function LoginPage() {
 
         <div className="mb-10 flex flex-col items-center text-center">
 
-          <OctopusMascot size={160} />
-
-          <h1 className="mt-5 text-3xl font-bold text-paper">
+          <h1 className="text-3xl font-bold text-paper">
             Octopus
           </h1>
 
