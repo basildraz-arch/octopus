@@ -11,9 +11,11 @@ import {
   type Category,
 } from "@/repositories/category.repository";
 import { useSession } from "@/hooks/useSession";
+import { useToast } from "@/hooks/useToast";
 
 export default function CategoriesPage() {
   const { user } = useSession();
+  const toast = useToast();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +63,7 @@ export default function CategoriesPage() {
       await loadCategories();
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء إضافة الفئة");
+      toast.error("حدث خطأ أثناء إضافة الفئة");
     } finally {
       setAdding(false);
     }
@@ -92,7 +94,7 @@ export default function CategoriesPage() {
       await loadCategories();
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء حفظ التعديل");
+      toast.error("حدث خطأ أثناء حفظ التعديل");
     } finally {
       setSavingEdit(false);
     }
@@ -110,7 +112,7 @@ export default function CategoriesPage() {
       await loadCategories();
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء حذف الفئة");
+      toast.error("حدث خطأ أثناء حذف الفئة");
     }
   }
 
