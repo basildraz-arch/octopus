@@ -22,23 +22,8 @@ const INK_HIGHLIGHT_CHANCE = 0.25;
 
 // Where the ink actually erupts from — the base of the mantle, right
 // above the tentacles (measured pixel-by-pixel from the rendered
-// artwork, same method as EYE_REST below, not a guess). Fraction of
-// the container size.
+// artwork, not a guess). Fraction of the container size.
 const INK_ORIGIN = { x: 0.437, y: 0.65 };
-
-// Pupil rest position AND size, both measured pixel-by-pixel from the
-// rendered artwork (bounding box of the real pupil, not just its
-// center) and confirmed by overlaying an ellipse outline on a
-// screenshot before using these numbers — the previous version only
-// measured the center and used a fixed 6px dot regardless of
-// container size, which is why it never actually matched the real
-// pupil shape/size at any size other than the one it happened to be
-// eyeballed against.
-const EYE_REST = {
-  left: { x: 0.387, y: 0.454, rx: 0.048, ry: 0.052 },
-  right: { x: 0.601, y: 0.458, rx: 0.056, ry: 0.048 },
-};
-const EYE_MAX_OFFSET = 3; // px the pupil overlay is allowed to travel
 
 // How much empty space to keep clear at each viewport edge while
 // wandering, so the mascot never gets clipped or sits under the
@@ -67,6 +52,40 @@ const WANDER_SETTLE_SPEED = 0.3;
 // narrow lane along the screen edge on small screens instead.
 const MOBILE_BREAKPOINT = 640;
 const MOBILE_LANE_WIDTH = 150;
+
+// The arm only reaches for clicks/taps within this radius (px) of the
+// octopus's current on-screen position - a deliberate constraint so it
+// never "chases" something far across the page, only reacts to things
+// near wherever it already happens to be standing.
+const ARM_REACH_DISTANCE = 280;
+const ARM_REACH_DISTANCE_MOBILE = 180;
+const ARM_GROW_MS = 260;
+const ARM_HOLD_MS = 120;
+const ARM_RETRACT_MS = 220;
+const ARM_COLOR = INK_COLORS[0];
+
+// The body-reaction spring (see wrap.__setBounce below) - snappier and
+// less damped than the tilt/wander springs above so a kick actually
+// overshoots and settles with a visible "boing" instead of easing
+// straight back to rest.
+const BOUNCE_SPRING_STIFFNESS = 0.36;
+const BOUNCE_SPRING_DAMPING = 0.8;
+// How hard each event kicks the bounce spring's velocity - ink spraying
+// is the bigger, more physical reaction; the arm's tap is a lighter one.
+const BOUNCE_KICK_INK = 0.42;
+const BOUNCE_KICK_ARM = 0.22;
+// bounceScale drives a squash-and-stretch, not a uniform scale - these
+// are the per-axis multipliers applied to (bounceScale - 1). Positive on
+// X, negative on Y means growth phases bulge sideways while compressing
+// vertically (and the reverse on the rebound), which reads as an actual
+// squeeze reaction instead of a flat inflate/deflate pulse.
+const BOUNCE_STRETCH_X = 1.3;
+const BOUNCE_STRETCH_Y = -0.6;
+// How hard the body recoils (tilt-velocity kick, opposite the spray
+// direction) at the instant ink erupts - degrees/frame in the same units
+// as the pointer-tilt spring above it shares velX/velY with.
+const RECOIL_KICK_X = 11;
+const RECOIL_KICK_Y = 6;
 
 function springStep(pos, vel, target, stiffness, damping) {
   const force = (target - pos) * stiffness;
@@ -101,9 +120,10 @@ export default function OctopusMascot({
 }) {
   const outerRef = useRef(null);
   const wrapRef = useRef(null);
-  const leftEyeRef = useRef(null);
-  const rightEyeRef = useRef(null);
   const inkLayerRef = useRef(null);
+  const armPathRef = useRef(null);
+  const armTipRef = useRef(null);
+  const armBusyRef = useRef(false);
   const filterId = `octopus-ink-goo-${useId().replace(/:/g, "")}`;
   const [animationData, setAnimationData] = useState(null);
   const [effectiveSize, setEffectiveSize] = useState(size);
@@ -156,6 +176,7 @@ export default function OctopusMascot({
       velY = 0,
       idlePhase = Math.random() * 100,
       bounceScale = 1,
+      bounceVel = 0,
       raf;
 
     // --- wandering state ---
@@ -213,6 +234,109 @@ export default function OctopusMascot({
       targetY = 0;
     };
 
+    // --- arm reach: the octopus stretches an arm toward whatever the
+    // user just clicked/tapped, but only if it landed close to where the
+    // mascot currently is (see ARM_REACH_DISTANCE comment above) ---
+    const armTimers = [];
+
+    function triggerArmReach(clientX, clientY) {
+      const path = armPathRef.current;
+      const tip = armTipRef.current;
+      if (!path || !tip || armBusyRef.current) return;
+
+      const rect = wrap.getBoundingClientRect();
+      const originX = rect.left + INK_ORIGIN.x * effectiveSize;
+      const originY = rect.top + INK_ORIGIN.y * effectiveSize;
+      const dist = Math.hypot(clientX - originX, clientY - originY);
+      const maxReach = isMobile() ? ARM_REACH_DISTANCE_MOBILE : ARM_REACH_DISTANCE;
+      if (dist > maxReach || dist < 4) return;
+
+      armBusyRef.current = true;
+
+      // Bow the curve out to one side so the arm reads as a flexible
+      // tentacle instead of a rigid rod - perpendicular offset from the
+      // straight line to the target, capped so short reaches don't
+      // over-curve.
+      const midX = (originX + clientX) / 2;
+      const midY = (originY + clientY) / 2;
+      const dx = clientX - originX;
+      const dy = clientY - originY;
+      const bow = Math.min(dist * 0.25, 36);
+      const ctrlX = midX + (-dy / dist) * bow;
+      const ctrlY = midY + (dx / dist) * bow;
+
+      path.setAttribute("d", `M ${originX} ${originY} Q ${ctrlX} ${ctrlY} ${clientX} ${clientY}`);
+      const length = path.getTotalLength();
+      path.style.transition = "none";
+      path.style.strokeDasharray = `${length}`;
+      path.style.strokeDashoffset = `${length}`;
+      path.style.opacity = "1";
+      tip.style.transition = "none";
+      tip.style.opacity = "0";
+      tip.style.r = "0px";
+      tip.style.cx = `${originX}px`;
+      tip.style.cy = `${originY}px`;
+
+      // same "hidden state, then animate" pattern as spawnInk: two nested
+      // rAFs so the browser actually paints the zero-progress frame
+      // before the transition kicks in, instead of coalescing both style
+      // writes into one paint and skipping the animation entirely.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          path.style.transition = `stroke-dashoffset ${ARM_GROW_MS}ms cubic-bezier(0.3, 1.4, 0.5, 1)`;
+          path.style.strokeDashoffset = "0";
+        });
+      });
+
+      if (wrap.__setBounce) wrap.__setBounce(BOUNCE_KICK_ARM);
+
+      // arrival: a small "tap" pulse at the fingertip
+      armTimers.push(
+        setTimeout(() => {
+          tip.style.transition = "none";
+          tip.style.cx = `${clientX}px`;
+          tip.style.cy = `${clientY}px`;
+          tip.style.r = "3px";
+          tip.style.opacity = "0.85";
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              tip.style.transition = `r ${ARM_HOLD_MS}ms ease-out, opacity ${ARM_HOLD_MS}ms ease-out`;
+              tip.style.r = "11px";
+              tip.style.opacity = "0";
+            });
+          });
+        }, ARM_GROW_MS)
+      );
+
+      // retract: unwind the same draw animation backwards so the arm
+      // erases from the tip back toward the body, instead of just
+      // vanishing.
+      armTimers.push(
+        setTimeout(() => {
+          path.style.transition = `stroke-dashoffset ${ARM_RETRACT_MS}ms ease-in`;
+          path.style.strokeDashoffset = `${length}`;
+        }, ARM_GROW_MS + ARM_HOLD_MS)
+      );
+
+      armTimers.push(
+        setTimeout(() => {
+          path.style.opacity = "0";
+          path.setAttribute("d", "");
+          armBusyRef.current = false;
+        }, ARM_GROW_MS + ARM_HOLD_MS + ARM_RETRACT_MS)
+      );
+    }
+
+    // Global click - reacts to anything on the page, not just the
+    // mascot's own hit-box. The mascot's own click (ink/chat) is handled
+    // separately by handleMascotClick, so it's excluded here. Nothing is
+    // prevented or stopped - the real click still reaches its real
+    // target, this only layers a visual on top.
+    const handleGlobalClick = (e) => {
+      if (wrap.contains(e.target)) return;
+      triggerArmReach(e.clientX, e.clientY);
+    };
+
     const tick = () => {
       idlePhase += 0.02;
       const idleTiltX = Math.sin(idlePhase * 0.6) * 1.5 + Math.sin(idlePhase * 0.23) * 0.8;
@@ -220,7 +344,13 @@ export default function OctopusMascot({
 
       [curX, velX] = springStep(curX, velX, targetX, 0.09, 0.82);
       [curY, velY] = springStep(curY, velY, targetY, 0.09, 0.82);
-      bounceScale += (1 - bounceScale) * 0.2;
+      [bounceScale, bounceVel] = springStep(
+        bounceScale,
+        bounceVel,
+        1,
+        BOUNCE_SPRING_STIFFNESS,
+        BOUNCE_SPRING_DAMPING
+      );
 
       [wanderX, wanderVelX] = springStep(wanderX, wanderVelX, wanderTargetX, 0.012, 0.82);
       [wanderY, wanderVelY] = springStep(wanderY, wanderVelY, wanderTargetY, 0.012, 0.82);
@@ -239,15 +369,13 @@ export default function OctopusMascot({
 
       outer.style.transform = `translate(${wanderX}px, ${wanderY}px)`;
 
+      const bounceOffset = bounceScale - 1;
+      const scaleX = 1 + bounceOffset * BOUNCE_STRETCH_X;
+      const scaleY = 1 + bounceOffset * BOUNCE_STRETCH_Y;
+
       wrap.style.transform = `perspective(600px) translateY(${idleBobY}px) rotateY(${
         curX + idleTiltX
-      }deg) rotateX(${-curY}deg) scale(${bounceScale})`;
-
-      const eyeOffsetX = (curX / 18) * EYE_MAX_OFFSET;
-      const eyeOffsetY = (curY / 10) * EYE_MAX_OFFSET;
-      const eyeTransform = `translate(${eyeOffsetX}px, ${eyeOffsetY}px)`;
-      if (leftEyeRef.current) leftEyeRef.current.style.transform = eyeTransform;
-      if (rightEyeRef.current) rightEyeRef.current.style.transform = eyeTransform;
+      }deg) rotateX(${-curY}deg) scale(${scaleX}, ${scaleY})`;
 
       raf = requestAnimationFrame(tick);
     };
@@ -259,10 +387,19 @@ export default function OctopusMascot({
     window.addEventListener("pointerup", resetTilt);
     window.addEventListener("pointercancel", resetTilt);
     wrap.addEventListener("pointerleave", resetTilt);
+    window.addEventListener("click", handleGlobalClick);
     tick();
 
-    wrap.__setBounce = (v) => {
-      bounceScale = v;
+    // Both kick velocity rather than snap position directly, so the
+    // existing spring (see tick above) does the work of overshooting and
+    // settling instead of a scripted animation.
+    wrap.__setBounce = (kick) => {
+      bounceVel += kick;
+    };
+    wrap.__addRecoil = (angle, magX, magY) => {
+      // opposite the spray direction, like recoil from expelling force
+      velX += -Math.cos(angle) * magX;
+      velY += -Math.sin(angle) * magY;
     };
 
     return () => {
@@ -270,6 +407,9 @@ export default function OctopusMascot({
       window.removeEventListener("pointerup", resetTilt);
       window.removeEventListener("pointercancel", resetTilt);
       wrap.removeEventListener("pointerleave", resetTilt);
+      window.removeEventListener("click", handleGlobalClick);
+      armTimers.forEach(clearTimeout);
+      armBusyRef.current = false;
       clearTimeout(wanderTimer);
       cancelAnimationFrame(raf);
     };
@@ -342,16 +482,21 @@ export default function OctopusMascot({
         setTimeout(() => drop.remove(), 800);
       }
 
-      // excited bounce, read by the animation loop each frame so it
-      // doesn't get overwritten by the tilt/idle transform
-      if (wrap.__setBounce) wrap.__setBounce(1.08);
+      // excited bounce + a recoil kick opposite the spray direction, both
+      // read by the animation loop each frame so they don't get
+      // overwritten by the tilt/idle transform - together they read as
+      // the body actually reacting to expelling the ink, not just the
+      // ink itself moving.
+      if (wrap.__setBounce) wrap.__setBounce(BOUNCE_KICK_INK);
+      if (wrap.__addRecoil) wrap.__addRecoil(baseAngle, RECOIL_KICK_X, RECOIL_KICK_Y);
     },
     [effectiveSize]
   );
 
   // Clicking the mascot itself always sprays ink. If the current user is
   // the business owner, it also opens the assistant chat - the ink
-  // "becomes" the chat panel (see the assistant-in keyframes). Anyone
+  // "becomes" the chat panel (see AssistantChat.tsx's own blob growth
+  // animation, which starts from this same origin point). Anyone
   // else (employee, or logged out on /login) only gets the ink; there is
   // no attempt to open the chat, since AssistantChat itself refuses to
   // render for non-owners anyway - the real access control is the 403 in
@@ -361,104 +506,129 @@ export default function OctopusMascot({
     (e) => {
       spawnInk(e.clientX, e.clientY);
       if (user?.role === "owner") {
-        openAssistantChat();
+        // Same origin point the ink itself erupts from, so the chat
+        // panel's ink-flood entrance (AssistantChat.tsx) starts exactly
+        // where this splash did instead of some unrelated fixed point.
+        const rect = wrapRef.current?.getBoundingClientRect();
+        const origin = rect
+          ? {
+              x: rect.left + INK_ORIGIN.x * effectiveSize,
+              y: rect.top + INK_ORIGIN.y * effectiveSize,
+            }
+          : undefined;
+        openAssistantChat(origin);
       }
     },
-    [spawnInk, user, openAssistantChat]
+    [spawnInk, user, openAssistantChat, effectiveSize]
   );
 
-  const eyeDotStyle = (rest) => {
-    const w = rest.rx * effectiveSize * 2;
-    const h = rest.ry * effectiveSize * 2;
-    return {
-      position: "absolute",
-      left: `${rest.x * effectiveSize - w / 2}px`,
-      top: `${rest.y * effectiveSize - h / 2}px`,
-      width: `${w}px`,
-      height: `${h}px`,
-      borderRadius: "50%",
-      background: "#12151F",
-      pointerEvents: "none",
-    };
-  };
+  const armWidth = Math.max(6, effectiveSize * 0.08);
 
   return (
-    <div
-      ref={outerRef}
-      className={className}
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: effectiveSize,
-        height: effectiveSize,
-        zIndex: 40,
-        pointerEvents: "none",
-        willChange: "transform",
-      }}
-    >
+    <>
       <div
-        ref={wrapRef}
-        onClick={handleMascotClick}
+        ref={outerRef}
+        className={className}
         style={{
-          position: "relative",
+          position: "fixed",
+          top: 0,
+          left: 0,
           width: effectiveSize,
           height: effectiveSize,
-          cursor: "pointer",
-          pointerEvents: "auto",
-          touchAction: "none",
+          zIndex: 40,
+          pointerEvents: "none",
+          willChange: "transform",
         }}
       >
-        {animationData && (
-          <>
-            <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
-              <defs>
-                <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
-                  <feColorMatrix
-                    in="blur"
-                    mode="matrix"
-                    values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 25 -10"
-                    result="goo"
-                  />
-                  <feTurbulence
-                    type="fractalNoise"
-                    baseFrequency="0.025 0.05"
-                    numOctaves="2"
-                    seed="7"
-                    result="noise"
-                  />
-                  <feDisplacementMap
-                    in="goo"
-                    in2="noise"
-                    scale="30"
-                    xChannelSelector="R"
-                    yChannelSelector="G"
-                  />
-                </filter>
-              </defs>
-            </svg>
+        <div
+          ref={wrapRef}
+          onClick={handleMascotClick}
+          style={{
+            position: "relative",
+            width: effectiveSize,
+            height: effectiveSize,
+            cursor: "pointer",
+            pointerEvents: "auto",
+            touchAction: "none",
+          }}
+        >
+          {animationData && (
+            <>
+              <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
+                <defs>
+                  <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
+                    <feColorMatrix
+                      in="blur"
+                      mode="matrix"
+                      values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 25 -10"
+                      result="goo"
+                    />
+                    <feTurbulence
+                      type="fractalNoise"
+                      baseFrequency="0.025 0.05"
+                      numOctaves="2"
+                      seed="7"
+                      result="noise"
+                    />
+                    <feDisplacementMap
+                      in="goo"
+                      in2="noise"
+                      scale="30"
+                      xChannelSelector="R"
+                      yChannelSelector="G"
+                    />
+                  </filter>
+                </defs>
+              </svg>
 
-            <Lottie
-              animationData={animationData}
-              loop
-              autoplay
-              style={{ width: "100%", height: "100%" }}
-            />
-            <div ref={leftEyeRef} style={eyeDotStyle(EYE_REST.left)} />
-            <div ref={rightEyeRef} style={eyeDotStyle(EYE_REST.right)} />
-            <div
-              ref={inkLayerRef}
-              style={{
-                position: "absolute",
-                inset: 0,
-                filter: `url(#${filterId})`,
-                pointerEvents: "none",
-              }}
-            />
-          </>
-        )}
+              <Lottie
+                animationData={animationData}
+                loop
+                autoplay
+                style={{ width: "100%", height: "100%" }}
+              />
+              <div
+                ref={inkLayerRef}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  filter: `url(#${filterId})`,
+                  pointerEvents: "none",
+                }}
+              />
+            </>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Full-viewport overlay for the arm reach - lives outside the
+          wandering `outer` element so its path coordinates are plain
+          viewport coordinates, not affected by the wander translate. */}
+      {animationData && (
+        <svg
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            width: "100vw",
+            height: "100vh",
+            pointerEvents: "none",
+            zIndex: 41,
+          }}
+        >
+          <path
+            ref={armPathRef}
+            d=""
+            fill="none"
+            stroke={ARM_COLOR}
+            strokeWidth={armWidth}
+            strokeLinecap="round"
+            style={{ opacity: 0 }}
+          />
+          <circle ref={armTipRef} cx={0} cy={0} r={0} fill={ARM_COLOR} style={{ opacity: 0 }} />
+        </svg>
+      )}
+    </>
   );
 }
