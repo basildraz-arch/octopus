@@ -7,6 +7,7 @@ import { getItems } from "@/repositories/item.repository";
 import { createPurchase } from "@/repositories/purchase.repository";
 import { useSession } from "@/hooks/useSession";
 import { useWarehouseSelection } from "@/hooks/useWarehouseSelection";
+import { useToast } from "@/hooks/useToast";
 
 import type { Item } from "@/types/item";
 
@@ -14,6 +15,7 @@ export default function PurchasesPage() {
   const { user } = useSession();
   const { warehouses, selectedWarehouseId, selectWarehouse } =
     useWarehouseSelection(user?.business_id);
+  const toast = useToast();
 
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +76,7 @@ export default function PurchasesPage() {
         selectedWarehouseId
       );
 
-      alert(
+      toast.success(
         `اتضاف ${quantityValue} ${selectedItem.unit} لمخزون "${selectedItem.name}"`
       );
 
@@ -85,7 +87,7 @@ export default function PurchasesPage() {
       await load();
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء حفظ عملية الشراء");
+      toast.error("حدث خطأ أثناء حفظ عملية الشراء");
     } finally {
       setSaving(false);
     }
