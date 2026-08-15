@@ -23,12 +23,17 @@ const INK_HIGHLIGHT_CHANCE = 0.25;
 // the container size.
 const INK_ORIGIN = { x: 0.437, y: 0.65 };
 
-// Pupil rest position as a fraction of the container size, measured
-// pixel-by-pixel from the rendered artwork (see git history for the
-// measurement script) — not a guess.
+// Pupil rest position AND size, both measured pixel-by-pixel from the
+// rendered artwork (bounding box of the real pupil, not just its
+// center) and confirmed by overlaying an ellipse outline on a
+// screenshot before using these numbers — the previous version only
+// measured the center and used a fixed 6px dot regardless of
+// container size, which is why it never actually matched the real
+// pupil shape/size at any size other than the one it happened to be
+// eyeballed against.
 const EYE_REST = {
-  left: { x: 0.408, y: 0.436 },
-  right: { x: 0.570, y: 0.442 },
+  left: { x: 0.387, y: 0.454, rx: 0.048, ry: 0.052 },
+  right: { x: 0.601, y: 0.458, rx: 0.056, ry: 0.048 },
 };
 const EYE_MAX_OFFSET = 3; // px the pupil overlay is allowed to travel
 
@@ -36,8 +41,19 @@ const EYE_MAX_OFFSET = 3; // px the pupil overlay is allowed to travel
 // wandering, so the mascot never gets clipped or sits under the
 // bottom nav / toast stack.
 const WANDER_MARGIN = { top: 70, bottom: 100, left: 16, right: 16 };
-const WANDER_MIN_INTERVAL_MS = 5000;
-const WANDER_MAX_INTERVAL_MS = 9000;
+// How long the mascot sits still in one spot before relocating. The
+// travel itself only takes ~1.5-2.5s (see the wander spring constants
+// in the animation loop), so most of this window is genuine rest, not
+// motion — it should read as "settles somewhere, then moves on", not
+// continuous drift.
+const WANDER_MIN_INTERVAL_MS = 7000;
+const WANDER_MAX_INTERVAL_MS = 13000;
+// Once within this distance (px) and speed of the wander target, snap
+// to it exactly and zero the velocity instead of letting the spring
+// asymptotically crawl forever — without this it never actually stops,
+// it just keeps inching toward the target until the next one is picked.
+const WANDER_SETTLE_DIST = 0.5;
+const WANDER_SETTLE_SPEED = 0.3;
 
 // Below this viewport width, most of the screen is occupied by
 // full-width page content (forms, cards) with little safe empty space -
@@ -176,7 +192,7 @@ export default function OctopusMascot({
         Math.random() * (WANDER_MAX_INTERVAL_MS - WANDER_MIN_INTERVAL_MS);
       wanderTimer = setTimeout(pickNewWanderTarget, delay);
     }
-    wanderTimer = setTimeout(pickNewWanderTarget, 1500);
+    wanderTimer = setTimeout(pickNewWanderTarget, 2000);
 
     // --- pointer tracking (mouse + touch, unified via Pointer Events) ---
     const handlePointerMove = (e) => {
@@ -201,8 +217,21 @@ export default function OctopusMascot({
       [curY, velY] = springStep(curY, velY, targetY, 0.09, 0.82);
       bounceScale += (1 - bounceScale) * 0.2;
 
-      [wanderX, wanderVelX] = springStep(wanderX, wanderVelX, wanderTargetX, 0.0025, 0.9);
-      [wanderY, wanderVelY] = springStep(wanderY, wanderVelY, wanderTargetY, 0.0025, 0.9);
+      [wanderX, wanderVelX] = springStep(wanderX, wanderVelX, wanderTargetX, 0.012, 0.82);
+      [wanderY, wanderVelY] = springStep(wanderY, wanderVelY, wanderTargetY, 0.012, 0.82);
+
+      // hard settle: stop for real once close enough, instead of the
+      // spring crawling toward the target forever without ever arriving
+      if (
+        Math.hypot(wanderTargetX - wanderX, wanderTargetY - wanderY) < WANDER_SETTLE_DIST &&
+        Math.hypot(wanderVelX, wanderVelY) < WANDER_SETTLE_SPEED
+      ) {
+        wanderX = wanderTargetX;
+        wanderY = wanderTargetY;
+        wanderVelX = 0;
+        wanderVelY = 0;
+      }
+
       outer.style.transform = `translate(${wanderX}px, ${wanderY}px)`;
 
       wrap.style.transform = `perspective(600px) translateY(${idleBobY}px) rotateY(${
@@ -315,16 +344,20 @@ export default function OctopusMascot({
     [effectiveSize]
   );
 
-  const eyeDotStyle = (rest) => ({
-    position: "absolute",
-    left: `${rest.x * effectiveSize - 3}px`,
-    top: `${rest.y * effectiveSize - 3}px`,
-    width: 6,
-    height: 6,
-    borderRadius: "50%",
-    background: "#12151F",
-    pointerEvents: "none",
-  });
+  const eyeDotStyle = (rest) => {
+    const w = rest.rx * effectiveSize * 2;
+    const h = rest.ry * effectiveSize * 2;
+    return {
+      position: "absolute",
+      left: `${rest.x * effectiveSize - w / 2}px`,
+      top: `${rest.y * effectiveSize - h / 2}px`,
+      width: `${w}px`,
+      height: `${h}px`,
+      borderRadius: "50%",
+      background: "#12151F",
+      pointerEvents: "none",
+    };
+  };
 
   return (
     <div
