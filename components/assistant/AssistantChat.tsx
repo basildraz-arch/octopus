@@ -267,8 +267,17 @@ export default function AssistantChat() {
       const radius = refRadius();
       const scale = axisScale();
       const tc = targetCenter();
-      [curCenter.x, velCenter.x] = springStep(curCenter.x, velCenter.x, tc.x, CENTER_STIFFNESS, CENTER_DAMPING);
-      [curCenter.y, velCenter.y] = springStep(curCenter.y, velCenter.y, tc.y, CENTER_STIFFNESS, CENTER_DAMPING);
+      // Declare-then-assign, not destructuring assignment straight into
+      // curCenter.x/velCenter.x - array-destructuring assignment INTO an
+      // object property (as opposed to a plain variable) is what
+      // production's minifier mishandled, see the commit message for the
+      // "Invalid destructuring assignment target" incident this fixes.
+      const [nextCenterX, nextVelCenterX] = springStep(curCenter.x, velCenter.x, tc.x, CENTER_STIFFNESS, CENTER_DAMPING);
+      curCenter.x = nextCenterX;
+      velCenter.x = nextVelCenterX;
+      const [nextCenterY, nextVelCenterY] = springStep(curCenter.y, velCenter.y, tc.y, CENTER_STIFFNESS, CENTER_DAMPING);
+      curCenter.y = nextCenterY;
+      velCenter.y = nextVelCenterY;
 
       const collapse = closingNow ? 0 : 1;
 
@@ -310,7 +319,11 @@ export default function AssistantChat() {
 
         const target = Math.max(naturalTarget, unitFloor) * collapse;
 
-        [curRadii[i], velRadii[i]] = springStep(curRadii[i], velRadii[i], target, RADIUS_STIFFNESS, RADIUS_DAMPING);
+        // Same declare-then-assign fix as curCenter above - curRadii[i]
+        // is a computed member expression too.
+        const [nextRadius, nextVel] = springStep(curRadii[i], velRadii[i], target, RADIUS_STIFFNESS, RADIUS_DAMPING);
+        curRadii[i] = nextRadius;
+        velRadii[i] = nextVel;
         const r = Math.max(0, curRadii[i]);
         points.push({
           x: curCenter.x + Math.cos(angle) * r * scale.x,
