@@ -14,6 +14,7 @@ import {
 import { changePassword } from "@/services/auth.service";
 import { getBusiness, updateBusiness } from "@/repositories/business.repository";
 import { useSession } from "@/hooks/useSession";
+import { useToast } from "@/hooks/useToast";
 import { ALL_FEATURES, FEATURE_LABELS } from "@/lib/features";
 import type { FeatureKey } from "@/types/business";
 
@@ -21,6 +22,7 @@ const ADMIN_EMAIL = "basildraz@gmail.com";
 
 export default function SettingsPage() {
   const { user } = useSession();
+  const toast = useToast();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -68,7 +70,7 @@ export default function SettingsPage() {
       setEnabledFeatures(newFeatures);
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء تحديث الميزة");
+      toast.error("حدث خطأ أثناء تحديث الميزة");
     } finally {
       setSavingFeatures(false);
     }
@@ -88,7 +90,7 @@ export default function SettingsPage() {
       value = Number(trimmed);
 
       if (Number.isNaN(value) || value < 0 || value > 100) {
-        alert("أقصى نسبة خصم لازم تكون رقم بين 0 و100");
+        toast.error("أقصى نسبة خصم لازم تكون رقم بين 0 و100");
         return;
       }
     }
@@ -101,7 +103,7 @@ export default function SettingsPage() {
       setDiscountSuccess(true);
     } catch (err) {
       console.error(JSON.stringify(err));
-      alert("حدث خطأ أثناء حفظ نسبة الخصم");
+      toast.error("حدث خطأ أثناء حفظ نسبة الخصم");
     } finally {
       setDiscountSaving(false);
     }
@@ -113,12 +115,12 @@ export default function SettingsPage() {
     setSuccess(false);
 
     if (newPassword.length < 6) {
-      alert("كلمة المرور لازم تكون 6 حروف أو أرقام على الأقل");
+      toast.error("كلمة المرور لازم تكون 6 حروف أو أرقام على الأقل");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      alert("كلمتا المرور غير متطابقتين");
+      toast.error("كلمتا المرور غير متطابقتين");
       return;
     }
 
@@ -139,7 +141,7 @@ export default function SettingsPage() {
           ? err.message
           : "حدث خطأ أثناء تغيير كلمة المرور";
 
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
