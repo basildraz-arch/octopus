@@ -62,7 +62,23 @@ const ARM_REACH_DISTANCE_MOBILE = 180;
 const ARM_GROW_MS = 260;
 const ARM_HOLD_MS = 120;
 const ARM_RETRACT_MS = 220;
-const ARM_COLOR = INK_COLORS[0];
+// A gradient along the arm's own length (base -> tip), not one flat hex -
+// same "a few near-black shades, not one flat value" idea as INK_COLORS,
+// so the tentacle reads as a rounded, lit ink shape instead of a flat
+// silhouette. The base end sits closer to INK_COLORS' lighter shades
+// (nearer the body, catching a little ambient light), darkening toward
+// the tip like ink thins into a point.
+const ARM_GRADIENT_BASE = INK_COLORS[2];
+const ARM_GRADIENT_MID = INK_COLORS[0];
+const ARM_GRADIENT_TIP = INK_COLORS[3];
+// The small arrival "tap" dot at the fingertip - a concentrated point of
+// ink, not a lit surface, so it stays a flat dark tone rather than
+// sharing the tentacle's gradient.
+const ARM_TIP_COLOR = INK_COLORS[3];
+// How many points sample the curve to build the arm's filled outline -
+// this is what makes it a real tapered tentacle shape (thick at the
+// body, narrowing to a point) instead of a uniform-width stroked line.
+const ARM_SAMPLES = 12;
 
 // The body-reaction spring (see wrap.__setBounce below) - snappier and
 // less damped than the tilt/wander springs above so a kick actually
@@ -91,6 +107,62 @@ function springStep(pos, vel, target, stiffness, damping) {
   const force = (target - pos) * stiffness;
   const newVel = (vel + force) * damping;
   return [pos + newVel, newVel];
+}
+
+// Point on a cubic Bezier (p0 -> c1 -> c2 -> p1) at parameter t. Two
+// control points (instead of one) let the curve bow one way near the
+// body and the other way near the tip - a real S-shape, not one uniform
+// arc - which is what makes the arm read as an organic whip/tentacle
+// instead of a simple geometric curve.
+function cubicPoint(p0, c1, c2, p1, t) {
+  const mt = 1 - t;
+  return {
+    x: mt * mt * mt * p0.x + 3 * mt * mt * t * c1.x + 3 * mt * t * t * c2.x + t * t * t * p1.x,
+    y: mt * mt * mt * p0.y + 3 * mt * mt * t * c1.y + 3 * mt * t * t * c2.y + t * t * t * p1.y,
+  };
+}
+
+// Tangent direction of the same curve at t - used to offset the arm's
+// left/right edges perpendicular to the direction it's actually curving
+// in at that point, not just perpendicular to the straight base-to-tip
+// line (which would look wrong on a bowed curve).
+function cubicTangent(p0, c1, c2, p1, t) {
+  const mt = 1 - t;
+  return {
+    x: 3 * mt * mt * (c1.x - p0.x) + 6 * mt * t * (c2.x - c1.x) + 3 * t * t * (p1.x - c2.x),
+    y: 3 * mt * mt * (c1.y - p0.y) + 6 * mt * t * (c2.y - c1.y) + 3 * t * t * (p1.y - c2.y),
+  };
+}
+
+// Builds a filled, tapered tentacle outline (thick at t=0, a point at
+// t=1) by sampling the curve and offsetting each sample perpendicular to
+// its own local tangent - two edges (left/right), joined at the tip and
+// closed back at the base, instead of a uniform-width stroked line.
+// Width tapers on an eased curve (stays thicker longer near the body,
+// narrows faster near the tip) rather than a straight linear ramp, with
+// a light sine ripple on top - both read as organic muscle tapering to a
+// point instead of a machined, perfectly linear cone.
+function tentaclePath(origin, c1, c2, tip, baseWidth, rippleSeed) {
+  const left = [];
+  const right = [];
+  for (let i = 0; i <= ARM_SAMPLES; i++) {
+    const t = i / ARM_SAMPLES;
+    const p = cubicPoint(origin, c1, c2, tip, t);
+    const tan = cubicTangent(origin, c1, c2, tip, t);
+    const tanLen = Math.hypot(tan.x, tan.y) || 1;
+    const perpX = -tan.y / tanLen;
+    const perpY = tan.x / tanLen;
+    const taper = Math.pow(1 - t, 1.35);
+    const ripple = 1 + Math.sin(t * Math.PI * 3.2 + rippleSeed) * 0.06;
+    const width = (baseWidth / 2) * taper * ripple;
+    left.push({ x: p.x + perpX * width, y: p.y + perpY * width });
+    right.push({ x: p.x - perpX * width, y: p.y - perpY * width });
+  }
+
+  let d = `M ${left[0].x} ${left[0].y} `;
+  for (let i = 1; i < left.length; i++) d += `L ${left[i].x} ${left[i].y} `;
+  for (let i = right.length - 1; i >= 0; i--) d += `L ${right[i].x} ${right[i].y} `;
+  return d + "Z";
 }
 
 /**
@@ -123,8 +195,11 @@ export default function OctopusMascot({
   const inkLayerRef = useRef(null);
   const armPathRef = useRef(null);
   const armTipRef = useRef(null);
+  const armGradientRef = useRef(null);
   const armBusyRef = useRef(false);
   const filterId = `octopus-ink-goo-${useId().replace(/:/g, "")}`;
+  const armFilterId = `octopus-arm-ink-${useId().replace(/:/g, "")}`;
+  const armGradientId = `octopus-arm-gradient-${useId().replace(/:/g, "")}`;
   const [animationData, setAnimationData] = useState(null);
   const [effectiveSize, setEffectiveSize] = useState(size);
   const { user } = useSession();
@@ -237,11 +312,20 @@ export default function OctopusMascot({
     // --- arm reach: the octopus stretches an arm toward whatever the
     // user just clicked/tapped, but only if it landed close to where the
     // mascot currently is (see ARM_REACH_DISTANCE comment above) ---
-    const armTimers = [];
+    let armRaf = null;
+    const armBaseWidth = Math.max(10, effectiveSize * 0.14);
+
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+    function easeInCubic(t) {
+      return t * t * t;
+    }
 
     function triggerArmReach(clientX, clientY) {
       const path = armPathRef.current;
       const tip = armTipRef.current;
+      const gradient = armGradientRef.current;
       if (!path || !tip || armBusyRef.current) return;
 
       const rect = wrap.getBoundingClientRect();
@@ -253,78 +337,122 @@ export default function OctopusMascot({
 
       armBusyRef.current = true;
 
-      // Bow the curve out to one side so the arm reads as a flexible
-      // tentacle instead of a rigid rod - perpendicular offset from the
-      // straight line to the target, capped so short reaches don't
-      // over-curve.
-      const midX = (originX + clientX) / 2;
-      const midY = (originY + clientY) / 2;
+      // Two independent bow points (instead of one) give the curve a real
+      // S-shape - a primary bow around the first third of the reach, and
+      // a smaller, usually-opposite counter-bow around the last third -
+      // so it reads as a flexible whip settling into a curve, not a
+      // rigid rod or a single uniform arc. Randomized per reach (sign and
+      // magnitude) so it doesn't look identical every time.
+      const origin = { x: originX, y: originY };
+      const tipTarget = { x: clientX, y: clientY };
       const dx = clientX - originX;
       const dy = clientY - originY;
-      const bow = Math.min(dist * 0.25, 36);
-      const ctrlX = midX + (-dy / dist) * bow;
-      const ctrlY = midY + (dx / dist) * bow;
+      const nx = -dy / dist;
+      const ny = dx / dist;
 
-      path.setAttribute("d", `M ${originX} ${originY} Q ${ctrlX} ${ctrlY} ${clientX} ${clientY}`);
-      const length = path.getTotalLength();
-      path.style.transition = "none";
-      path.style.strokeDasharray = `${length}`;
-      path.style.strokeDashoffset = `${length}`;
+      const bow1 = (0.4 + Math.random() * 0.6) * Math.min(dist * 0.22, 34);
+      const bow1Sign = Math.random() < 0.5 ? 1 : -1;
+      const bow2 = (0.2 + Math.random() * 0.5) * Math.min(dist * 0.12, 16);
+      const bow2Sign = -bow1Sign * (Math.random() < 0.8 ? 1 : -1);
+
+      const c1 = {
+        x: originX + dx * 0.35 + nx * bow1 * bow1Sign,
+        y: originY + dy * 0.35 + ny * bow1 * bow1Sign,
+      };
+      const c2 = {
+        x: originX + dx * 0.72 + nx * bow2 * bow2Sign,
+        y: originY + dy * 0.72 + ny * bow2 * bow2Sign,
+      };
+      // Random phase for the width ripple (see tentaclePath) - fixed for
+      // the whole reach so the ripple doesn't crawl along the arm as it
+      // grows, just varies reach to reach.
+      const rippleSeed = Math.random() * Math.PI * 2;
+
       path.style.opacity = "1";
-      tip.style.transition = "none";
-      tip.style.opacity = "0";
-      tip.style.r = "0px";
-      tip.style.cx = `${originX}px`;
-      tip.style.cy = `${originY}px`;
 
-      // same "hidden state, then animate" pattern as spawnInk: two nested
-      // rAFs so the browser actually paints the zero-progress frame
-      // before the transition kicks in, instead of coalescing both style
-      // writes into one paint and skipping the animation entirely.
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          path.style.transition = `stroke-dashoffset ${ARM_GROW_MS}ms cubic-bezier(0.3, 1.4, 0.5, 1)`;
-          path.style.strokeDashoffset = "0";
-        });
-      });
+      // The gradient runs along the arm's actual base->tip line (in the
+      // same viewport-pixel userSpaceOnUse coordinates as the path itself),
+      // not a fixed on-screen direction - it's re-anchored per reach so it
+      // stays correct no matter which way the octopus happens to be
+      // reaching. x1/y1 (the base) stay fixed at origin for the whole
+      // reach; x2/y2 (the tip) is updated every frame below as the arm
+      // grows/retracts, so the gradient always spans exactly the drawn
+      // shape instead of lagging behind it.
+      if (gradient) {
+        gradient.setAttribute("x1", origin.x);
+        gradient.setAttribute("y1", origin.y);
+        gradient.setAttribute("x2", origin.x);
+        gradient.setAttribute("y2", origin.y);
+      }
+
+      // Drives a real tapered tentacle shape (see tentaclePath) through
+      // its own grow -> hold -> retract timeline via requestAnimationFrame,
+      // instead of a CSS stroke-dashoffset trick - a filled, tapering
+      // shape can't be "drawn on" with a stroke dash the way a
+      // uniform-width line could, since the width itself needs to change
+      // as more of the curve is revealed.
+      let phase = "grow";
+      let phaseStart = performance.now();
+
+      function frame(now) {
+        const elapsed = now - phaseStart;
+
+        if (phase === "grow") {
+          const raw = Math.min(1, elapsed / ARM_GROW_MS);
+          const t = easeOutCubic(raw);
+          const currentTip = cubicPoint(origin, c1, c2, tipTarget, t);
+          path.setAttribute("d", tentaclePath(origin, c1, c2, currentTip, armBaseWidth, rippleSeed));
+          if (gradient) {
+            gradient.setAttribute("x2", currentTip.x);
+            gradient.setAttribute("y2", currentTip.y);
+          }
+          if (raw >= 1) {
+            phase = "hold";
+            phaseStart = now;
+            // arrival: a small "tap" pulse at the fingertip
+            tip.style.transition = "none";
+            tip.style.cx = `${clientX}px`;
+            tip.style.cy = `${clientY}px`;
+            tip.style.r = "3px";
+            tip.style.opacity = "0.85";
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                tip.style.transition = `r ${ARM_HOLD_MS}ms ease-out, opacity ${ARM_HOLD_MS}ms ease-out`;
+                tip.style.r = "11px";
+                tip.style.opacity = "0";
+              });
+            });
+          }
+        } else if (phase === "hold") {
+          if (elapsed >= ARM_HOLD_MS) {
+            phase = "retract";
+            phaseStart = now;
+          }
+        } else if (phase === "retract") {
+          // unwind from the tip back toward the body, instead of just
+          // vanishing - same curve, shrinking t back to 0.
+          const raw = Math.min(1, elapsed / ARM_RETRACT_MS);
+          const t = 1 - easeInCubic(raw);
+          const currentTip = cubicPoint(origin, c1, c2, tipTarget, t);
+          path.setAttribute("d", tentaclePath(origin, c1, c2, currentTip, armBaseWidth, rippleSeed));
+          if (gradient) {
+            gradient.setAttribute("x2", currentTip.x);
+            gradient.setAttribute("y2", currentTip.y);
+          }
+          if (raw >= 1) {
+            path.style.opacity = "0";
+            path.setAttribute("d", "");
+            armBusyRef.current = false;
+            armRaf = null;
+            return;
+          }
+        }
+
+        armRaf = requestAnimationFrame(frame);
+      }
+      armRaf = requestAnimationFrame(frame);
 
       if (wrap.__setBounce) wrap.__setBounce(BOUNCE_KICK_ARM);
-
-      // arrival: a small "tap" pulse at the fingertip
-      armTimers.push(
-        setTimeout(() => {
-          tip.style.transition = "none";
-          tip.style.cx = `${clientX}px`;
-          tip.style.cy = `${clientY}px`;
-          tip.style.r = "3px";
-          tip.style.opacity = "0.85";
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              tip.style.transition = `r ${ARM_HOLD_MS}ms ease-out, opacity ${ARM_HOLD_MS}ms ease-out`;
-              tip.style.r = "11px";
-              tip.style.opacity = "0";
-            });
-          });
-        }, ARM_GROW_MS)
-      );
-
-      // retract: unwind the same draw animation backwards so the arm
-      // erases from the tip back toward the body, instead of just
-      // vanishing.
-      armTimers.push(
-        setTimeout(() => {
-          path.style.transition = `stroke-dashoffset ${ARM_RETRACT_MS}ms ease-in`;
-          path.style.strokeDashoffset = `${length}`;
-        }, ARM_GROW_MS + ARM_HOLD_MS)
-      );
-
-      armTimers.push(
-        setTimeout(() => {
-          path.style.opacity = "0";
-          path.setAttribute("d", "");
-          armBusyRef.current = false;
-        }, ARM_GROW_MS + ARM_HOLD_MS + ARM_RETRACT_MS)
-      );
     }
 
     // Global click - reacts to anything on the page, not just the
@@ -408,7 +536,7 @@ export default function OctopusMascot({
       window.removeEventListener("pointercancel", resetTilt);
       wrap.removeEventListener("pointerleave", resetTilt);
       window.removeEventListener("click", handleGlobalClick);
-      armTimers.forEach(clearTimeout);
+      if (armRaf) cancelAnimationFrame(armRaf);
       armBusyRef.current = false;
       clearTimeout(wanderTimer);
       cancelAnimationFrame(raf);
@@ -522,8 +650,6 @@ export default function OctopusMascot({
     [spawnInk, user, openAssistantChat, effectiveSize]
   );
 
-  const armWidth = Math.max(6, effectiveSize * 0.08);
-
   return (
     <>
       <div
@@ -604,7 +730,18 @@ export default function OctopusMascot({
 
       {/* Full-viewport overlay for the arm reach - lives outside the
           wandering `outer` element so its path coordinates are plain
-          viewport coordinates, not affected by the wander translate. */}
+          viewport coordinates, not affected by the wander translate.
+          The arm itself is a filled, tapered shape (built in
+          triggerArmReach via tentaclePath), same ink language as the
+          rest of the mascot rather than a flat vector line: a
+          base->tip gradient through the same near-black shades used
+          elsewhere (see ARM_GRADIENT_*, INK_COLORS) for depth, plus a
+          light turbulence/displacement edge (armFilterId) so the
+          silhouette reads as diffusing ink, not a drawn stroke. The
+          displacement scale here is deliberately much smaller than the
+          ink-splash goo filter above (which is tuned to merge many
+          small scattered droplets into one blob) - enough to rough up
+          the edge without eating the taper this shape is built to have. */}
       {animationData && (
         <svg
           aria-hidden="true"
@@ -617,16 +754,44 @@ export default function OctopusMascot({
             zIndex: 41,
           }}
         >
+          <defs>
+            <linearGradient ref={armGradientRef} id={armGradientId} gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor={ARM_GRADIENT_BASE} />
+              <stop offset="55%" stopColor={ARM_GRADIENT_MID} />
+              <stop offset="100%" stopColor={ARM_GRADIENT_TIP} />
+            </linearGradient>
+            <filter id={armFilterId} x="-30%" y="-30%" width="160%" height="160%">
+              <feTurbulence
+                type="fractalNoise"
+                baseFrequency="0.045 0.09"
+                numOctaves="2"
+                seed="11"
+                result="armNoise"
+              />
+              <feDisplacementMap
+                in="SourceGraphic"
+                in2="armNoise"
+                scale="4"
+                xChannelSelector="R"
+                yChannelSelector="G"
+              />
+              <feGaussianBlur stdDeviation="0.8" />
+            </filter>
+          </defs>
           <path
             ref={armPathRef}
             d=""
-            fill="none"
-            stroke={ARM_COLOR}
-            strokeWidth={armWidth}
-            strokeLinecap="round"
+            fill={`url(#${armGradientId})`}
+            style={{ opacity: 0, filter: `url(#${armFilterId})` }}
+          />
+          <circle
+            ref={armTipRef}
+            cx={0}
+            cy={0}
+            r={0}
+            fill={ARM_TIP_COLOR}
             style={{ opacity: 0 }}
           />
-          <circle ref={armTipRef} cx={0} cy={0} r={0} fill={ARM_COLOR} style={{ opacity: 0 }} />
         </svg>
       )}
     </>
