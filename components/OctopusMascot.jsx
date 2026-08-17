@@ -53,43 +53,14 @@ const WANDER_SETTLE_SPEED = 0.3;
 const MOBILE_BREAKPOINT = 640;
 const MOBILE_LANE_WIDTH = 150;
 
-// The arm only reaches for clicks/taps within this radius (px) of the
-// octopus's current on-screen position - a deliberate constraint so it
-// never "chases" something far across the page, only reacts to things
-// near wherever it already happens to be standing.
-const ARM_REACH_DISTANCE = 280;
-const ARM_REACH_DISTANCE_MOBILE = 180;
-const ARM_GROW_MS = 260;
-const ARM_HOLD_MS = 120;
-const ARM_RETRACT_MS = 220;
-// A gradient along the arm's own length (base -> tip), not one flat hex -
-// same "a few near-black shades, not one flat value" idea as INK_COLORS,
-// so the tentacle reads as a rounded, lit ink shape instead of a flat
-// silhouette. The base end sits closer to INK_COLORS' lighter shades
-// (nearer the body, catching a little ambient light), darkening toward
-// the tip like ink thins into a point.
-const ARM_GRADIENT_BASE = INK_COLORS[2];
-const ARM_GRADIENT_MID = INK_COLORS[0];
-const ARM_GRADIENT_TIP = INK_COLORS[3];
-// The small arrival "tap" dot at the fingertip - a concentrated point of
-// ink, not a lit surface, so it stays a flat dark tone rather than
-// sharing the tentacle's gradient.
-const ARM_TIP_COLOR = INK_COLORS[3];
-// How many points sample the curve to build the arm's filled outline -
-// this is what makes it a real tapered tentacle shape (thick at the
-// body, narrowing to a point) instead of a uniform-width stroked line.
-const ARM_SAMPLES = 12;
-
 // The body-reaction spring (see wrap.__setBounce below) - snappier and
 // less damped than the tilt/wander springs above so a kick actually
 // overshoots and settles with a visible "boing" instead of easing
 // straight back to rest.
 const BOUNCE_SPRING_STIFFNESS = 0.36;
 const BOUNCE_SPRING_DAMPING = 0.8;
-// How hard each event kicks the bounce spring's velocity - ink spraying
-// is the bigger, more physical reaction; the arm's tap is a lighter one.
+// How hard the ink-spray event kicks the bounce spring's velocity.
 const BOUNCE_KICK_INK = 0.42;
-const BOUNCE_KICK_ARM = 0.22;
 // bounceScale drives a squash-and-stretch, not a uniform scale - these
 // are the per-axis multipliers applied to (bounceScale - 1). Positive on
 // X, negative on Y means growth phases bulge sideways while compressing
@@ -107,62 +78,6 @@ function springStep(pos, vel, target, stiffness, damping) {
   const force = (target - pos) * stiffness;
   const newVel = (vel + force) * damping;
   return [pos + newVel, newVel];
-}
-
-// Point on a cubic Bezier (p0 -> c1 -> c2 -> p1) at parameter t. Two
-// control points (instead of one) let the curve bow one way near the
-// body and the other way near the tip - a real S-shape, not one uniform
-// arc - which is what makes the arm read as an organic whip/tentacle
-// instead of a simple geometric curve.
-function cubicPoint(p0, c1, c2, p1, t) {
-  const mt = 1 - t;
-  return {
-    x: mt * mt * mt * p0.x + 3 * mt * mt * t * c1.x + 3 * mt * t * t * c2.x + t * t * t * p1.x,
-    y: mt * mt * mt * p0.y + 3 * mt * mt * t * c1.y + 3 * mt * t * t * c2.y + t * t * t * p1.y,
-  };
-}
-
-// Tangent direction of the same curve at t - used to offset the arm's
-// left/right edges perpendicular to the direction it's actually curving
-// in at that point, not just perpendicular to the straight base-to-tip
-// line (which would look wrong on a bowed curve).
-function cubicTangent(p0, c1, c2, p1, t) {
-  const mt = 1 - t;
-  return {
-    x: 3 * mt * mt * (c1.x - p0.x) + 6 * mt * t * (c2.x - c1.x) + 3 * t * t * (p1.x - c2.x),
-    y: 3 * mt * mt * (c1.y - p0.y) + 6 * mt * t * (c2.y - c1.y) + 3 * t * t * (p1.y - c2.y),
-  };
-}
-
-// Builds a filled, tapered tentacle outline (thick at t=0, a point at
-// t=1) by sampling the curve and offsetting each sample perpendicular to
-// its own local tangent - two edges (left/right), joined at the tip and
-// closed back at the base, instead of a uniform-width stroked line.
-// Width tapers on an eased curve (stays thicker longer near the body,
-// narrows faster near the tip) rather than a straight linear ramp, with
-// a light sine ripple on top - both read as organic muscle tapering to a
-// point instead of a machined, perfectly linear cone.
-function tentaclePath(origin, c1, c2, tip, baseWidth, rippleSeed) {
-  const left = [];
-  const right = [];
-  for (let i = 0; i <= ARM_SAMPLES; i++) {
-    const t = i / ARM_SAMPLES;
-    const p = cubicPoint(origin, c1, c2, tip, t);
-    const tan = cubicTangent(origin, c1, c2, tip, t);
-    const tanLen = Math.hypot(tan.x, tan.y) || 1;
-    const perpX = -tan.y / tanLen;
-    const perpY = tan.x / tanLen;
-    const taper = Math.pow(1 - t, 1.35);
-    const ripple = 1 + Math.sin(t * Math.PI * 3.2 + rippleSeed) * 0.06;
-    const width = (baseWidth / 2) * taper * ripple;
-    left.push({ x: p.x + perpX * width, y: p.y + perpY * width });
-    right.push({ x: p.x - perpX * width, y: p.y - perpY * width });
-  }
-
-  let d = `M ${left[0].x} ${left[0].y} `;
-  for (let i = 1; i < left.length; i++) d += `L ${left[i].x} ${left[i].y} `;
-  for (let i = right.length - 1; i >= 0; i--) d += `L ${right[i].x} ${right[i].y} `;
-  return d + "Z";
 }
 
 /**
@@ -193,13 +108,7 @@ export default function OctopusMascot({
   const outerRef = useRef(null);
   const wrapRef = useRef(null);
   const inkLayerRef = useRef(null);
-  const armPathRef = useRef(null);
-  const armTipRef = useRef(null);
-  const armGradientRef = useRef(null);
-  const armBusyRef = useRef(false);
   const filterId = `octopus-ink-goo-${useId().replace(/:/g, "")}`;
-  const armFilterId = `octopus-arm-ink-${useId().replace(/:/g, "")}`;
-  const armGradientId = `octopus-arm-gradient-${useId().replace(/:/g, "")}`;
   const [animationData, setAnimationData] = useState(null);
   const [effectiveSize, setEffectiveSize] = useState(size);
   const { user } = useSession();
@@ -309,162 +218,6 @@ export default function OctopusMascot({
       targetY = 0;
     };
 
-    // --- arm reach: the octopus stretches an arm toward whatever the
-    // user just clicked/tapped, but only if it landed close to where the
-    // mascot currently is (see ARM_REACH_DISTANCE comment above) ---
-    let armRaf = null;
-    const armBaseWidth = Math.max(10, effectiveSize * 0.14);
-
-    function easeOutCubic(t) {
-      return 1 - Math.pow(1 - t, 3);
-    }
-    function easeInCubic(t) {
-      return t * t * t;
-    }
-
-    function triggerArmReach(clientX, clientY) {
-      const path = armPathRef.current;
-      const tip = armTipRef.current;
-      const gradient = armGradientRef.current;
-      if (!path || !tip || armBusyRef.current) return;
-
-      const rect = wrap.getBoundingClientRect();
-      const originX = rect.left + INK_ORIGIN.x * effectiveSize;
-      const originY = rect.top + INK_ORIGIN.y * effectiveSize;
-      const dist = Math.hypot(clientX - originX, clientY - originY);
-      const maxReach = isMobile() ? ARM_REACH_DISTANCE_MOBILE : ARM_REACH_DISTANCE;
-      if (dist > maxReach || dist < 4) return;
-
-      armBusyRef.current = true;
-
-      // Two independent bow points (instead of one) give the curve a real
-      // S-shape - a primary bow around the first third of the reach, and
-      // a smaller, usually-opposite counter-bow around the last third -
-      // so it reads as a flexible whip settling into a curve, not a
-      // rigid rod or a single uniform arc. Randomized per reach (sign and
-      // magnitude) so it doesn't look identical every time.
-      const origin = { x: originX, y: originY };
-      const tipTarget = { x: clientX, y: clientY };
-      const dx = clientX - originX;
-      const dy = clientY - originY;
-      const nx = -dy / dist;
-      const ny = dx / dist;
-
-      const bow1 = (0.4 + Math.random() * 0.6) * Math.min(dist * 0.22, 34);
-      const bow1Sign = Math.random() < 0.5 ? 1 : -1;
-      const bow2 = (0.2 + Math.random() * 0.5) * Math.min(dist * 0.12, 16);
-      const bow2Sign = -bow1Sign * (Math.random() < 0.8 ? 1 : -1);
-
-      const c1 = {
-        x: originX + dx * 0.35 + nx * bow1 * bow1Sign,
-        y: originY + dy * 0.35 + ny * bow1 * bow1Sign,
-      };
-      const c2 = {
-        x: originX + dx * 0.72 + nx * bow2 * bow2Sign,
-        y: originY + dy * 0.72 + ny * bow2 * bow2Sign,
-      };
-      // Random phase for the width ripple (see tentaclePath) - fixed for
-      // the whole reach so the ripple doesn't crawl along the arm as it
-      // grows, just varies reach to reach.
-      const rippleSeed = Math.random() * Math.PI * 2;
-
-      path.style.opacity = "1";
-
-      // The gradient runs along the arm's actual base->tip line (in the
-      // same viewport-pixel userSpaceOnUse coordinates as the path itself),
-      // not a fixed on-screen direction - it's re-anchored per reach so it
-      // stays correct no matter which way the octopus happens to be
-      // reaching. x1/y1 (the base) stay fixed at origin for the whole
-      // reach; x2/y2 (the tip) is updated every frame below as the arm
-      // grows/retracts, so the gradient always spans exactly the drawn
-      // shape instead of lagging behind it.
-      if (gradient) {
-        gradient.setAttribute("x1", origin.x);
-        gradient.setAttribute("y1", origin.y);
-        gradient.setAttribute("x2", origin.x);
-        gradient.setAttribute("y2", origin.y);
-      }
-
-      // Drives a real tapered tentacle shape (see tentaclePath) through
-      // its own grow -> hold -> retract timeline via requestAnimationFrame,
-      // instead of a CSS stroke-dashoffset trick - a filled, tapering
-      // shape can't be "drawn on" with a stroke dash the way a
-      // uniform-width line could, since the width itself needs to change
-      // as more of the curve is revealed.
-      let phase = "grow";
-      let phaseStart = performance.now();
-
-      function frame(now) {
-        const elapsed = now - phaseStart;
-
-        if (phase === "grow") {
-          const raw = Math.min(1, elapsed / ARM_GROW_MS);
-          const t = easeOutCubic(raw);
-          const currentTip = cubicPoint(origin, c1, c2, tipTarget, t);
-          path.setAttribute("d", tentaclePath(origin, c1, c2, currentTip, armBaseWidth, rippleSeed));
-          if (gradient) {
-            gradient.setAttribute("x2", currentTip.x);
-            gradient.setAttribute("y2", currentTip.y);
-          }
-          if (raw >= 1) {
-            phase = "hold";
-            phaseStart = now;
-            // arrival: a small "tap" pulse at the fingertip
-            tip.style.transition = "none";
-            tip.style.cx = `${clientX}px`;
-            tip.style.cy = `${clientY}px`;
-            tip.style.r = "3px";
-            tip.style.opacity = "0.85";
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                tip.style.transition = `r ${ARM_HOLD_MS}ms ease-out, opacity ${ARM_HOLD_MS}ms ease-out`;
-                tip.style.r = "11px";
-                tip.style.opacity = "0";
-              });
-            });
-          }
-        } else if (phase === "hold") {
-          if (elapsed >= ARM_HOLD_MS) {
-            phase = "retract";
-            phaseStart = now;
-          }
-        } else if (phase === "retract") {
-          // unwind from the tip back toward the body, instead of just
-          // vanishing - same curve, shrinking t back to 0.
-          const raw = Math.min(1, elapsed / ARM_RETRACT_MS);
-          const t = 1 - easeInCubic(raw);
-          const currentTip = cubicPoint(origin, c1, c2, tipTarget, t);
-          path.setAttribute("d", tentaclePath(origin, c1, c2, currentTip, armBaseWidth, rippleSeed));
-          if (gradient) {
-            gradient.setAttribute("x2", currentTip.x);
-            gradient.setAttribute("y2", currentTip.y);
-          }
-          if (raw >= 1) {
-            path.style.opacity = "0";
-            path.setAttribute("d", "");
-            armBusyRef.current = false;
-            armRaf = null;
-            return;
-          }
-        }
-
-        armRaf = requestAnimationFrame(frame);
-      }
-      armRaf = requestAnimationFrame(frame);
-
-      if (wrap.__setBounce) wrap.__setBounce(BOUNCE_KICK_ARM);
-    }
-
-    // Global click - reacts to anything on the page, not just the
-    // mascot's own hit-box. The mascot's own click (ink/chat) is handled
-    // separately by handleMascotClick, so it's excluded here. Nothing is
-    // prevented or stopped - the real click still reaches its real
-    // target, this only layers a visual on top.
-    const handleGlobalClick = (e) => {
-      if (wrap.contains(e.target)) return;
-      triggerArmReach(e.clientX, e.clientY);
-    };
-
     const tick = () => {
       idlePhase += 0.02;
       const idleTiltX = Math.sin(idlePhase * 0.6) * 1.5 + Math.sin(idlePhase * 0.23) * 0.8;
@@ -515,7 +268,6 @@ export default function OctopusMascot({
     window.addEventListener("pointerup", resetTilt);
     window.addEventListener("pointercancel", resetTilt);
     wrap.addEventListener("pointerleave", resetTilt);
-    window.addEventListener("click", handleGlobalClick);
     tick();
 
     // Both kick velocity rather than snap position directly, so the
@@ -535,9 +287,6 @@ export default function OctopusMascot({
       window.removeEventListener("pointerup", resetTilt);
       window.removeEventListener("pointercancel", resetTilt);
       wrap.removeEventListener("pointerleave", resetTilt);
-      window.removeEventListener("click", handleGlobalClick);
-      if (armRaf) cancelAnimationFrame(armRaf);
-      armBusyRef.current = false;
       clearTimeout(wanderTimer);
       cancelAnimationFrame(raf);
     };
@@ -651,149 +400,80 @@ export default function OctopusMascot({
   );
 
   return (
-    <>
+    <div
+      ref={outerRef}
+      className={className}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: effectiveSize,
+        height: effectiveSize,
+        zIndex: 40,
+        pointerEvents: "none",
+        willChange: "transform",
+      }}
+    >
       <div
-        ref={outerRef}
-        className={className}
+        ref={wrapRef}
+        onClick={handleMascotClick}
         style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
+          position: "relative",
           width: effectiveSize,
           height: effectiveSize,
-          zIndex: 40,
-          pointerEvents: "none",
-          willChange: "transform",
+          cursor: "pointer",
+          pointerEvents: "auto",
+          touchAction: "none",
         }}
       >
-        <div
-          ref={wrapRef}
-          onClick={handleMascotClick}
-          style={{
-            position: "relative",
-            width: effectiveSize,
-            height: effectiveSize,
-            cursor: "pointer",
-            pointerEvents: "auto",
-            touchAction: "none",
-          }}
-        >
-          {animationData && (
-            <>
-              <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
-                <defs>
-                  <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
-                    <feColorMatrix
-                      in="blur"
-                      mode="matrix"
-                      values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 25 -10"
-                      result="goo"
-                    />
-                    <feTurbulence
-                      type="fractalNoise"
-                      baseFrequency="0.025 0.05"
-                      numOctaves="2"
-                      seed="7"
-                      result="noise"
-                    />
-                    <feDisplacementMap
-                      in="goo"
-                      in2="noise"
-                      scale="30"
-                      xChannelSelector="R"
-                      yChannelSelector="G"
-                    />
-                  </filter>
-                </defs>
-              </svg>
+        {animationData && (
+          <>
+            <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
+              <defs>
+                <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
+                  <feColorMatrix
+                    in="blur"
+                    mode="matrix"
+                    values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 25 -10"
+                    result="goo"
+                  />
+                  <feTurbulence
+                    type="fractalNoise"
+                    baseFrequency="0.025 0.05"
+                    numOctaves="2"
+                    seed="7"
+                    result="noise"
+                  />
+                  <feDisplacementMap
+                    in="goo"
+                    in2="noise"
+                    scale="30"
+                    xChannelSelector="R"
+                    yChannelSelector="G"
+                  />
+                </filter>
+              </defs>
+            </svg>
 
-              <Lottie
-                animationData={animationData}
-                loop
-                autoplay
-                style={{ width: "100%", height: "100%" }}
-              />
-              <div
-                ref={inkLayerRef}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  filter: `url(#${filterId})`,
-                  pointerEvents: "none",
-                }}
-              />
-            </>
-          )}
-        </div>
+            <Lottie
+              animationData={animationData}
+              loop
+              autoplay
+              style={{ width: "100%", height: "100%" }}
+            />
+            <div
+              ref={inkLayerRef}
+              style={{
+                position: "absolute",
+                inset: 0,
+                filter: `url(#${filterId})`,
+                pointerEvents: "none",
+              }}
+            />
+          </>
+        )}
       </div>
-
-      {/* Full-viewport overlay for the arm reach - lives outside the
-          wandering `outer` element so its path coordinates are plain
-          viewport coordinates, not affected by the wander translate.
-          The arm itself is a filled, tapered shape (built in
-          triggerArmReach via tentaclePath), same ink language as the
-          rest of the mascot rather than a flat vector line: a
-          base->tip gradient through the same near-black shades used
-          elsewhere (see ARM_GRADIENT_*, INK_COLORS) for depth, plus a
-          light turbulence/displacement edge (armFilterId) so the
-          silhouette reads as diffusing ink, not a drawn stroke. The
-          displacement scale here is deliberately much smaller than the
-          ink-splash goo filter above (which is tuned to merge many
-          small scattered droplets into one blob) - enough to rough up
-          the edge without eating the taper this shape is built to have. */}
-      {animationData && (
-        <svg
-          aria-hidden="true"
-          style={{
-            position: "fixed",
-            inset: 0,
-            width: "100vw",
-            height: "100vh",
-            pointerEvents: "none",
-            zIndex: 41,
-          }}
-        >
-          <defs>
-            <linearGradient ref={armGradientRef} id={armGradientId} gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor={ARM_GRADIENT_BASE} />
-              <stop offset="55%" stopColor={ARM_GRADIENT_MID} />
-              <stop offset="100%" stopColor={ARM_GRADIENT_TIP} />
-            </linearGradient>
-            <filter id={armFilterId} x="-30%" y="-30%" width="160%" height="160%">
-              <feTurbulence
-                type="fractalNoise"
-                baseFrequency="0.045 0.09"
-                numOctaves="2"
-                seed="11"
-                result="armNoise"
-              />
-              <feDisplacementMap
-                in="SourceGraphic"
-                in2="armNoise"
-                scale="4"
-                xChannelSelector="R"
-                yChannelSelector="G"
-              />
-              <feGaussianBlur stdDeviation="0.8" />
-            </filter>
-          </defs>
-          <path
-            ref={armPathRef}
-            d=""
-            fill={`url(#${armGradientId})`}
-            style={{ opacity: 0, filter: `url(#${armFilterId})` }}
-          />
-          <circle
-            ref={armTipRef}
-            cx={0}
-            cy={0}
-            r={0}
-            fill={ARM_TIP_COLOR}
-            style={{ opacity: 0 }}
-          />
-        </svg>
-      )}
-    </>
+    </div>
   );
 }
