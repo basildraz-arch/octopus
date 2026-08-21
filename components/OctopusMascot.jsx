@@ -29,6 +29,20 @@ const INK_ORIGIN = { x: 0.437, y: 0.65 };
 // wandering, so the mascot never gets clipped or sits under the
 // bottom nav / toast stack.
 const WANDER_MARGIN = { top: 70, bottom: 100, left: 16, right: 16 };
+// On a phone the bottom strip belongs to real controls - the nav bar,
+// and on the till the basket bar with the running total. Wandering into
+// it means the mascot sits on the button somebody is trying to press.
+const MOBILE_BOTTOM_MARGIN = 150;
+
+// How far a finger has to travel before a press counts as "move the
+// mascot" instead of "tap the mascot". Below this a tap still sprays
+// ink and opens the assistant, exactly as before.
+const DRAG_THRESHOLD_PX = 6;
+
+// Where the owner last parked it. Survives a reload, because having to
+// drag it out of the way again on every page would be worse than the
+// wandering it replaces.
+const PINNED_STORAGE_KEY = "octopus-mascot-pinned";
 // How long the mascot sits still in one spot before relocating. The
 // travel itself only takes ~1.5-2.5s (see the wander spring constants
 // in the animation loop), so most of this window is genuine rest, not
@@ -173,10 +187,13 @@ export default function OctopusMascot({
     const laneMaxSpanX = () =>
       Math.max(0, MOBILE_LANE_WIDTH - effectiveSize - WANDER_MARGIN.right);
 
+    const bottomMargin = () =>
+      isMobile() ? MOBILE_BOTTOM_MARGIN : WANDER_MARGIN.bottom;
+
     const maxWanderX = () =>
       Math.max(0, window.innerWidth - effectiveSize - WANDER_MARGIN.left - WANDER_MARGIN.right);
     const maxWanderY = () =>
-      Math.max(0, window.innerHeight - effectiveSize - WANDER_MARGIN.top - WANDER_MARGIN.bottom);
+      Math.max(0, window.innerHeight - effectiveSize - WANDER_MARGIN.top - bottomMargin());
 
     function randomWanderX() {
       if (isMobile()) {
@@ -185,8 +202,37 @@ export default function OctopusMascot({
       return WANDER_MARGIN.left + Math.random() * maxWanderX();
     }
 
-    let wanderX = randomWanderX();
-    let wanderY = WANDER_MARGIN.top + Math.random() * maxWanderY();
+    // Keeps a position on screen whatever the window is doing - used
+    // both when dropping the mascot and after a resize or rotation.
+    const clampX = (x) =>
+      Math.max(0, Math.min(x, window.innerWidth - effectiveSize));
+    const clampY = (y) =>
+      Math.max(0, Math.min(y, window.innerHeight - effectiveSize));
+
+    let pinned = false;
+    let stored = null;
+
+    // Private-mode browsers throw on access rather than returning null,
+    // so this has to be guarded, and a missing value is a normal state.
+    try {
+      const raw = window.localStorage.getItem(PINNED_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Number.isFinite(parsed?.x) && Number.isFinite(parsed?.y)) {
+          stored = parsed;
+        }
+      }
+    } catch {
+      stored = null;
+    }
+
+    let wanderX = stored ? clampX(stored.x) : randomWanderX();
+    let wanderY = stored
+      ? clampY(stored.y)
+      : WANDER_MARGIN.top + Math.random() * maxWanderY();
+
+    if (stored) pinned = true;
+
     let wanderTargetX = wanderX;
     let wanderTargetY = wanderY;
     let wanderVelX = 0;
@@ -194,6 +240,9 @@ export default function OctopusMascot({
     let wanderTimer;
 
     function pickNewWanderTarget() {
+      // Parked by hand. Leave it exactly where it was put.
+      if (pinned) return;
+
       wanderTargetX = randomWanderX();
       wanderTargetY = WANDER_MARGIN.top + Math.random() * maxWanderY();
 
@@ -202,7 +251,103 @@ export default function OctopusMascot({
         Math.random() * (WANDER_MAX_INTERVAL_MS - WANDER_MIN_INTERVAL_MS);
       wanderTimer = setTimeout(pickNewWanderTarget, delay);
     }
-    wanderTimer = setTimeout(pickNewWanderTarget, 2000);
+
+    if (!pinned) wanderTimer = setTimeout(pickNewWanderTarget, 2000);
+
+    // --- dragging: pick it up and put it down where you want it ---
+    //
+    // The complaint this answers: it drifts onto the button you are
+    // about to press and you wait for it to move on. Now you move it.
+    //
+    // A press only becomes a drag after DRAG_THRESHOLD_PX, so a plain
+    // tap still sprays ink and opens the assistant. Dropping it pins it
+    // and the wandering stops; double-tap sets it loose again.
+    let pressing = false;
+    let didDrag = false;
+    let grabDx = 0;
+    let grabDy = 0;
+
+    const handleDragStart = (e) => {
+      pressing = true;
+      didDrag = false;
+      grabDx = e.clientX - wanderX;
+      grabDy = e.clientY - wanderY;
+
+      try {
+        wrap.setPointerCapture(e.pointerId);
+      } catch {
+        // capture is a nicety, not a requirement
+      }
+    };
+
+    const handleDragMove = (e) => {
+      if (!pressing) return;
+
+      const nextX = clampX(e.clientX - grabDx);
+      const nextY = clampY(e.clientY - grabDy);
+
+      if (
+        !didDrag &&
+        Math.hypot(nextX - wanderX, nextY - wanderY) < DRAG_THRESHOLD_PX
+      ) {
+        return;
+      }
+
+      didDrag = true;
+
+      // Written straight to position with the spring zeroed: while a
+      // finger is on it, it should track the finger exactly, not lag
+      // behind on a spring.
+      wanderX = nextX;
+      wanderY = nextY;
+      wanderTargetX = nextX;
+      wanderTargetY = nextY;
+      wanderVelX = 0;
+      wanderVelY = 0;
+    };
+
+    const handleDragEnd = () => {
+      if (!pressing) return;
+
+      pressing = false;
+
+      if (!didDrag) return;
+
+      pinned = true;
+      clearTimeout(wanderTimer);
+
+      try {
+        window.localStorage.setItem(
+          PINNED_STORAGE_KEY,
+          JSON.stringify({ x: wanderX, y: wanderY })
+        );
+      } catch {
+        // remembering is a bonus; being where it was dropped is not
+      }
+    };
+
+    // Double-tap hands it back to its own devices.
+    const handleUnpin = () => {
+      pinned = false;
+
+      try {
+        window.localStorage.removeItem(PINNED_STORAGE_KEY);
+      } catch {
+        // nothing to clean up
+      }
+
+      clearTimeout(wanderTimer);
+      pickNewWanderTarget();
+    };
+
+    // A rotation or a resized window can leave a parked mascot off
+    // screen entirely, where it cannot be dragged back.
+    const handleResize = () => {
+      wanderX = clampX(wanderX);
+      wanderY = clampY(wanderY);
+      wanderTargetX = clampX(wanderTargetX);
+      wanderTargetY = clampY(wanderTargetY);
+    };
 
     // --- pointer tracking (mouse + touch, unified via Pointer Events) ---
     const handlePointerMove = (e) => {
@@ -268,6 +413,18 @@ export default function OctopusMascot({
     window.addEventListener("pointerup", resetTilt);
     window.addEventListener("pointercancel", resetTilt);
     wrap.addEventListener("pointerleave", resetTilt);
+
+    wrap.addEventListener("pointerdown", handleDragStart);
+    window.addEventListener("pointermove", handleDragMove);
+    window.addEventListener("pointerup", handleDragEnd);
+    window.addEventListener("pointercancel", handleDragEnd);
+    wrap.addEventListener("dblclick", handleUnpin);
+    window.addEventListener("resize", handleResize);
+
+    // Read by the click handler so a drag that ends over the mascot
+    // does not also count as a tap and open the assistant.
+    wrap.__wasDragged = () => didDrag;
+
     tick();
 
     // Both kick velocity rather than snap position directly, so the
@@ -287,6 +444,14 @@ export default function OctopusMascot({
       window.removeEventListener("pointerup", resetTilt);
       window.removeEventListener("pointercancel", resetTilt);
       wrap.removeEventListener("pointerleave", resetTilt);
+
+      wrap.removeEventListener("pointerdown", handleDragStart);
+      window.removeEventListener("pointermove", handleDragMove);
+      window.removeEventListener("pointerup", handleDragEnd);
+      window.removeEventListener("pointercancel", handleDragEnd);
+      wrap.removeEventListener("dblclick", handleUnpin);
+      window.removeEventListener("resize", handleResize);
+
       clearTimeout(wanderTimer);
       cancelAnimationFrame(raf);
     };
@@ -381,6 +546,10 @@ export default function OctopusMascot({
   // would do nothing.
   const handleMascotClick = useCallback(
     (e) => {
+      // Letting go after dragging it somewhere is not a request to
+      // open the assistant.
+      if (wrapRef.current?.__wasDragged?.()) return;
+
       spawnInk(e.clientX, e.clientY);
       if (user?.role === "owner") {
         // Same origin point the ink itself erupts from, so the chat
@@ -409,7 +578,10 @@ export default function OctopusMascot({
         left: 0,
         width: effectiveSize,
         height: effectiveSize,
-        zIndex: 40,
+        // Below the app's own fixed furniture (bottom nav and the
+        // till's basket bar are z-40) so it can never cover a control,
+        // still above ordinary page content.
+        zIndex: 30,
         pointerEvents: "none",
         willChange: "transform",
       }}
@@ -417,13 +589,15 @@ export default function OctopusMascot({
       <div
         ref={wrapRef}
         onClick={handleMascotClick}
+        title="اسحبه لأي مكان · دوس عليه مرتين يرجع يتحرك لوحده"
         style={{
           position: "relative",
           width: effectiveSize,
           height: effectiveSize,
-          cursor: "pointer",
+          cursor: "grab",
           pointerEvents: "auto",
           touchAction: "none",
+          userSelect: "none",
         }}
       >
         {animationData && (

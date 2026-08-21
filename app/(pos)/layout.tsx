@@ -67,11 +67,15 @@ export default function PosLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-ink-950 text-paper">
-      <header className="flex items-center justify-between border-b border-ink-600 bg-ink-800 px-4 py-3">
-        <div className="flex items-center gap-4">
-          <h1 className="text-lg font-bold">🐙 Octopus</h1>
+      {/* On a 390px phone the shop name, the tabs, the bell and the
+          logout button all fighting for one row is what made this look
+          cramped. The name is the first thing to go: the person at the
+          till knows which shop they are standing in. */}
+      <header className="flex items-center justify-between gap-2 border-b border-ink-600 bg-ink-800 px-3 py-2 md:px-4 md:py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <h1 className="hidden text-lg font-bold md:block">🐙 Octopus</h1>
 
-          <nav className="flex gap-2">
+          <nav className="flex gap-1.5">
             {tabs.map((tab) => {
               const Icon = tab.icon;
 
@@ -79,10 +83,10 @@ export default function PosLayout({ children }: { children: ReactNode }) {
                 <Link
                   key={tab.href}
                   href={tab.href}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  className={`flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition ${
                     pathname === tab.href
                       ? "bg-splash text-ink-950"
-                      : "text-mist hover:bg-ink-700"
+                      : "text-mist md:hover:bg-ink-700"
                   }`}
                 >
                   <Icon size={16} />
@@ -94,20 +98,20 @@ export default function PosLayout({ children }: { children: ReactNode }) {
             {user.role === "owner" && (
               <Link
                 href="/dashboard"
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-mist transition hover:bg-ink-700"
+                className="flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-mist transition md:hover:bg-ink-700"
               >
-                🏠 الرئيسية
+                🏠 <span className="hidden sm:inline">الرئيسية</span>
               </Link>
             )}
           </nav>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2">
           <NotificationBell />
 
           <button
             onClick={handleLogout}
-            className="rounded-lg bg-ink-700 px-3 py-2 text-sm transition hover:bg-ink-600"
+            className="min-h-10 rounded-lg bg-ink-700 px-3 text-sm transition md:hover:bg-ink-600"
           >
             خروج
           </button>
