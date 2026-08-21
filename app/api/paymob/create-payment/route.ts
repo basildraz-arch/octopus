@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+import { monthlyDueFor } from "@/lib/monthlyDue";
+
 const PAYMOB_BASE_URL = "https://accept.paymob.com";
 
 export async function POST(request: NextRequest) {
@@ -63,7 +65,31 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const amountCents = Number(process.env.SUBSCRIPTION_PRICE_EGP) * 100;
+  // Worked out from this shop's own modules, seats and referral
+  // discount - the same computation its settings screen shows it.
+  // Never from the request body, and no longer one flat number from
+  // the environment for every shop alike.
+  let due;
+
+  try {
+    due = await monthlyDueFor(supabase, appUser.business_id);
+  } catch (err) {
+    console.error("create-payment: pricing failed", err);
+
+    return NextResponse.json(
+      { error: "تعذر حساب قيمة الاشتراك" },
+      { status: 500 }
+    );
+  }
+
+  if (due.due <= 0) {
+    return NextResponse.json(
+      { error: "مفيش مبلغ مستحق عليك الشهر ده" },
+      { status: 400 }
+    );
+  }
+
+  const amountCents = Math.round(due.due * 100);
   const integrationId = Number(process.env.PAYMOB_INTEGRATION_ID);
 
   const [firstName, ...rest] = (appUser.full_name || "Octopus").split(" ");

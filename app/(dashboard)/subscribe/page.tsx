@@ -23,14 +23,40 @@ export default function SubscribePage() {
   const { user, business, loading: sessionLoading } = useSession();
 
   const [priceEgp, setPriceEgp] = useState<number | null>(null);
+  const [subtotal, setSubtotal] = useState(0);
+  const [discount, setDiscount] = useState(0);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
 
+  // The price is per shop now, so this call carries the session -
+  // the server works out what THIS shop owes rather than reading one
+  // number that used to apply to everybody.
   useEffect(() => {
-    fetch("/api/paymob/price")
-      .then((res) => res.json())
-      .then((data) => setPriceEgp(data.priceEgp))
-      .catch(() => setPriceEgp(null));
+    async function loadPrice() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) return;
+
+        const res = await fetch("/api/paymob/price", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data?.error);
+
+        setPriceEgp(data.priceEgp);
+        setSubtotal(data.subtotal ?? data.priceEgp);
+        setDiscount(data.discount ?? 0);
+      } catch {
+        setPriceEgp(null);
+      }
+    }
+
+    loadPrice();
   }, []);
 
   async function handlePay() {
@@ -137,6 +163,12 @@ export default function SubscribePage() {
         <p className="mt-2 text-4xl font-bold text-paper">
           {priceEgp !== null ? `${priceEgp} جنيه` : "..."}
         </p>
+
+        {discount > 0 && (
+          <p className="mt-1 text-sm text-green-400">
+            بعد خصم إحالات {discount} ج (الأصل {subtotal} ج)
+          </p>
+        )}
 
         {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
 

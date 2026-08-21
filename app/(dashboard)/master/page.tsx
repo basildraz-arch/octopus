@@ -402,7 +402,7 @@ export default function MasterPage() {
   const totalSales = rows.reduce((sum, r) => sum + r.salesTotal, 0);
 
   return (
-    <main className="space-y-6">
+    <main className="space-y-4">
       <div>
         <h1 className="flex items-center gap-2 text-3xl font-bold">
           <Globe size={28} />
@@ -489,116 +489,23 @@ export default function MasterPage() {
         </div>
       )}
 
-      {/* The starting shape of every new business of a given kind.
-          Editing one here changes what the NEXT shop of that type gets
-          - it never touches a business that already exists. */}
-      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
-        <h2 className="mb-1 flex items-center gap-2 text-lg font-bold">
-          <LayoutTemplate size={18} />
-          قوالب الأنشطة
-        </h2>
 
-        <p className="mb-4 text-xs text-mist">
-          كل نوع نشاط بيفتح ببرنامج متظبط على شغله. التعديل هنا بيأثر على
-          الحسابات الجديدة بس.
-        </p>
+      <details className="rounded-xl border border-ink-600 bg-ink-900/40" open>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+          <span>
+            <span className="block text-lg font-bold text-paper">
+              🏬 البيزنسات
+            </span>
 
-        <div className="space-y-2">
-          {templates.map((template) => {
-            const open = templateOpen === template.business_type;
+            <span className="mt-0.5 block text-xs text-mist">
+              كل محل: فاتورته وحدوده وشكل برنامجه
+            </span>
+          </span>
 
-            return (
-              <div
-                key={template.business_type}
-                className="rounded-lg border border-ink-600 bg-ink-900"
-              >
-                <button
-                  onClick={() =>
-                    setTemplateOpen(open ? null : template.business_type)
-                  }
-                  className="flex w-full items-center justify-between p-3 text-right"
-                >
-                  <span className="flex items-center gap-2 font-bold">
-                    <span className="text-xl">{template.icon}</span>
-                    {template.label}
-                  </span>
+          <span className="text-2xl text-mist">‹</span>
+        </summary>
 
-                  <span className="text-xs text-mist">
-                    {template.enabled_features.length} ميزة
-                  </span>
-                </button>
-
-                {open && (
-                  <div className="border-t border-ink-600 p-3">
-                    <div className="space-y-2">
-                      {ALL_FEATURES.map((feature) => (
-                        <label
-                          key={feature}
-                          className="flex items-center gap-3 text-sm"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={template.enabled_features.includes(feature)}
-                            onChange={() =>
-                              toggleTemplateFeature(template.business_type, feature)
-                            }
-                            disabled={busyId === template.business_type}
-                            className="h-4 w-4"
-                          />
-
-                          <span className="text-mist">
-                            {FEATURE_LABELS[feature]}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-
-                    <div className="mt-4">
-                      <p className="mb-2 text-xs text-mist">
-                        أسماء التسعيرات التلاتة (لو الميزة مفعّلة)
-                      </p>
-
-                      <div className="grid grid-cols-3 gap-2">
-                        {[0, 1, 2].map((index) => (
-                          <input
-                            key={index}
-                            value={template.price_tier_labels[index] ?? ""}
-                            onChange={(e) =>
-                              setTemplates((current) =>
-                                current.map((t) =>
-                                  t.business_type === template.business_type
-                                    ? {
-                                        ...t,
-                                        price_tier_labels: t.price_tier_labels.map(
-                                          (label, i) =>
-                                            i === index ? e.target.value : label
-                                        ),
-                                      }
-                                    : t
-                                )
-                              )
-                            }
-                            className="rounded-lg border border-ink-600 bg-ink-950 p-2 text-sm text-paper outline-none"
-                          />
-                        ))}
-                      </div>
-
-                      <button
-                        onClick={() => saveTemplateLabels(template)}
-                        disabled={busyId === template.business_type}
-                        className="mt-3 w-full rounded-lg bg-ink-700 p-2 text-sm font-semibold transition hover:bg-ink-600 disabled:opacity-50"
-                      >
-                        احفظ أسماء التسعيرات
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
+        <div className="space-y-6 p-5 pt-0">
       {loading ? (
         <div className="p-8 text-center text-mist">جارِ التحميل...</div>
       ) : (
@@ -964,6 +871,25 @@ export default function MasterPage() {
         </div>
       )}
 
+        </div>
+      </details>
+
+      <details className="rounded-xl border border-ink-600 bg-ink-900/40">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+          <span>
+            <span className="block text-lg font-bold text-paper">
+              💵 التسعير
+            </span>
+
+            <span className="mt-0.5 block text-xs text-mist">
+              سعر كل قايمة · الأساسي · المقاعد الزيادة
+            </span>
+          </span>
+
+          <span className="text-2xl text-mist">‹</span>
+        </summary>
+
+        <div className="space-y-6 p-5 pt-0">
       {pricing && (
         <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
           <h2 className="mb-1 flex items-center gap-2 font-bold">
@@ -1048,8 +974,173 @@ export default function MasterPage() {
         </div>
       )}
 
-      <ReferralPanel businesses={rows} />
+        </div>
+      </details>
 
+      <details className="rounded-xl border border-ink-600 bg-ink-900/40">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+          <span>
+            <span className="block text-lg font-bold text-paper">
+              🔗 الإحالات
+            </span>
+
+            <span className="mt-0.5 block text-xs text-mist">
+              الأكواد · مين جاب مين · المستحق الشهر ده
+            </span>
+          </span>
+
+          <span className="text-2xl text-mist">‹</span>
+        </summary>
+
+        <div className="space-y-6 p-5 pt-0">
+      <ReferralPanel businesses={rows} />
+        </div>
+      </details>
+
+      <details className="rounded-xl border border-ink-600 bg-ink-900/40">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+          <span>
+            <span className="block text-lg font-bold text-paper">
+              🧩 قوالب الأنشطة
+            </span>
+
+            <span className="mt-0.5 block text-xs text-mist">
+              شكل كل نوع محل جديد وقت التسجيل
+            </span>
+          </span>
+
+          <span className="text-2xl text-mist">‹</span>
+        </summary>
+
+        <div className="space-y-6 p-5 pt-0">
+      {/* The starting shape of every new business of a given kind.
+          Editing one here changes what the NEXT shop of that type gets
+          - it never touches a business that already exists. */}
+      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-bold">
+          <LayoutTemplate size={18} />
+          قوالب الأنشطة
+        </h2>
+
+        <p className="mb-4 text-xs text-mist">
+          كل نوع نشاط بيفتح ببرنامج متظبط على شغله. التعديل هنا بيأثر على
+          الحسابات الجديدة بس.
+        </p>
+
+        <div className="space-y-2">
+          {templates.map((template) => {
+            const open = templateOpen === template.business_type;
+
+            return (
+              <div
+                key={template.business_type}
+                className="rounded-lg border border-ink-600 bg-ink-900"
+              >
+                <button
+                  onClick={() =>
+                    setTemplateOpen(open ? null : template.business_type)
+                  }
+                  className="flex w-full items-center justify-between p-3 text-right"
+                >
+                  <span className="flex items-center gap-2 font-bold">
+                    <span className="text-xl">{template.icon}</span>
+                    {template.label}
+                  </span>
+
+                  <span className="text-xs text-mist">
+                    {template.enabled_features.length} ميزة
+                  </span>
+                </button>
+
+                {open && (
+                  <div className="border-t border-ink-600 p-3">
+                    <div className="space-y-2">
+                      {ALL_FEATURES.map((feature) => (
+                        <label
+                          key={feature}
+                          className="flex items-center gap-3 text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={template.enabled_features.includes(feature)}
+                            onChange={() =>
+                              toggleTemplateFeature(template.business_type, feature)
+                            }
+                            disabled={busyId === template.business_type}
+                            className="h-4 w-4"
+                          />
+
+                          <span className="text-mist">
+                            {FEATURE_LABELS[feature]}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="mt-4">
+                      <p className="mb-2 text-xs text-mist">
+                        أسماء التسعيرات التلاتة (لو الميزة مفعّلة)
+                      </p>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        {[0, 1, 2].map((index) => (
+                          <input
+                            key={index}
+                            value={template.price_tier_labels[index] ?? ""}
+                            onChange={(e) =>
+                              setTemplates((current) =>
+                                current.map((t) =>
+                                  t.business_type === template.business_type
+                                    ? {
+                                        ...t,
+                                        price_tier_labels: t.price_tier_labels.map(
+                                          (label, i) =>
+                                            i === index ? e.target.value : label
+                                        ),
+                                      }
+                                    : t
+                                )
+                              )
+                            }
+                            className="rounded-lg border border-ink-600 bg-ink-950 p-2 text-sm text-paper outline-none"
+                          />
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => saveTemplateLabels(template)}
+                        disabled={busyId === template.business_type}
+                        className="mt-3 w-full rounded-lg bg-ink-700 p-2 text-sm font-semibold transition hover:bg-ink-600 disabled:opacity-50"
+                      >
+                        احفظ أسماء التسعيرات
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+        </div>
+      </details>
+
+      <details className="rounded-xl border border-ink-600 bg-ink-900/40">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+          <span>
+            <span className="block text-lg font-bold text-paper">
+              🕓 السجل
+            </span>
+
+            <span className="mt-0.5 block text-xs text-mist">
+              آخر إجراءات Master
+            </span>
+          </span>
+
+          <span className="text-2xl text-mist">‹</span>
+        </summary>
+
+        <div className="space-y-6 p-5 pt-0">
       <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
         <h2 className="mb-3 flex items-center gap-2 font-bold">
           <History size={16} />
@@ -1085,6 +1176,8 @@ export default function MasterPage() {
           </div>
         )}
       </div>
+        </div>
+      </details>
     </main>
   );
 }

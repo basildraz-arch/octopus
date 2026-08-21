@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { isEarningReferral } from "@/lib/referralRules";
 import type {
   ReferralCode,
   ReferralSummary,
@@ -19,23 +20,19 @@ type ReferralRow = {
   } | null;
 };
 
-// A referred shop earns its referrer money only while all three are
-// true: it qualified (paid at least once), it is still inside the
-// reward window, and it is still a paying customer today. A shop that
-// stops paying stops earning, without anything having to run on a
-// schedule to notice.
+// The rule itself lives in lib/referralRules.ts so the server-side
+// billing code applies exactly the same test when it decides what to
+// charge.
 function isEarning(row: ReferralRow, now: number): boolean {
-  if (!row.qualified_at || !row.reward_ends_at) return false;
-
-  if (new Date(row.reward_ends_at).getTime() <= now) return false;
-
-  const business = row.businesses;
-
-  if (!business || !business.active) return false;
-
-  if (!business.subscription_expires_at) return false;
-
-  return new Date(business.subscription_expires_at).getTime() > now;
+  return isEarningReferral(
+    {
+      qualifiedAt: row.qualified_at,
+      rewardEndsAt: row.reward_ends_at,
+      businessActive: row.businesses?.active ?? false,
+      subscriptionExpiresAt: row.businesses?.subscription_expires_at ?? null,
+    },
+    now
+  );
 }
 
 function toShop(row: ReferralRow, now: number): ReferredShop {
