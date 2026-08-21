@@ -571,7 +571,10 @@ export default function OctopusMascot({
   return (
     <div
       ref={outerRef}
-      className={className}
+      // print:hidden is not optional here - the mascot is fixed over the
+      // whole viewport, so without it a customer's receipt comes out of
+      // the thermal printer with a cartoon octopus on it.
+      className={`print:hidden${className ? ` ${className}` : ""}`}
       style={{
         position: "fixed",
         top: 0,

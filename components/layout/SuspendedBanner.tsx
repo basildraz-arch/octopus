@@ -22,7 +22,7 @@ export default function SuspendedBanner() {
   return (
     <div
       role="status"
-      className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-200"
+      className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-200 print:hidden"
     >
       <AlertTriangle size={18} className="shrink-0" />
 

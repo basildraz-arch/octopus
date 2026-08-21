@@ -569,6 +569,7 @@ export default function AssistantChat() {
       <svg
         ref={svgRef}
         aria-hidden="true"
+        className="print:hidden"
         style={{
           position: "fixed",
           inset: 0,
@@ -640,7 +641,7 @@ export default function AssistantChat() {
           raw window-pixel coordinates the clip path is built in - see
           the comment on the <clipPath> def above. */}
       <div
-        className="fixed inset-0 z-[51] flex items-center justify-center p-4"
+        className="fixed inset-0 z-[51] flex items-center justify-center p-4 print:hidden"
         style={{ pointerEvents: "none", clipPath: `url(#${safeClipId})` }}
       >
         <div
@@ -823,7 +824,7 @@ export default function AssistantChat() {
       <button
         onClick={handleClose}
         aria-label="إغلاق"
-        className="fixed top-4 right-4 z-[52] flex h-11 w-11 items-center justify-center rounded-full bg-ink-900/90 text-mist shadow-lg transition hover:bg-ink-700 hover:text-paper"
+        className="fixed top-4 right-4 z-[52] flex h-11 w-11 items-center justify-center rounded-full bg-ink-900/90 text-mist shadow-lg transition hover:bg-ink-700 hover:text-paper print:hidden"
         style={{
           opacity: closing ? 0 : 1,
           transition: "opacity 200ms ease",

@@ -71,7 +71,7 @@ export default function PosLayout({ children }: { children: ReactNode }) {
           logout button all fighting for one row is what made this look
           cramped. The name is the first thing to go: the person at the
           till knows which shop they are standing in. */}
-      <header className="flex items-center justify-between gap-2 border-b border-ink-600 bg-ink-800 px-3 py-2 md:px-4 md:py-3">
+      <header className="flex items-center justify-between gap-2 border-b border-ink-600 bg-ink-800 px-3 py-2 md:px-4 md:py-3 print:hidden">
         <div className="flex min-w-0 items-center gap-3">
           <h1 className="hidden text-lg font-bold md:block">🐙 Octopus</h1>
 
