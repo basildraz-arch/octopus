@@ -7,12 +7,10 @@ import {
   planCommand,
 } from "@/services/assistantCommand.service";
 import { looksLikeCommand } from "@/lib/assistant/commands";
-import { incrementAndCheckGeminiUsage } from "@/repositories/assistantUsage.repository";
+import { spendAssistantMessage } from "@/repositories/assistantUsage.repository";
+import { AllModelsExhaustedError } from "@/lib/ai";
 
 const MAX_QUESTION_LENGTH = 500;
-
-const DAILY_GEMINI_LIMIT =
-  Number(process.env.ASSISTANT_GEMINI_DAILY_LIMIT) || 50;
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -74,18 +72,22 @@ export async function POST(request: NextRequest) {
 
   const trimmed = question.trim();
 
+  // Charged once, up front, for every message - not only for the ones
+  // that look like commands. Plain questions call the model too, and
+  // the old code let them through free, so the counter never matched
+  // what was actually being spent.
+  const spend = await spendAssistantMessage(supabase);
+
+  if (!spend.allowed) {
+    return NextResponse.json({ error: spend.message }, { status: 429 });
+  }
+
   try {
     // An instruction rather than a question? Work out what it would
     // do and describe it - carrying it out is a separate call the
     // owner has to make on purpose.
     if (looksLikeCommand(trimmed)) {
-      const usage = await incrementAndCheckGeminiUsage(
-        supabase,
-        appUser.business_id,
-        DAILY_GEMINI_LIMIT
-      );
-
-      if (usage.allowed) {
+      {
         const command = await detectCommand(trimmed);
 
         if (command) {
@@ -136,6 +138,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({
             answer: planned.summary,
             source: "proposal",
+            remaining: spend.remaining,
             proposal: {
               actionId: action.id,
               summary: planned.summary,
@@ -152,8 +155,14 @@ export async function POST(request: NextRequest) {
       trimmed
     );
 
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, remaining: spend.remaining });
   } catch (err) {
+    // Worth telling apart: "come back tomorrow" is a different
+    // instruction to the shop than "something broke".
+    if (err instanceof AllModelsExhaustedError) {
+      return NextResponse.json({ error: err.message }, { status: 503 });
+    }
+
     console.error(err);
 
     return NextResponse.json(

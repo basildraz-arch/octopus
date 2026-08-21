@@ -18,7 +18,8 @@ export function useSession() {
     throw new Error("useSession() needs <SessionProvider> above it");
   }
 
-  const { user, business, isPlatformAdmin, loading, suspended, refresh } = ctx;
+  const { user, business, isPlatformAdmin, loading, subscription, refresh } =
+    ctx;
 
   const hasFeature = useCallback(
     (feature: FeatureKey) => checkFeature(business, feature),
@@ -41,7 +42,7 @@ export function useSession() {
     can,
     isPlatformAdmin,
     loading,
-    suspended,
+    subscription,
     refresh,
   };
 }

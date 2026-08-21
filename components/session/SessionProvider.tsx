@@ -34,18 +34,78 @@ import type { Business } from "@/types/business";
 // The fetching moved here, above the router, so it happens once and
 // every consumer reads the same result.
 
+// Why the shop can or cannot work today. Kept as four named states
+// rather than a boolean because they need different things said to
+// them: "switched off" is a conversation with Basel, "ran out" is a
+// payment, and "runs out on Tuesday" is a warning while everything
+// still works.
+export type SubscriptionStatus =
+  | "ok"
+  | "expiring"
+  | "expired"
+  | "suspended";
+
+export type Subscription = {
+  status: SubscriptionStatus;
+
+  /** Whole days until it runs out. Negative once it has. */
+  daysLeft: number | null;
+
+  endsAt: string | null;
+
+  /** True while nothing can be written - expired or switched off. */
+  locked: boolean;
+};
+
+// Matches the week Basel asked for: the warning starts seven days out.
+const WARN_WITHIN_DAYS = 7;
+
 export type SessionValue = {
   user: User | null;
   business: Business | null;
   isPlatformAdmin: boolean;
   loading: boolean;
 
-  /** The shop is switched off: it can be read, but nothing can be written. */
-  suspended: boolean;
+  subscription: Subscription;
 
   /** Re-read the session after something changes it (e.g. paying). */
   refresh: () => Promise<void>;
 };
+
+// The same rule migration 066 applies in the database, restated for
+// the screen. The database is the one that decides - this only decides
+// what to SAY. If the two ever disagree the database wins and the
+// person meets a refused write, which is why the wording never
+// promises anything, it only warns.
+export function readSubscription(business: Business | null): Subscription {
+  if (!business) {
+    return { status: "ok", daysLeft: null, endsAt: null, locked: false };
+  }
+
+  // A trial and a paid month end the same way; only the date differs.
+  const endsAt = business.subscription_expires_at ?? business.trial_ends_at ?? null;
+
+  if (business.active === false) {
+    return { status: "suspended", daysLeft: null, endsAt, locked: true };
+  }
+
+  if (!endsAt) {
+    return { status: "ok", daysLeft: null, endsAt: null, locked: false };
+  }
+
+  const msLeft = new Date(endsAt).getTime() - Date.now();
+  const daysLeft = Math.ceil(msLeft / 86_400_000);
+
+  if (msLeft <= 0) {
+    return { status: "expired", daysLeft, endsAt, locked: true };
+  }
+
+  if (daysLeft <= WARN_WITHIN_DAYS) {
+    return { status: "expiring", daysLeft, endsAt, locked: false };
+  }
+
+  return { status: "ok", daysLeft, endsAt, locked: false };
+}
 
 export const SessionContext = createContext<SessionValue | null>(null);
 
@@ -141,7 +201,7 @@ export default function SessionProvider({ children }: { children: ReactNode }) {
       business,
       isPlatformAdmin,
       loading,
-      suspended: !!business && business.active === false,
+      subscription: readSubscription(business),
       refresh: load,
     }),
     [user, business, isPlatformAdmin, loading, load]

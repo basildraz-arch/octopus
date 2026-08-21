@@ -194,6 +194,13 @@ export async function POST(request: NextRequest) {
       .from("businesses")
       .update({
         subscription_expires_at: newExpiry.toISOString(),
+        // When this paid period began. Only stamped when the shop was
+        // actually out - renewing early continues the period that is
+        // still running rather than starting a new one, which is the
+        // same logic the expiry above uses.
+        ...(currentExpiry <= new Date()
+          ? { subscription_started_at: new Date().toISOString() }
+          : {}),
         ...(business?.active === false ? { active: true } : {}),
       })
       .eq("id", businessId);

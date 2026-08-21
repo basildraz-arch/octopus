@@ -21,13 +21,16 @@ import {
   getItemNames,
   getWarehouseNames,
 } from "@/repositories/assistant.repository";
-import { incrementAndCheckGeminiUsage } from "@/repositories/assistantUsage.repository";
-
-const DAILY_GEMINI_LIMIT =
-  Number(process.env.ASSISTANT_GEMINI_DAILY_LIMIT) || 50;
-
-const LIMIT_REACHED_MESSAGE =
-  "وصلت للحد اليومي للأسئلة الذكية النهاردة 🙏 جرّب سؤال من الأسئلة الجاهزة زي: كام صنف عندي؟";
+// The daily allowance is charged ONCE per message, by the route, before
+// any of this runs. It used to be charged again here - twice, in fact,
+// once to classify the question and once to answer it - so a single
+// message could cost a person three of their allowance without them
+// doing anything unusual.
+//
+// A person's allowance is counted in messages, not in model calls. How
+// many calls one message takes is our problem, not theirs. Running out
+// of free model capacity is a separate matter and is handled by the
+// fallback chain in lib/ai.ts.
 
 export type AssistantAnswer = {
   answer: string;
@@ -310,17 +313,7 @@ export async function answerQuestion(
     return { answer, source: "rules" };
   }
 
-  // الطبقة 2: تصنيف بواسطة Gemini (بدون رد مباشر)
-  const usage1 = await incrementAndCheckGeminiUsage(
-    supabase,
-    businessId,
-    DAILY_GEMINI_LIMIT
-  );
-
-  if (!usage1.allowed) {
-    return { answer: LIMIT_REACHED_MESSAGE, source: "limit" };
-  }
-
+  // الطبقة 2: تصنيف بواسطة الموديل (بدون رد مباشر)
   const geminiIntent = await classifyWithGemini(question);
 
   if (geminiIntent !== "freeform") {
@@ -328,17 +321,7 @@ export async function answerQuestion(
     return { answer, source: "rules" };
   }
 
-  // الطبقة 3: رد حر كامل من Gemini
-  const usage2 = await incrementAndCheckGeminiUsage(
-    supabase,
-    businessId,
-    DAILY_GEMINI_LIMIT
-  );
-
-  if (!usage2.allowed) {
-    return { answer: LIMIT_REACHED_MESSAGE, source: "limit" };
-  }
-
+  // الطبقة 3: رد حر كامل من الموديل
   const answer = await answerFromGemini(supabase, businessId, question);
   return { answer, source: "ai" };
 }
