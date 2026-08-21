@@ -49,8 +49,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // The whole app is Arabic and was being laid out left-to-right,
+    // which is why things looked subtly wrong everywhere and visibly
+    // broke on a phone: the category strip started at the left and ran
+    // off the right edge, the price-tier chips read backwards, and the
+    // item grid filled from the wrong corner. lang was still "en" from
+    // the starter template.
+    //
+    // Physical utilities in this codebase stay correct under rtl - the
+    // search icon and its padding are on the right on purpose, and
+    // text-right is the reading edge in Arabic. What flips is flex and
+    // grid order, and where horizontal scrollers start, which is
+    // exactly what needed flipping.
     <html
-      lang="en"
+      lang="ar"
+      dir="rtl"
       className={`${cairo.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-ink-950 overflow-x-hidden">

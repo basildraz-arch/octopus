@@ -3,8 +3,11 @@
 import Navigation from "./Navigation";
 
 export default function DesktopSidebar() {
+  // border-e, not border-r: under rtl the sidebar sits on the right and
+  // its dividing edge is the left one. The logical property is correct
+  // in both directions.
   return (
-    <aside className="hidden md:flex w-64 flex-col border-r border-ink-600 bg-ink-800 p-6">
+    <aside className="hidden md:flex w-64 flex-col border-e border-ink-600 bg-ink-800 p-6">
       <div className="mb-10">
         <h1 className="text-3xl font-bold">
           🐙 Octopus

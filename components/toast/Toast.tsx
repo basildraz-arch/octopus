@@ -25,14 +25,16 @@ export default function Toast({ type, message, leaving, onDismiss }: Props) {
 
   return (
     <div
-      className="relative flex min-w-[260px] max-w-sm items-start gap-3 overflow-hidden rounded-2xl border border-ink-600 bg-ink-800 py-3 pr-3 pl-4 shadow-2xl"
+      className="relative flex min-w-[260px] max-w-sm items-start gap-3 overflow-hidden rounded-2xl border border-ink-600 bg-ink-800 py-3 pe-3 ps-4 shadow-2xl"
       style={{
         animation: leaving
           ? "toast-out 0.25s ease-in forwards"
           : "toast-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
       }}
     >
-      <span className={`absolute inset-y-0 left-0 w-1.5 ${accent}`} />
+      {/* start-0: the colour stripe belongs on the reading edge, which
+          is the right in Arabic. */}
+      <span className={`absolute inset-y-0 start-0 w-1.5 ${accent}`} />
 
       <Icon size={20} className={`mt-0.5 shrink-0 ${iconColor}`} />
 

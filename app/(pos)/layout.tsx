@@ -75,7 +75,11 @@ export default function PosLayout({ children }: { children: ReactNode }) {
         <div className="flex min-w-0 items-center gap-3">
           <h1 className="hidden text-lg font-bold md:block">🐙 Octopus</h1>
 
-          <nav className="flex gap-1.5">
+          {/* Scrolls rather than pushes: in the screenshot from Basel's
+              phone the tabs shoved the bell and the logout button clean
+              off the right edge. A row that can overflow must be
+              allowed to overflow inside itself. */}
+          <nav className="flex gap-1.5 overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
 
