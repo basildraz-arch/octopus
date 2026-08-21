@@ -21,6 +21,7 @@ import {
 import { getWarehouses } from "@/repositories/warehouse.repository";
 import { getStockByWarehouse } from "@/repositories/stockBatch.repository";
 import { useSession } from "@/hooks/useSession";
+import { getExampleHints } from "@/lib/examples";
 import { useToast } from "@/hooks/useToast";
 
 import { itemSchema, ItemSchema } from "./validation";
@@ -36,7 +37,10 @@ type Props = {
 
 export default function ItemForm({ item }: Props) {
   const router = useRouter();
-  const { user } = useSession();
+  const { user, business } = useSession();
+
+  // Examples drawn from this shop's trade rather than generic ones.
+  const hints = getExampleHints(business);
   const toast = useToast();
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -202,7 +206,7 @@ export default function ItemForm({ item }: Props) {
 
           <Input
             {...register("name")}
-            placeholder="اسم الصنف"
+            placeholder={`اسم الصنف (مثال: ${hints.itemName})`}
             className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
           />
 
@@ -304,7 +308,7 @@ export default function ItemForm({ item }: Props) {
 
             <Input
               {...register("unit")}
-              placeholder="مثال: قطعة، كيلو، جرام"
+              placeholder={`مثال: ${hints.unit}`}
               className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
             />
 

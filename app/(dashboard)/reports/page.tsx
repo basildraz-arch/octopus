@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BarChart3, AlertTriangle, ClipboardList } from "lucide-react";
+import { BarChart3, AlertTriangle, ClipboardList, Users } from "lucide-react";
 
 import {
   getReportSummary,
+  getEmployeeReports,
   type ReportSummary,
+  type EmployeeReportRow,
 } from "@/repositories/report.repository";
 import { useSession } from "@/hooks/useSession";
 import WarehousePulseDashboard from "@/components/reports/WarehousePulseDashboard";
@@ -44,13 +46,14 @@ const PRESETS = [
 ];
 
 export default function ReportsPage() {
-  const { user, hasFeature } = useSession();
+  const { user, business, hasFeature } = useSession();
 
   const [startDate, setStartDate] = useState(
     toDateString(startOfMonth(new Date()))
   );
   const [endDate, setEndDate] = useState(toDateString(new Date()));
   const [summary, setSummary] = useState<ReportSummary | null>(null);
+  const [staffRows, setStaffRows] = useState<EmployeeReportRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isWarehouseManagement = hasFeature("warehouse_reports");
@@ -66,13 +69,13 @@ export default function ReportsPage() {
 
     setLoading(true);
 
-    const data = await getReportSummary(
-      user.business_id,
-      startDate,
-      endDate
-    );
+    const [data, perStaff] = await Promise.all([
+      getReportSummary(user.business_id, startDate, endDate),
+      getEmployeeReports(user.business_id, startDate, endDate),
+    ]);
 
     setSummary(data);
+    setStaffRows(perStaff);
 
     setLoading(false);
   }
@@ -217,6 +220,70 @@ export default function ReportsPage() {
               {summary.netProfit.toFixed(2)} ج
             </h2>
           </div>
+
+          {staffRows.length > 0 && (
+            <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+              <h2 className="mb-1 flex items-center gap-2 text-lg font-bold">
+                <Users size={18} />
+                أداء كل عامل
+              </h2>
+
+              <p className="mb-4 text-xs text-mist">
+                نفس الفترة المختارة فوق
+              </p>
+
+              <div className="space-y-3">
+                {staffRows.map((row) => (
+                  <div
+                    key={row.userId}
+                    className="rounded-xl border border-ink-700 bg-ink-900 p-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-bold text-paper">
+                        {row.userName}
+                      </span>
+
+                      <span className="text-lg font-bold text-green-400">
+                        {row.totalSales.toFixed(2)} ج
+                      </span>
+                    </div>
+
+                    <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-mist sm:grid-cols-4">
+                      <span>{row.saleCount} فاتورة</span>
+                      <span>متوسط {row.averageSale.toFixed(2)} ج</span>
+                      <span>ربح {row.grossProfit.toFixed(2)} ج</span>
+                      <span>مصروفات {row.expensesRecorded.toFixed(2)} ج</span>
+                    </div>
+
+                    {business?.price_tier_labels &&
+                      row.tierCounts.some((c) => c > 0) && (
+                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-mist">
+                          {business.price_tier_labels.map((label, index) => (
+                            <span key={label}>
+                              {label}: {row.tierCounts[index]}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                    {row.abandonedCarts > 0 && (
+                      <div className="mt-2 flex items-center gap-1.5 text-xs font-bold text-red-400">
+                        <AlertTriangle size={13} />
+                        {row.abandonedCarts} فاتورة اتفتحت وماتنفذتش
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <Link
+                href="/sales-audit"
+                className="mt-4 block text-center text-sm text-mist hover:text-paper"
+              >
+                تفاصيل الفواتير اللي ماتنفذتش
+              </Link>
+            </div>
+          )}
 
           <Link
             href={`/sales-log?from=${startDate}&to=${endDate}`}

@@ -17,6 +17,10 @@ export type ShiftSummary = {
   saleCount: number;
   byPaymentMethod: Record<PaymentMethod, number>;
   totalExpenses: number;
+  // Money collected during this shift against earlier credit sales.
+  // It is in the drawer now even though the sale happened before.
+  customerPaymentsCash: number;
+  customerPaymentsOther: number;
   expectedCash: number;
 };
 
@@ -124,7 +128,7 @@ export async function reopenShift(
 export async function getShiftSummary(
   shiftId: string
 ): Promise<ShiftSummary> {
-  const [salesResult, expensesResult] = await Promise.all([
+  const [salesResult, expensesResult, paymentsResult] = await Promise.all([
     supabase
       .from("sales")
       .select("total, payment_method")
@@ -133,23 +137,27 @@ export async function getShiftSummary(
       .from("expenses")
       .select("amount")
       .eq("shift_id", shiftId),
+    supabase
+      .from("customer_payments")
+      .select("amount, method")
+      .eq("shift_id", shiftId),
   ]);
 
-  if (salesResult.error) {
-    console.error("Supabase Error:", salesResult.error.message);
-  }
-
-  if (expensesResult.error) {
-    console.error("Supabase Error:", expensesResult.error.message);
+  for (const result of [salesResult, expensesResult, paymentsResult]) {
+    if (result.error) {
+      console.error("Supabase Error:", result.error.message);
+    }
   }
 
   const sales = salesResult.data ?? [];
   const expenses = expensesResult.data ?? [];
+  const payments = paymentsResult.data ?? [];
 
   const byPaymentMethod: Record<PaymentMethod, number> = {
     cash: 0,
     vodafone_cash: 0,
     instapay: 0,
+    credit: 0,
   };
 
   let totalSales = 0;
@@ -166,11 +174,25 @@ export async function getShiftSummary(
     0
   );
 
+  let customerPaymentsCash = 0;
+  let customerPaymentsOther = 0;
+
+  for (const payment of payments) {
+    if (payment.method === "cash") customerPaymentsCash += Number(payment.amount);
+    else customerPaymentsOther += Number(payment.amount);
+  }
+
   return {
     totalSales,
     saleCount: sales.length,
     byPaymentMethod,
     totalExpenses,
-    expectedCash: byPaymentMethod.cash - totalExpenses,
+    customerPaymentsCash,
+    customerPaymentsOther,
+    // Credit sales are excluded by construction: they never land in
+    // byPaymentMethod.cash. Settlements collected today are added,
+    // because that money IS in the drawer now.
+    expectedCash:
+      byPaymentMethod.cash + customerPaymentsCash - totalExpenses,
   };
 }

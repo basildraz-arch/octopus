@@ -8,24 +8,32 @@ import BottomNav from "@/components/layout/BottomNav";
 import AppHeader from "@/components/layout/AppHeader";
 
 import { useSession } from "@/hooks/useSession";
-import type { FeatureKey } from "@/types/business";
+import { homePathFor } from "@/lib/permissions";
+import { canOpen, contextFor, ruleFor } from "@/lib/navItems";
 
-const PATH_FEATURES: Record<string, FeatureKey> = {
-  "/day-close": "shifts",
-  "/sales-log": "pos_sales",
-};
+// The rules themselves live in lib/navItems.ts alongside the tiles
+// and the sidebar, so "what a stock keeper can open" has exactly one
+// answer - and the Master preview can ask that same question about
+// somebody else's shop without a second copy to fall out of date.
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, hasFeature, loading } = useSession();
+  const { user, business, isPlatformAdmin, loading } = useSession();
 
-  const requiredFeature = PATH_FEATURES[pathname];
-  const isBlockedByFeature = requiredFeature ? !hasFeature(requiredFeature) : false;
+  const ctx = contextFor(user, business, isPlatformAdmin);
+
+  const rule = ruleFor(pathname);
+
+  // Kept apart because they send the person to the same place for
+  // different reasons: a missing feature is the shop's shape, a
+  // missing permission is this person's job.
+  const blockedByFeature =
+    !!user && !!rule?.feature && !ctx.features.includes(rule.feature);
+
+  const blockedByRole = !!user && !blockedByFeature && !canOpen(pathname, ctx);
+
+  const allowed = !!user && !blockedByFeature && !blockedByRole;
 
   useEffect(() => {
     if (loading) return;
@@ -35,22 +43,17 @@ export default function DashboardLayout({
       return;
     }
 
-    if (user.role !== "owner") {
-      router.replace("/sales");
+    if (blockedByRole) {
+      router.replace(homePathFor(user));
       return;
     }
 
-    if (isBlockedByFeature) {
-      router.replace("/dashboard");
+    if (blockedByFeature) {
+      router.replace(homePathFor(user));
     }
-  }, [loading, user, isBlockedByFeature, router]);
+  }, [loading, user, blockedByRole, blockedByFeature, router]);
 
-  if (
-    loading ||
-    !user ||
-    user.role !== "owner" ||
-    isBlockedByFeature
-  ) {
+  if (loading || !allowed) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-ink-950 text-paper">
         جارِ التحميل...
@@ -60,20 +63,14 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-ink-950 text-paper">
-      {/* Desktop Sidebar */}
       <DesktopSidebar />
 
       <div className="flex flex-1 flex-col">
-        {/* Header */}
         <AppHeader />
 
-        {/* Page */}
-        <main className="flex-1 p-6 pb-24 md:p-8 md:pb-8">
-          {children}
-        </main>
+        <main className="flex-1 p-6 pb-24 md:p-8 md:pb-8">{children}</main>
       </div>
 
-      {/* Bottom Navigation (mobile only) */}
       <BottomNav />
     </div>
   );

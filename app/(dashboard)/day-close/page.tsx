@@ -8,6 +8,7 @@ import {
   Smartphone,
   CreditCard,
   CheckCircle2,
+  NotebookPen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +28,9 @@ const PAYMENT_METHOD_INFO: Record<string, { label: string; icon: LucideIcon }> =
   cash: { label: "كاش", icon: Banknote },
   vodafone_cash: { label: "فودافون كاش", icon: Smartphone },
   instapay: { label: "إنستاباي", icon: CreditCard },
+  // Sold but not paid for yet, so it is shown alongside the others
+  // and pointedly NOT counted as cash in the drawer.
+  credit: { label: "على الحساب (لسه ما اتدفعش)", icon: NotebookPen },
 };
 
 export default function DayClosePage() {
@@ -199,6 +203,26 @@ export default function DayClosePage() {
         </p>
       </div>
 
+      {summary.customerPaymentsCash + summary.customerPaymentsOther > 0 && (
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+          <p className="text-sm text-mist">
+            تحصيل من حسابات العملاء النهارده
+          </p>
+
+          <p className="mt-1 text-2xl font-bold text-green-400">
+            {(
+              summary.customerPaymentsCash + summary.customerPaymentsOther
+            ).toFixed(2)}{" "}
+            ج
+          </p>
+
+          <p className="mt-1 text-xs text-mist">
+            منها {summary.customerPaymentsCash.toFixed(2)} ج كاش (داخلة في
+            حساب الدرج)
+          </p>
+        </div>
+      )}
+
       <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
         <p className="text-sm text-mist">
           الكاش المتوقع في الدرج
@@ -209,7 +233,7 @@ export default function DayClosePage() {
         </p>
 
         <p className="mt-1 text-xs text-mist">
-          (مبيعات الكاش − المصروفات)
+          (مبيعات الكاش + تحصيل العملاء كاش − المصروفات)
         </p>
       </div>
 

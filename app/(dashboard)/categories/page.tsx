@@ -11,10 +11,14 @@ import {
   type Category,
 } from "@/repositories/category.repository";
 import { useSession } from "@/hooks/useSession";
+import { getExampleHints } from "@/lib/examples";
 import { useToast } from "@/hooks/useToast";
 
 export default function CategoriesPage() {
-  const { user } = useSession();
+  const { user, business } = useSession();
+
+  // Examples drawn from this shop's trade rather than generic ones.
+  const hints = getExampleHints(business);
   const toast = useToast();
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -143,7 +147,7 @@ export default function CategoriesPage() {
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="اسم الفئة (مثال: ألبان)"
+            placeholder={`اسم الفئة (مثال: ${hints.categoryName})`}
             className="flex-1 rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
           />
 

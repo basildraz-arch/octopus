@@ -3,6 +3,9 @@ export type AppMode =
   | "warehouse_management";
 
 export type FeatureKey =
+  | "credit_customers"
+  | "price_tiers"
+  | "english_receipt"
   | "pos_sales"
   | "inventory"
   | "categories"
@@ -13,6 +16,7 @@ export type FeatureKey =
   | "discounts";
 
 export type BusinessType =
+  | "coffee"
   | "pet_shop"
   | "barber"
   | "restaurant"
@@ -43,7 +47,9 @@ export interface Business {
 
   address?: string;
 
-  logo?: string;
+  // Nullable rather than optional: "شيل اللوجو" writes null, which is
+  // a different thing from "this field was not included".
+  logo?: string | null;
 
   currency: string;
 
@@ -52,6 +58,43 @@ export interface Business {
   timezone: string;
 
   max_discount_percent?: number | null;
+
+  // Short code used to namespace employee logins
+  // (mohamed@<code>.octopus.local). Null until the first employee is
+  // requested, then frozen - see migration 034.
+  employee_email_code?: string | null;
+
+  // The shop's own words for its own work: {"items":"الأكلات"}. Only
+  // the keys it wanted changed are stored; the rest fall back to the
+  // app's defaults at read time. Written by the platform admin only
+  // (migration 056).
+  ui_labels?: Record<string, string>;
+
+  // Which plan the shop is on, and what that plan costs it. The
+  // price lives here rather than only on the plan so a special deal
+  // is a field on one business, not a fork of the price list.
+  plan_code?: string | null;
+  monthly_price?: number | null;
+
+  // Seeded from the plan and enforced by triggers (migration 061).
+  // Kept per business so raising one shop's ceiling is an edit, not
+  // a new plan - and so moving to a smaller plan never drops below
+  // what the shop already built.
+  staff_limit: number;
+  warehouse_limit: number;
+  branch_limit: number;
+
+  // Exactly three, in order: the shop's own words for its price
+  // tiers, whatever the owner calls them. Highest price first.
+  price_tier_labels: [string, string, string];
+
+  // Decides the printed receipt's width and font sizing. Most small
+  // shops run an 80mm thermal roll.
+  receipt_paper: "thermal_58" | "thermal_80" | "a4";
+
+  // Every completed sale prints automatically. A printed receipt in
+  // the customer's hand is what makes an unrecorded sale hard.
+  force_print_on_sale: boolean;
 
   active: boolean;
 

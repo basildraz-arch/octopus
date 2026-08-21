@@ -3,7 +3,9 @@ import {
   checkAvailability,
   drawFromBatches,
   createBatch,
+  getCurrentStockAndCost,
 } from "@/repositories/stockBatch.repository";
+import { updateItem } from "@/repositories/item.repository";
 
 export type StockTransfer = {
   id: string;
@@ -55,6 +57,14 @@ export async function createTransfer(
     quantity,
     averageBuyPrice
   );
+
+  // draw_stock_fifo recalculated the item's total the moment the
+  // goods left the source warehouse - before they existed in the
+  // destination one. Recalculate now that both halves are recorded,
+  // otherwise a transfer reads as stock that vanished.
+  const { stock, averageCost } = await getCurrentStockAndCost(itemId);
+
+  await updateItem(itemId, { stock, buy_price: averageCost });
 
   const { data, error } = await supabase
     .from("stock_transfers")

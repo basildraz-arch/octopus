@@ -4,11 +4,13 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import type { Item } from "@/types/item";
+import { priceForTier, type PriceTier } from "@/lib/priceTier";
 
 type Props = {
   item: Item | null;
   onClose: () => void;
   onAdd: (quantity: number, total: number) => void;
+  priceTier?: PriceTier;
 };
 
 const LABELS: Record<Item["sale_method"], string> = {
@@ -21,6 +23,7 @@ export default function SalePopup({
   item,
   onClose,
   onAdd,
+  priceTier = 1,
 }: Props) {
   const [value, setValue] = useState("");
 
@@ -28,15 +31,18 @@ export default function SalePopup({
     return null;
   }
 
+  // Same price the list showed and the same one the sale will store.
+  const unitPrice = priceForTier(item, priceTier);
+
   function handleAdd() {
     const number = Number(value);
 
     if (!item || number <= 0) return;
 
     if (item.sale_method === "money") {
-      onAdd(number / item.sell_price, number);
+      onAdd(number / unitPrice, number);
     } else {
-      onAdd(number, number * item.sell_price);
+      onAdd(number, number * unitPrice);
     }
 
     setValue("");
@@ -51,7 +57,7 @@ export default function SalePopup({
         </h2>
 
         <p className="mb-6 text-sm text-mist">
-          {item.sell_price} جنيه / {item.unit}
+          {unitPrice} جنيه / {item.unit}
         </p>
 
         <label className="mb-2 block text-sm text-mist">

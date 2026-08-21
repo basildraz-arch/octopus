@@ -13,6 +13,17 @@ type ChatMessage = {
   text: string;
   link?: { path: string; label: string };
   linkResolved?: "confirmed" | "dismissed";
+
+  // Set when the answer was an instruction rather than a question.
+  // The assistant has worked out exactly what it would change and is
+  // waiting to be told to go ahead - nothing has happened yet.
+  proposal?: {
+    actionId: string;
+    summary: string;
+    affectedCount: number;
+  };
+  proposalResolved?: "executed" | "cancelled" | "failed";
+  proposalMessage?: string;
 };
 
 type Point = { x: number; y: number };
@@ -155,6 +166,7 @@ export default function AssistantChat() {
   const [closing, setClosing] = useState(false);
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [busyProposal, setBusyProposal] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [animationData, setAnimationData] = useState<object | null>(null);
@@ -448,7 +460,12 @@ export default function AssistantChat() {
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", text: data.answer, link: data.link },
+        {
+          role: "assistant",
+          text: data.answer,
+          link: data.link,
+          proposal: data.proposal,
+        },
       ]);
     } catch (err) {
       const message =
@@ -459,6 +476,62 @@ export default function AssistantChat() {
       setError(message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleProposalDecision(
+    index: number,
+    decision: "execute" | "cancel"
+  ) {
+    const proposal = messages[index].proposal;
+    if (!proposal) return;
+
+    setBusyProposal(proposal.actionId);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) throw new Error("لازم تسجّل الدخول الأول");
+
+      const res = await fetch("/api/assistant/execute", {
+        method: decision === "execute" ? "POST" : "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ actionId: proposal.actionId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "تعذر التنفيذ");
+
+      setMessages((prev) =>
+        prev.map((message, i) =>
+          i === index
+            ? {
+                ...message,
+                proposalResolved:
+                  decision === "execute" ? "executed" : "cancelled",
+                proposalMessage: data.message,
+              }
+            : message
+        )
+      );
+    } catch (err) {
+      const text = err instanceof Error ? err.message : "تعذر التنفيذ";
+
+      setMessages((prev) =>
+        prev.map((message, i) =>
+          i === index
+            ? { ...message, proposalResolved: "failed", proposalMessage: text }
+            : message
+        )
+      );
+    } finally {
+      setBusyProposal(null);
     }
   }
 
@@ -571,7 +644,12 @@ export default function AssistantChat() {
         style={{ pointerEvents: "none", clipPath: `url(#${safeClipId})` }}
       >
         <div
-          className="pointer-events-auto flex w-full flex-col"
+          // overflow-hidden here is a layout constraint (keeps the flex
+          // children from growing past maxHeight and pushing the header
+          // out of reach on a long conversation), not a visual card - no
+          // background/border/shadow, so it doesn't bring back the
+          // "boxed" look that was removed earlier.
+          className="pointer-events-auto flex w-full flex-col overflow-hidden"
           style={{
             maxWidth: "min(520px, 80vw)",
             maxHeight: "min(640px, 64vh)",
@@ -579,7 +657,7 @@ export default function AssistantChat() {
             transition: closing ? "opacity 200ms ease" : "opacity 350ms ease 200ms",
           }}
         >
-          <div className="flex items-center justify-between border-b border-ink-600 p-5">
+          <div className="flex flex-none items-center border-b border-ink-600 p-5">
             <h2 className="flex items-center gap-2 font-bold">
               {animationData ? (
                 <Lottie
@@ -597,16 +675,9 @@ export default function AssistantChat() {
               )}
               اسأل الأخطبوط
             </h2>
-            <button
-              onClick={handleClose}
-              className="text-mist hover:text-paper"
-              aria-label="إغلاق"
-            >
-              ✕
-            </button>
           </div>
 
-          <div className="flex-1 space-y-3 overflow-y-auto p-4">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
             {messages.length === 0 && (
               <p className="text-sm text-mist">
                 اسألني أي حاجة عن بيزنسك، زي &quot;قد إيه مبيعاتي النهاردة؟&quot;
@@ -659,6 +730,52 @@ export default function AssistantChat() {
                     تمام، خليه هنا 👍
                   </p>
                 )}
+
+                {message.proposal && !message.proposalResolved && (
+                  <div className="mt-2 max-w-[85%] space-y-2 rounded-xl border border-amber-600/50 bg-amber-950/30 p-3">
+                    <p className="text-right text-xs text-amber-300">
+                      لسه مفيش حاجة اتغيرت. لو دوست "نفّذ" هيحصل التالي:
+                    </p>
+
+                    <p className="text-right text-sm text-paper">
+                      {message.proposal.summary}
+                    </p>
+
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleProposalDecision(i, "cancel")}
+                        disabled={busyProposal === message.proposal.actionId}
+                        className="rounded-lg bg-ink-700 px-3 py-1.5 text-sm font-semibold text-paper transition hover:bg-ink-600 disabled:opacity-50"
+                      >
+                        ❌ لأ، سيبها
+                      </button>
+
+                      <button
+                        onClick={() => handleProposalDecision(i, "execute")}
+                        disabled={busyProposal === message.proposal.actionId}
+                        className="rounded-lg bg-splash px-3 py-1.5 text-sm font-semibold text-ink-950 transition hover:bg-splash-deep disabled:opacity-50"
+                      >
+                        ✅ نفّذ
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {message.proposalResolved === "executed" && (
+                  <p className="mt-1 text-sm text-green-400">
+                    ✅ {message.proposalMessage ?? "اتنفذ"}
+                  </p>
+                )}
+
+                {message.proposalResolved === "cancelled" && (
+                  <p className="mt-1 text-sm text-mist">تمام، ماعملتش حاجة 👍</p>
+                )}
+
+                {message.proposalResolved === "failed" && (
+                  <p className="mt-1 text-sm text-red-400">
+                    ❌ {message.proposalMessage}
+                  </p>
+                )}
               </div>
             ))}
 
@@ -669,7 +786,7 @@ export default function AssistantChat() {
 
           <form
             onSubmit={handleSubmit}
-            className="flex gap-2 border-t border-ink-600 p-4"
+            className="flex flex-none gap-2 border-t border-ink-600 p-4"
           >
             <input
               type="text"
@@ -688,6 +805,32 @@ export default function AssistantChat() {
           </form>
         </div>
       </div>
+
+      {/* The close button lives entirely outside the clip-path system -
+          not just visually separate, but structurally independent of the
+          blob's geometry. Earlier this sat inside the clipped header, and
+          on mobile the safe zone could momentarily shrink below what the
+          header needed (window.innerHeight doesn't reliably reflect the
+          visible area once the on-screen keyboard opens/closes, which
+          happens constantly through a long conversation) - clipping it
+          away right when it was needed most. A fixed corner position has
+          no dependency on any of that: it's reachable regardless of
+          screen size, keyboard state, or conversation length, by
+          construction rather than by hoping the ink shape stays big
+          enough. Everything else (title, messages, input) keeps living
+          inside the ink as before - this is a deliberate exception for
+          the one control that must never fail. */}
+      <button
+        onClick={handleClose}
+        aria-label="إغلاق"
+        className="fixed top-4 right-4 z-[52] flex h-11 w-11 items-center justify-center rounded-full bg-ink-900/90 text-mist shadow-lg transition hover:bg-ink-700 hover:text-paper"
+        style={{
+          opacity: closing ? 0 : 1,
+          transition: "opacity 200ms ease",
+        }}
+      >
+        ✕
+      </button>
     </>
   );
 }

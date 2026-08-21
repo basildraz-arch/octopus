@@ -27,7 +27,15 @@ export interface Item {
 
   buy_price: number;
 
+  // Tier 1 - the default/walk-in price. The only one a single-price
+  // shop ever sets, which is why it keeps the plain name.
   sell_price: number;
+
+  // Tiers 2 and 3, null when the shop prices everything the same.
+  // Labels for all three live on the business (price_tier_labels).
+  sell_price_2?: number | null;
+
+  sell_price_3?: number | null;
 
   stock: number;
 

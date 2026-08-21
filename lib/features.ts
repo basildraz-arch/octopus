@@ -16,6 +16,9 @@ export const ALL_FEATURES: FeatureKey[] = [
   "multi_warehouse",
   "warehouse_reports",
   "discounts",
+  "price_tiers",
+  "english_receipt",
+  "credit_customers",
 ];
 
 export const FEATURE_LABELS: Record<FeatureKey, string> = {
@@ -27,6 +30,9 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   multi_warehouse: "المخازن المتعددة والنقل بينها",
   warehouse_reports: "لوحة نبض المخازن",
   discounts: "الخصم على الفاتورة",
+  price_tiers: "3 تسعيرات لكل صنف",
+  english_receipt: "فاتورة إنجليزي للتسعيرة الأعلى",
+  credit_customers: "حساب مؤجل للعملاء (يأخد ويحاسب بعدين)",
 };
 
 export const FEATURE_ICONS: Record<FeatureKey, string> = {
@@ -38,6 +44,9 @@ export const FEATURE_ICONS: Record<FeatureKey, string> = {
   multi_warehouse: "🚚",
   warehouse_reports: "🛰️",
   discounts: "💰",
+  price_tiers: "🏷️",
+  english_receipt: "🌍",
+  credit_customers: "🧾",
 };
 
 export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
@@ -49,4 +58,10 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   multi_warehouse: "تنقل بضاعة بين أكتر من مخزن بسهولة",
   warehouse_reports: "متابعة سريعة لحالة كل مخازنك في لحظة واحدة",
   discounts: "تقدر تدي خصم على الفاتورة وقت البيع",
+  price_tiers:
+    "سعر مختلف لكل نوع زبون - إنت اللي بتسمّي التسعيرات، والكاشير يختار وقت البيع",
+  english_receipt:
+    "لما البيع يبقى بالتسعيرة الأعلى، الفاتورة تتطبع بالإنجليزي للسايح",
+  credit_customers:
+    "العميل ياخد على مدار اليوم ويحاسب في الآخر - والمبلغ ما بيتحسبش كاش لحد ما يدفع",
 };

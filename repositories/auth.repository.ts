@@ -54,7 +54,8 @@ export async function signUp(
   metadata: {
     full_name: string;
     business_name: string;
-    enabled_features: string[];
+    business_type: string;
+    enabled_features?: string[];
   },
   emailRedirectTo: string
 ) {

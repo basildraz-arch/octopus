@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Package, Warehouse, Tag, Plus, Search } from "lucide-react";
+import { Package, Warehouse, Tag, Plus, Search, FileSpreadsheet } from "lucide-react";
 
 import ProductTable from "@/components/items/ItemTable";
 
@@ -78,6 +78,14 @@ export default function ItemsPage() {
           >
             <Tag size={18} />
             إدارة الفئات
+          </Link>
+
+          <Link
+            href="/import"
+            className="flex items-center justify-center gap-2 rounded-lg bg-ink-700 px-5 py-3 text-center font-semibold transition hover:bg-ink-600"
+          >
+            <FileSpreadsheet size={18} />
+            استيراد من ملف
           </Link>
 
           <Link

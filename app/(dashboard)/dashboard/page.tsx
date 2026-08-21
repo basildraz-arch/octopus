@@ -9,12 +9,12 @@ import {
   getReportSummary,
   type ReportSummary,
 } from "@/repositories/report.repository";
-import { getWarehouses } from "@/repositories/warehouse.repository";
 import {
-  getRecentTransfers,
-  type StockTransferWithDetails,
-} from "@/repositories/stockTransfer.repository";
+  getCartAuditByDate,
+  summarizeCartSessions,
+} from "@/repositories/cartAudit.repository";
 import { useSession } from "@/hooks/useSession";
+import { contextFor, labelsFor, visibleTiles } from "@/lib/navItems";
 
 import type { Item } from "@/types/item";
 
@@ -29,18 +29,18 @@ function todayString() {
 }
 
 export default function DashboardHomePage() {
-  const { user, business, hasFeature } = useSession();
+  const { user, business, hasFeature, isPlatformAdmin } = useSession();
+
+  // Same functions the sidebar and the route guard run - the home
+  // screen is not allowed to have its own opinion about what exists.
+  const ctx = contextFor(user, business, isPlatformAdmin);
+  const labels = labelsFor(business);
 
   const [items, setItems] = useState<Item[]>([]);
   const [shift, setShift] = useState<Shift | null>(null);
   const [todayReport, setTodayReport] = useState<ReportSummary | null>(null);
-  const [warehouseCount, setWarehouseCount] = useState(0);
-  const [recentTransfers, setRecentTransfers] = useState<
-    StockTransferWithDetails[]
-  >([]);
+  const [suspiciousToday, setSuspiciousToday] = useState(0);
   const [loading, setLoading] = useState(true);
-
-  const isWarehouseManagement = hasFeature("multi_warehouse");
 
   useEffect(() => {
     if (!user || !business) return;
@@ -53,176 +53,54 @@ export default function DashboardHomePage() {
 
     setLoading(true);
 
-    if (isWarehouseManagement) {
-      const [itemsData, warehouses, transfers] = await Promise.all([
-        getItems(),
-        getWarehouses(user.business_id),
-        getRecentTransfers(user.business_id),
-      ]);
+    const today = todayString();
 
-      setItems(itemsData);
-      setWarehouseCount(warehouses.filter((w) => w.active).length);
-      setRecentTransfers(transfers);
-    } else {
-      const today = todayString();
+    const [itemsData, openShift, report, auditEvents] = await Promise.all([
+      getItems(),
+      getOpenShift(user.business_id),
+      getReportSummary(user.business_id, today, today),
+      getCartAuditByDate(user.business_id, today),
+    ]);
 
-      const [itemsData, openShift, report] = await Promise.all([
-        getItems(),
-        getOpenShift(user.business_id),
-        getReportSummary(user.business_id, today, today),
-      ]);
+    setItems(itemsData);
+    setShift(openShift);
+    setTodayReport(report);
 
-      setItems(itemsData);
-      setShift(openShift);
-      setTodayReport(report);
-    }
+    setSuspiciousToday(
+      summarizeCartSessions(auditEvents).filter(
+        (s) => !s.completed && s.addedCount > 0
+      ).length
+    );
 
     setLoading(false);
   }
 
-  const totalStockValue = items.reduce((sum, item) => {
-    if (!item.has_stock) return sum;
+  const dailyTiles = visibleTiles(ctx, labels, "daily");
+  const managementTiles = visibleTiles(ctx, labels, "management");
 
-    return sum + item.stock * item.buy_price;
-  }, 0);
+  const stockValue = items.reduce(
+    (sum, item) => (item.has_stock ? sum + item.stock * item.buy_price : sum),
+    0
+  );
 
   if (loading) {
-    return (
-      <main className="p-8 text-center text-mist">
-        جارِ التحميل...
-      </main>
-    );
-  }
-
-  if (isWarehouseManagement) {
-    return (
-      <main className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">
-            🐙 الرئيسية
-          </h1>
-
-          <p className="mt-1 text-mist">
-            نظرة سريعة على مخازنك
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
-            <p className="text-sm text-mist">
-              عدد المخازن
-            </p>
-
-            <h3 className="mt-2 text-3xl font-bold">
-              {warehouseCount}
-            </h3>
-          </div>
-
-          <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
-            <p className="text-sm text-mist">
-              عدد الأصناف
-            </p>
-
-            <h3 className="mt-2 text-3xl font-bold">
-              {items.length}
-            </h3>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
-          <p className="text-sm text-mist">
-            قيمة المخزون
-          </p>
-
-          <h2 className="mt-2 text-4xl font-bold text-green-400">
-            {totalStockValue.toFixed(2)} ج
-          </h2>
-        </div>
-
-        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
-          <h2 className="mb-4 text-lg font-bold">
-            🔀 آخر عمليات النقل
-          </h2>
-
-          {recentTransfers.length === 0 ? (
-            <p className="text-mist">
-              لا توجد عمليات نقل بعد
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {recentTransfers.map((transfer) => (
-                <div
-                  key={transfer.id}
-                  className="rounded-lg border border-ink-600 bg-ink-950 p-3 text-sm"
-                >
-                  <div className="flex justify-between">
-                    <span className="font-semibold">
-                      {transfer.items?.name ?? "صنف محذوف"}
-                    </span>
-
-                    <span className="text-mist">
-                      {new Date(transfer.created_at).toLocaleDateString(
-                        "ar-EG"
-                      )}
-                    </span>
-                  </div>
-
-                  <p className="mt-1 text-mist">
-                    {transfer.quantity} {transfer.items?.unit ?? ""} من "
-                    {transfer.from_warehouse?.name ?? "؟"}" إلى "
-                    {transfer.to_warehouse?.name ?? "؟"}"
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Link
-            href="/warehouses"
-            className="rounded-xl bg-splash p-4 text-center font-semibold text-ink-950 transition hover:bg-splash-deep"
-          >
-            🏭 المخازن
-          </Link>
-
-          <Link
-            href="/items"
-            className="rounded-xl bg-ink-700 p-4 text-center font-semibold text-paper transition hover:bg-ink-600"
-          >
-            📦 الأصناف
-          </Link>
-        </div>
-      </main>
-    );
+    return <main className="p-8 text-center text-mist">جارِ التحميل...</main>;
   }
 
   return (
     <main className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">
-          🐙 الرئيسية
-        </h1>
-
-        <p className="mt-1 text-mist">
-          نظرة سريعة على محلك
-        </p>
-      </div>
-
-      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+      {/* Today, in one glance. Small on purpose - the buttons below
+          are what the screen is for. */}
+      <div className="rounded-2xl border border-ink-600 bg-ink-800 p-5">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-mist">
-            حالة اليوم
-          </p>
+          <p className="text-sm text-mist">مبيعات النهارده</p>
 
           <span
             className={`rounded-full px-3 py-1 text-xs font-semibold ${
-              shift
-                ? "bg-green-600 text-white"
-                : "bg-ink-600 text-mist"
+              shift ? "bg-green-600 text-white" : "bg-ink-600 text-mist"
             }`}
           >
-            {shift ? "مفتوح" : "لسه ما بدأش"}
+            {shift ? "اليوم مفتوح" : "اليوم ما بدأش"}
           </span>
         </div>
 
@@ -230,86 +108,91 @@ export default function DashboardHomePage() {
           {(todayReport?.totalSales ?? 0).toFixed(2)} ج
         </h2>
 
-        <p className="mt-1 text-sm text-mist">
-          {todayReport?.saleCount ?? 0} عملية بيع لحد دلوقتي
-        </p>
+        <div className="mt-2 flex flex-wrap gap-x-4 text-sm text-mist">
+          <span>{todayReport?.saleCount ?? 0} فاتورة</span>
+          <span>
+            {items.length} من {labels.items}
+          </span>
+          <span>
+            {labels.stock} بـ {stockValue.toFixed(0)} ج
+          </span>
+        </div>
+      </div>
 
-        {shift && todayReport && (
-          <div className="mt-3 border-t border-ink-600 pt-3">
-            <p className="text-sm text-mist">
-              صافي ربح اليوم
-            </p>
+      {/* The one thing done more than anything else gets the biggest
+          target on the screen. */}
+      {hasFeature("pos_sales") && (
+        <Link
+          href="/sales"
+          className="flex items-center justify-center gap-3 rounded-2xl bg-green-600 p-8 text-3xl font-bold text-white shadow-lg transition hover:bg-green-700"
+        >
+          <span className="text-4xl">🛒</span>
+          {labels.sale}
+        </Link>
+      )}
 
-            <p
-              className={`mt-1 text-xl font-bold ${
-                todayReport.netProfit >= 0
-                  ? "text-green-400"
-                  : "text-red-400"
-              }`}
+      {suspiciousToday > 0 && (
+        <Link
+          href="/sales-audit"
+          className="flex items-center justify-between rounded-2xl border border-red-700 bg-red-950/30 p-5 transition hover:bg-red-950/50"
+        >
+          <span className="flex items-center gap-3">
+            <span className="text-3xl">⚠️</span>
+
+            <span>
+              <span className="block font-bold text-red-400">
+                {suspiciousToday} فاتورة اتفتحت وماتنفذتش
+              </span>
+
+              <span className="block text-xs text-mist">
+                دوس تشوف مين وإمتى بالظبط
+              </span>
+            </span>
+          </span>
+
+          <span className="text-2xl text-mist">‹</span>
+        </Link>
+      )}
+
+      {dailyTiles.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {dailyTiles.map((tile) => (
+            <Link
+              key={tile.href}
+              href={tile.href}
+              className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-2xl border border-ink-600 bg-ink-800 p-4 text-center transition hover:border-splash hover:bg-ink-700"
             >
-              {todayReport.netProfit.toFixed(2)} ج
-            </p>
+              <span className="text-4xl">{tile.icon}</span>
 
-            {todayReport.hasIncompleteCostData && (
-              <p className="mt-1 text-xs text-amber-400">
-                ⚠️ تكلفة بعض المبيعات القديمة مش محسوبة
-              </p>
-            )}
+              <span className="text-sm font-bold text-paper">
+                {tile.text}
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {managementTiles.length > 0 && (
+        <div>
+          <p className="mb-2 px-1 text-xs text-mist">إدارة</p>
+
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+            {managementTiles.map((tile) => (
+              <Link
+                key={tile.href}
+                href={tile.href}
+                className="flex min-h-24 flex-col items-center justify-center gap-1.5 rounded-2xl border border-ink-600 bg-ink-800/60 p-3 text-center transition hover:border-splash hover:bg-ink-700"
+              >
+                <span className="text-2xl">{tile.icon}</span>
+
+                <span className="text-xs font-medium text-mist">
+                  {tile.text}
+                </span>
+              </Link>
+            ))}
           </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
-          <p className="text-sm text-mist">
-            عدد الأصناف
-          </p>
-
-          <h3 className="mt-2 text-2xl font-bold">
-            {items.length}
-          </h3>
         </div>
-
-        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
-          <p className="text-sm text-mist">
-            قيمة المخزون
-          </p>
-
-          <h3 className="mt-2 text-2xl font-bold text-green-400">
-            {totalStockValue.toFixed(2)} ج
-          </h3>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Link
-          href="/sales-log"
-          className="rounded-xl bg-splash p-4 text-center font-semibold text-ink-950 transition hover:bg-splash-deep"
-        >
-          📒 سجل المبيعات
-        </Link>
-
-        <Link
-          href="/day-close"
-          className="rounded-xl bg-ink-700 p-4 text-center font-semibold text-paper transition hover:bg-ink-600"
-        >
-          🔒 إنهاء اليوم
-        </Link>
-
-        <Link
-          href="/purchases"
-          className="rounded-xl bg-ink-700 p-4 text-center font-semibold text-paper transition hover:bg-ink-600"
-        >
-          🚚 تزويد المخزون
-        </Link>
-
-        <Link
-          href="/reports"
-          className="rounded-xl bg-ink-700 p-4 text-center font-semibold text-paper transition hover:bg-ink-600"
-        >
-          📊 التقارير
-        </Link>
-      </div>
+      )}
     </main>
   );
 }

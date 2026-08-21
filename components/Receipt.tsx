@@ -1,8 +1,12 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Printer } from "lucide-react";
 
 import type { CartItem } from "@/components/Cart";
+import type { Business } from "@/types/business";
+import { hasFeature } from "@/lib/features";
+import type { PriceTier } from "@/lib/priceTier";
 
 type Props = {
   cart: CartItem[];
@@ -10,6 +14,47 @@ type Props = {
   discountAmount: number;
   createdAt: Date;
   onClose: () => void;
+  business?: Business | null;
+  priceTier?: PriceTier;
+  // Fire the print dialog as soon as the receipt appears. Used for
+  // completed sales when the shop requires every sale to print.
+  autoPrint?: boolean;
+  // A price quote, not a sale. Marked loudly so it can never be
+  // mistaken for proof of payment.
+  quote?: boolean;
+};
+
+// Printable width in millimetres. 58mm and 80mm rolls lose a few mm
+// to the printer's own margins, so the usable widths are 48 and 72.
+const PAPER: Record<string, { width: string; page: string }> = {
+  thermal_58: { width: "48mm", page: "58mm auto" },
+  thermal_80: { width: "72mm", page: "80mm auto" },
+  a4: { width: "180mm", page: "A4" },
+};
+
+const TEXT = {
+  ar: {
+    subtotal: "الإجمالي قبل الخصم",
+    discount: "الخصم",
+    total: "الإجمالي النهائي",
+    currency: "جنيه",
+    thanks: "شكرًا لزيارتكم",
+    quote: "عرض سعر - مش فاتورة بيع",
+    print: "طباعة",
+    close: "إغلاق",
+    locale: "ar-EG",
+  },
+  en: {
+    subtotal: "Subtotal",
+    discount: "Discount",
+    total: "Total",
+    currency: "EGP",
+    thanks: "Thank you for your visit",
+    quote: "QUOTE - NOT A RECEIPT",
+    print: "طباعة",
+    close: "إغلاق",
+    locale: "en-GB",
+  },
 };
 
 export default function Receipt({
@@ -18,78 +63,139 @@ export default function Receipt({
   discountAmount,
   createdAt,
   onClose,
+  business,
+  priceTier = 1,
+  autoPrint = false,
+  quote = false,
 }: Props) {
-  const subtotal = cart.reduce(
-    (sum, line) => sum + line.total,
-    0
-  );
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 print:static print:bg-white print:p-0">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-gray-900 print:max-w-full print:rounded-none print:shadow-none">
+  const subtotal = cart.reduce((sum, line) => sum + line.total, 0);
+  const printed = useRef(false);
 
-        <div className="mb-4 text-center">
-          <h2 className="text-xl font-bold">
-            🐙 Octopus
+  useEffect(() => {
+    if (!autoPrint || printed.current) return;
+
+    // Guarded by a ref: React can run this effect twice in dev, and
+    // nobody wants two print dialogs per sale.
+    printed.current = true;
+
+    // One frame's delay so the logo and layout are painted before the
+    // browser snapshots the page for printing.
+    const timer = window.setTimeout(() => window.print(), 150);
+
+    return () => window.clearTimeout(timer);
+  }, [autoPrint]);
+
+  // Tier 1 is the tourist price, so that is the sale that gets an
+  // English receipt - when the shop has asked for one.
+  const english = hasFeature(business, "english_receipt") && priceTier === 1;
+  const t = english ? TEXT.en : TEXT.ar;
+
+  const paper = PAPER[business?.receipt_paper ?? "thermal_80"] ?? PAPER.thermal_80;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 print:static print:block print:bg-white print:p-0">
+      {/* Thermal rolls are continuous paper: a fixed page height would
+          eject a mostly-blank sheet after every sale. */}
+      <style>{`
+        @media print {
+          @page { size: ${paper.page}; margin: 0; }
+          body { margin: 0; }
+        }
+      `}</style>
+
+      <div
+        dir={english ? "ltr" : "rtl"}
+        style={{ width: paper.width }}
+        className="max-h-full overflow-y-auto rounded-2xl bg-white p-4 text-gray-900 print:max-h-none print:overflow-visible print:rounded-none print:p-2 print:shadow-none"
+      >
+        {quote && (
+          <p className="mb-2 rounded border border-gray-900 py-1 text-center text-xs font-bold">
+            {t.quote}
+          </p>
+        )}
+
+        <div className="mb-3 text-center">
+          {business?.logo && (
+            // Height-capped, not width-capped: the logo must never
+            // push the receipt wider than the roll.
+            <img
+              src={business.logo}
+              alt=""
+              className="mx-auto mb-2 h-auto"
+              style={{ maxHeight: "24mm", maxWidth: "100%" }}
+            />
+          )}
+
+          <h2 className="text-base font-bold">
+            {business?.name ?? "Octopus"}
           </h2>
 
-          <p className="text-sm text-gray-500">
-            {createdAt.toLocaleString("ar-EG")}
+          {business?.phone && (
+            <p className="text-xs text-gray-600">{business.phone}</p>
+          )}
+
+          <p className="mt-1 text-xs text-gray-500">
+            {createdAt.toLocaleString(t.locale)}
           </p>
         </div>
 
-        <div className="space-y-2 border-y border-dashed border-gray-300 py-4">
+        <div className="space-y-1 border-y border-dashed border-gray-400 py-2">
           {cart.map((line) => (
-            <div
-              key={line.item.id}
-              className="flex justify-between text-sm"
-            >
-              <span>
+            <div key={line.item.id} className="flex justify-between text-xs">
+              <span className="pe-2">
                 {line.item.name} × {line.quantity.toFixed(2)}
               </span>
 
-              <span>
+              <span className="whitespace-nowrap">
                 {line.total.toFixed(2)}
               </span>
             </div>
           ))}
         </div>
 
-        <div className="mt-4 space-y-1">
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>الإجمالي قبل الخصم</span>
-            <span>{subtotal.toFixed(2)} جنيه</span>
+        <div className="mt-2 space-y-0.5">
+          <div className="flex justify-between text-xs text-gray-600">
+            <span>{t.subtotal}</span>
+            <span>
+              {subtotal.toFixed(2)} {t.currency}
+            </span>
           </div>
 
           {discountAmount > 0 && (
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>الخصم</span>
-              <span>{discountAmount.toFixed(2)} جنيه</span>
+            <div className="flex justify-between text-xs text-gray-600">
+              <span>{t.discount}</span>
+              <span>
+                {discountAmount.toFixed(2)} {t.currency}
+              </span>
             </div>
           )}
 
-          <div className="flex justify-between border-t border-dashed border-gray-300 pt-1 text-lg font-bold">
-            <span>الإجمالي النهائي</span>
-            <span>{total.toFixed(2)} جنيه</span>
+          <div className="flex justify-between border-t border-dashed border-gray-400 pt-1 text-sm font-bold">
+            <span>{t.total}</span>
+            <span>
+              {total.toFixed(2)} {t.currency}
+            </span>
           </div>
         </div>
 
-        <div className="mt-6 flex gap-2 print:hidden">
+        <p className="mt-3 text-center text-xs text-gray-500">{t.thanks}</p>
+
+        <div className="mt-4 flex gap-2 print:hidden">
           <button
             onClick={() => window.print()}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 p-3 font-bold text-white hover:bg-blue-700"
           >
             <Printer size={18} />
-            طباعة
+            {t.print}
           </button>
 
           <button
             onClick={onClose}
             className="flex-1 rounded-xl bg-gray-200 p-3 font-bold text-gray-800 hover:bg-gray-300"
           >
-            إغلاق
+            {t.close}
           </button>
         </div>
-
       </div>
     </div>
   );

@@ -15,9 +15,9 @@ import {
 
 import {
   getWarehouses,
-  createWarehouse,
   updateWarehouse,
 } from "@/repositories/warehouse.repository";
+import { createChangeRequest } from "@/repositories/changeRequest.repository";
 import { useSession } from "@/hooks/useSession";
 import { useToast } from "@/hooks/useToast";
 import type { Warehouse } from "@/types/warehouse";
@@ -64,18 +64,23 @@ export default function WarehousesPage() {
     setAdding(true);
 
     try {
-      await createWarehouse({
-        business_id: user.business_id,
-        name: trimmed,
-        is_default: false,
-        active: true,
+      // Adding a second warehouse reshapes how the shop works, so it
+      // goes through approval - the database refuses the insert
+      // outright otherwise (migration 049). What used to be a direct
+      // insert here is now a request.
+      await createChangeRequest({
+        businessId: user.business_id,
+        requestedBy: user.id,
+        kind: "add_warehouse",
+        payload: { name: trimmed },
+        note: `مخزن جديد: ${trimmed}`,
       });
 
       setNewName("");
-      await loadWarehouses();
+      toast.success("الطلب اتبعت - المخزن هيتعمل بعد الموافقة");
     } catch (err) {
       console.error(err);
-      toast.error("حدث خطأ أثناء إضافة المخزن");
+      toast.error("تعذر إرسال الطلب");
     } finally {
       setAdding(false);
     }
@@ -155,10 +160,14 @@ export default function WarehousesPage() {
       </div>
 
       <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-bold">
           <Plus size={18} />
-          إضافة مخزن جديد
+          اطلب مخزن جديد
         </h2>
+
+        <p className="mb-4 text-xs text-mist">
+          المخزن الجديد بيتعمل بعد الموافقة - هيوصلك تنبيه أول ما يتراجع.
+        </p>
 
         <form
           onSubmit={handleAdd}
@@ -178,11 +187,11 @@ export default function WarehousesPage() {
             className="flex items-center justify-center gap-2 rounded-xl bg-splash px-6 py-3 font-bold text-ink-950 hover:bg-splash-deep disabled:opacity-50 sm:w-auto"
           >
             {adding ? (
-              "جارِ الإضافة..."
+              "جارِ الإرسال..."
             ) : (
               <>
                 <Save size={18} />
-                إضافة
+                ابعت الطلب
               </>
             )}
           </button>

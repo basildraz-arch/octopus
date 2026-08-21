@@ -1,0 +1,152 @@
+import { supabase } from "@/lib/supabase";
+import type { Warehouse } from "@/types/warehouse";
+
+// Bulk paths for the catalogue importer. Written as set-based inserts
+// rather than reusing createItem() in a loop: a 79-row price list
+// would otherwise be ~160 sequential round trips, which is slow enough
+// on a shop's connection to look broken.
+
+export async function ensureDefaultWarehouse(
+  businessId: string
+): Promise<Warehouse> {
+  const { data: existing } = await supabase
+    .from("warehouses")
+    .select("*")
+    .eq("business_id", businessId)
+    .eq("is_default", true)
+    .maybeSingle();
+
+  if (existing) return existing as Warehouse;
+
+  // Older businesses (created before every signup got one) may have
+  // no default warehouse at all - make one rather than failing an
+  // import the owner is watching.
+  const { data, error } = await supabase
+    .from("warehouses")
+    .insert({ business_id: businessId, name: "المخزن الرئيسي", is_default: true })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data as Warehouse;
+}
+
+export async function bulkCreateCategories(
+  businessId: string,
+  names: string[]
+): Promise<Record<string, string>> {
+  if (names.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from("categories")
+    .insert(
+      names.map((name) => ({ business_id: businessId, name, active: true }))
+    )
+    .select("id, name");
+
+  if (error) throw error;
+
+  const byName: Record<string, string> = {};
+
+  for (const row of data ?? []) byName[row.name] = row.id;
+
+  return byName;
+}
+
+export type ItemInsert = {
+  business_id: string;
+  category_id: string | null;
+  name: string;
+  barcode: string | null;
+  item_type: "product";
+  sale_method: "piece";
+  unit: string;
+  buy_price: number;
+  sell_price: number;
+  sell_price_2: number | null;
+  sell_price_3: number | null;
+  stock: number;
+  minimum_stock: number;
+  has_stock: boolean;
+  active: boolean;
+  keywords: string[];
+};
+
+export async function bulkCreateItems(
+  items: ItemInsert[]
+): Promise<{ id: string; name: string; stock: number; buy_price: number }[]> {
+  if (items.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("items")
+    .insert(items)
+    .select("id, name, stock, buy_price");
+
+  if (error) throw error;
+
+  return data ?? [];
+}
+
+// Opening stock. Without these rows the item shows a quantity that
+// the FIFO batch logic can't actually draw from, so a sale would fail
+// its availability check.
+export async function bulkCreateOpeningBatches(
+  businessId: string,
+  warehouseId: string,
+  rows: { id: string; stock: number; buy_price: number }[]
+): Promise<void> {
+  const batches = rows
+    .filter((r) => r.stock > 0)
+    .map((r) => ({
+      business_id: businessId,
+      item_id: r.id,
+      warehouse_id: warehouseId,
+      purchase_id: null,
+      quantity: r.stock,
+      remaining_quantity: r.stock,
+      buy_price: r.buy_price,
+    }));
+
+  if (batches.length === 0) return;
+
+  const { error } = await supabase.from("stock_batches").insert(batches);
+
+  if (error) throw error;
+}
+
+export async function getExistingItemNames(
+  businessId: string
+): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("items")
+    .select("name")
+    .eq("business_id", businessId);
+
+  if (error) {
+    console.error("Supabase Error:", error.message);
+    return new Set();
+  }
+
+  return new Set((data ?? []).map((r) => r.name.trim().toLowerCase()));
+}
+
+export async function getExistingCategoryMap(
+  businessId: string
+): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, name")
+    .eq("business_id", businessId);
+
+  if (error) {
+    console.error("Supabase Error:", error.message);
+    return {};
+  }
+
+  const byName: Record<string, string> = {};
+
+  for (const row of data ?? []) byName[row.name.trim().toLowerCase()] = row.id;
+
+  return byName;
+}

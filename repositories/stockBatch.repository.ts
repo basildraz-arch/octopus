@@ -80,48 +80,31 @@ export async function checkAvailability(
   return totalAvailable >= quantityNeeded;
 }
 
+// The FIFO draw used to happen here: read the batches, then send one
+// UPDATE per batch from the browser. That needed every cashier to hold
+// UPDATE on stock_batches and on items - the last broad write a
+// cashier had - and it raced: two tills selling the last unit at the
+// same moment both read "1 available" and both sold it.
+//
+// It is now one call to draw_stock_fifo (migration 053), which locks
+// the batches, decrements them, and recalculates the item's stock and
+// average cost in the same transaction. The permission check lives
+// inside that function, so the till no longer needs write access to
+// either table.
 export async function drawFromBatches(
   itemId: string,
   quantityNeeded: number,
   warehouseId: string
 ): Promise<BatchDraw[]> {
-  const batches = await getAvailableBatches(itemId, warehouseId);
+  const { data, error } = await supabase.rpc("draw_stock_fifo", {
+    p_item_id: itemId,
+    p_quantity: quantityNeeded,
+    p_warehouse_id: warehouseId,
+  });
 
-  const totalAvailable = batches.reduce(
-    (sum, batch) => sum + Number(batch.remaining_quantity),
-    0
-  );
+  if (error) throw new Error(error.message);
 
-  if (totalAvailable < quantityNeeded) {
-    throw new Error("الكمية المطلوبة أكبر من المخزون المتاح فعليًا");
-  }
-
-  const draws: BatchDraw[] = [];
-  let remaining = quantityNeeded;
-
-  for (const batch of batches) {
-    if (remaining <= 0) break;
-
-    const batchRemaining = Number(batch.remaining_quantity);
-    const drawQty = Math.min(batchRemaining, remaining);
-
-    draws.push({
-      batchId: batch.id,
-      quantity: drawQty,
-      buyPrice: Number(batch.buy_price),
-    });
-
-    const { error } = await supabase
-      .from("stock_batches")
-      .update({ remaining_quantity: batchRemaining - drawQty })
-      .eq("id", batch.id);
-
-    if (error) throw error;
-
-    remaining -= drawQty;
-  }
-
-  return draws;
+  return (data ?? []) as BatchDraw[];
 }
 
 export async function getCurrentStockAndCost(

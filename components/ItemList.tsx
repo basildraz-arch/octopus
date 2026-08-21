@@ -6,11 +6,14 @@ import { Search, Mic } from "lucide-react";
 import type { Item } from "@/types/item";
 import type { Category } from "@/repositories/category.repository";
 import { searchItems } from "@/lib/search";
+import { priceForTier, type PriceTier } from "@/lib/priceTier";
 
 type Props = {
   items: Item[];
   categories: Category[];
   onSelect: (item: Item) => void;
+  // Which of the shop's price tiers the current invoice is using.
+  priceTier?: PriceTier;
 };
 
 function speak(text: string) {
@@ -24,6 +27,7 @@ export default function ItemList({
   items,
   categories,
   onSelect,
+  priceTier = 1,
 }: Props) {
   const [search, setSearch] = useState("");
   const [listening, setListening] = useState(false);
@@ -169,7 +173,7 @@ export default function ItemList({
             </div>
 
             <div className="text-mist">
-              {item.sell_price} جنيه / {item.unit}
+              {priceForTier(item, priceTier)} جنيه / {item.unit}
             </div>
           </button>
         ))}

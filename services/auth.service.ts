@@ -30,6 +30,15 @@ export async function login(
     throw new Error("الحساب غير مرتبط بأي نشاط تجاري");
   }
 
+  // An owner switching a cashier off must take effect on the very next
+  // login attempt - so this check lives here, before any session is
+  // handed back, not in a UI guard the cashier's browser could skip.
+  if (!appUser.active) {
+    await signOut();
+
+    throw new Error("الحساب ده متوقف - كلّم صاحب النشاط");
+  }
+
   await logActivity(appUser.id, appUser.business_id);
 
   return appUser;
@@ -69,12 +78,22 @@ export async function changePassword(
   await updatePassword(newPassword);
 }
 
+// enabledFeatures is deliberately optional now. The business type
+// picks the template, and complete_signup() reads that template
+// server-side (migration 046) - so a new shop opens with the right
+// screens without anyone ticking boxes. Passing an explicit list
+// still works and still wins, which is what the Master account uses.
 export async function registerBusiness(params: {
   fullName: string;
   businessName: string;
+  businessType: string;
   email: string;
   password: string;
-  enabledFeatures: FeatureKey[];
+  enabledFeatures?: FeatureKey[];
+
+  // Who sent them. complete_signup() records it once and never
+  // again, and silently ignores a code that has been retired.
+  referralCode?: string;
 }) {
   await signOut();
 
@@ -86,7 +105,11 @@ export async function registerBusiness(params: {
     {
       full_name: params.fullName,
       business_name: params.businessName,
-      enabled_features: params.enabledFeatures,
+      business_type: params.businessType,
+      ...(params.enabledFeatures?.length
+        ? { enabled_features: params.enabledFeatures }
+        : {}),
+      ...(params.referralCode ? { referral_code: params.referralCode } : {}),
     },
     emailRedirectTo
   );

@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Rocket, Mail, ArrowRight } from "lucide-react";
 
 import { registerBusiness } from "@/services/auth.service";
-import { BUSINESS_TEMPLATES, type BusinessTemplateKey } from "@/lib/businessTemplates";
+import { getBusinessTemplates } from "@/repositories/businessTemplate.repository";
 import {
   ALL_FEATURES,
   FEATURE_LABELS,
   FEATURE_ICONS,
   FEATURE_DESCRIPTIONS,
 } from "@/lib/features";
+import type { BusinessTemplate } from "@/types/businessTemplate";
 import type { FeatureKey } from "@/types/business";
 
 export default function SignupPage() {
@@ -20,6 +21,12 @@ export default function SignupPage() {
   const [inviteCode, setInviteCode] = useState("");
   const [verifyingInvite, setVerifyingInvite] = useState(false);
   const [inviteError, setInviteError] = useState("");
+
+  // Set when the code turned out to be a referrer's rather than the
+  // house code. Carried all the way into signup so the referral is
+  // recorded without anyone having to remember a second step.
+  const [referralCode, setReferralCode] = useState("");
+  const [referredBy, setReferredBy] = useState("");
 
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
@@ -30,9 +37,16 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [selectedTemplate, setSelectedTemplate] =
-    useState<BusinessTemplateKey | null>(null);
+  // Loaded from the database, not from a list in this file, so that
+  // editing a template in Master changes what new shops actually get.
+  const [templates, setTemplates] = useState<BusinessTemplate[]>([]);
+  const [businessType, setBusinessType] = useState<string>("");
   const [editedFeatures, setEditedFeatures] = useState<FeatureKey[]>([]);
+  const [touchedFeatures, setTouchedFeatures] = useState(false);
+
+  useEffect(() => {
+    getBusinessTemplates().then(setTemplates);
+  }, []);
 
   async function handleInviteSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,6 +64,8 @@ export default function SignupPage() {
       const data = await res.json();
 
       if (data.valid) {
+        setReferralCode(data.referralCode ?? "");
+        setReferredBy(data.referredBy ?? "");
         setStep(1);
       } else {
         setInviteError("كود الدعوة غير صحيح");
@@ -80,16 +96,19 @@ export default function SignupPage() {
     setStep(2);
   }
 
-  function handleShapeSelect(key: BusinessTemplateKey) {
-    const template = BUSINESS_TEMPLATES.find((t) => t.key === key);
+  function handleShapeSelect(type: string) {
+    const template = templates.find((t) => t.business_type === type);
     if (!template) return;
 
-    setSelectedTemplate(key);
-    setEditedFeatures(template.features);
+    setBusinessType(type);
+    setEditedFeatures(template.enabled_features);
+    setTouchedFeatures(false);
     setStep(3);
   }
 
   function handleToggleFeature(feature: FeatureKey) {
+    setTouchedFeatures(true);
+
     setEditedFeatures((prev) =>
       prev.includes(feature)
         ? prev.filter((f) => f !== feature)
@@ -100,7 +119,12 @@ export default function SignupPage() {
   async function handleRegister() {
     setError("");
 
-    if (editedFeatures.length === 0) {
+    if (!businessType) {
+      setError("اختار نوع نشاطك الأول");
+      return;
+    }
+
+    if (touchedFeatures && editedFeatures.length === 0) {
       setError("لازم تختار ميزة واحدة على الأقل");
       return;
     }
@@ -111,9 +135,13 @@ export default function SignupPage() {
       await registerBusiness({
         fullName,
         businessName,
+        businessType,
         email,
         password,
-        enabledFeatures: editedFeatures,
+        // Untouched means "use whatever the template says" - decided
+        // server-side, where the template actually lives.
+        enabledFeatures: touchedFeatures ? editedFeatures : undefined,
+        referralCode: referralCode || undefined,
       });
 
       setStep(5);
@@ -132,7 +160,7 @@ export default function SignupPage() {
   const subtitles: Record<0 | 1 | 2 | 3 | 4 | 5, string> = {
     0: "أدخل كود الدعوة للمتابعة",
     1: "سجّل بيزنسك الجديد",
-    2: "اختار شكل نشاطك",
+    2: "اختار نوع نشاطك",
     3: "خطوة بسيطة وخلصنا",
     4: "عدّل الميزات اللي تحتاجها",
     5: "خطوة أخيرة وهتبقى جاهز",
@@ -178,6 +206,12 @@ export default function SignupPage() {
 
         {step === 1 && (
           <form onSubmit={handleStep1Submit} className="space-y-5">
+            {referredBy && (
+              <p className="rounded-xl border border-splash/40 bg-splash-dim p-3 text-center text-sm text-splash">
+                جاي من عند {referredBy} 👋
+              </p>
+            )}
+
             <div>
               <label className="mb-2 block text-sm text-mist">
                 اسمك
@@ -261,16 +295,20 @@ export default function SignupPage() {
               اختر الشكل الأقرب لمحلك
             </p>
 
-            {BUSINESS_TEMPLATES.map((template) => (
+            {templates.length === 0 && (
+              <p className="py-6 text-center text-mist">جارِ التحميل...</p>
+            )}
+
+            {templates.map((template) => (
               <button
-                key={template.key}
-                onClick={() => handleShapeSelect(template.key)}
-                className="flex w-full items-center gap-4 rounded-2xl border border-ink-600 bg-ink-700/50 p-6 text-right transition hover:border-splash hover:bg-splash/10"
+                key={template.business_type}
+                onClick={() => handleShapeSelect(template.business_type)}
+                className="flex w-full items-center gap-4 rounded-2xl border border-ink-600 bg-ink-700/50 p-5 text-right transition hover:border-splash hover:bg-splash/10"
               >
-                <span className="text-5xl">{template.icon}</span>
+                <span className="text-4xl">{template.icon}</span>
                 <span>
                   <span className="block text-lg font-bold">
-                    {template.title}
+                    {template.label}
                   </span>
                   <span className="mt-1 block text-sm text-mist">
                     {template.description}

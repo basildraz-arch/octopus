@@ -2,13 +2,12 @@ import { supabase } from "@/lib/supabase";
 import type { CartItem } from "@/components/Cart";
 import type { PaymentMethod } from "@/types/sale";
 import { getOrCreateOpenShift } from "@/repositories/shift.repository";
-import { updateItem } from "@/repositories/item.repository";
 import {
   checkAvailability,
   drawFromBatches,
-  getCurrentStockAndCost,
 } from "@/repositories/stockBatch.repository";
 import { logActivity } from "@/repositories/activity.repository";
+import { priceForTier, type PriceTier } from "@/lib/priceTier";
 
 export type SaleWithItems = {
   id: string;
@@ -66,8 +65,17 @@ export async function createSale(
   cart: CartItem[],
   paymentMethod: PaymentMethod,
   discountAmount: number = 0,
-  warehouseId: string
+  warehouseId: string,
+  priceTier: PriceTier = 1,
+  customerId: string | null = null
 ) {
+  // The database enforces this too (sales_credit_needs_customer_check),
+  // but failing here gives the cashier a sentence instead of a
+  // constraint name.
+  if (paymentMethod === "credit" && !customerId) {
+    throw new Error("اختار العميل الأول عشان تبيع على الحساب");
+  }
+
   for (const line of cart) {
     if (line.item.has_stock) {
       const available = await checkAvailability(
@@ -102,6 +110,8 @@ export async function createSale(
       payment_method: paymentMethod,
       total,
       discount_amount: discountAmount,
+      price_tier: priceTier,
+      customer_id: customerId,
     })
     .select()
     .single();
@@ -125,7 +135,7 @@ export async function createSale(
     sale_id: sale.id,
     item_id: line.item.id,
     quantity: line.quantity,
-    unit_price: line.item.sell_price,
+    unit_price: priceForTier(line.item, priceTier),
     total: line.total,
     cost: line.item.has_stock ? costByItemId[line.item.id] : null,
   }));
@@ -136,18 +146,11 @@ export async function createSale(
 
   if (itemsError) throw itemsError;
 
-  for (const line of cart) {
-    if (line.item.has_stock) {
-      const { stock, averageCost } = await getCurrentStockAndCost(
-        line.item.id
-      );
-
-      await updateItem(line.item.id, {
-        stock,
-        buy_price: averageCost,
-      });
-    }
-  }
+  // The item's stock and average cost are recalculated inside
+  // draw_stock_fifo, in the same transaction as the draw itself
+  // (migration 053). Writing them again from here would need the till
+  // to hold UPDATE on items, which is exactly what that migration
+  // took away.
 
   await logActivity(createdBy, businessId);
 

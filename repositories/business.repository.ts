@@ -29,3 +29,22 @@ export async function updateBusiness(
 
   if (error) throw error;
 }
+
+// Set once, then frozen by the protect_employee_email_code trigger
+// (migration 034). Returns the row so the caller can confirm which
+// code actually stuck.
+export async function setEmployeeEmailCode(
+  businessId: string,
+  code: string
+): Promise<string> {
+  const { data, error } = await supabase
+    .from("businesses")
+    .update({ employee_email_code: code })
+    .eq("id", businessId)
+    .select("employee_email_code")
+    .single();
+
+  if (error) throw error;
+
+  return data.employee_email_code as string;
+}

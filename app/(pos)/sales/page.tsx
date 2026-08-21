@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ShoppingCart } from "lucide-react";
 
 import ItemList from "@/components/ItemList";
@@ -12,22 +12,36 @@ import { getActiveItems } from "@/repositories/item.repository";
 import { createSale } from "@/repositories/sale.repository";
 import { getBusiness } from "@/repositories/business.repository";
 import { getCategories, type Category } from "@/repositories/category.repository";
+import { logCartEvent } from "@/repositories/cartAudit.repository";
+import {
+  getCustomers,
+  createCustomer,
+} from "@/repositories/customer.repository";
 import { useSession } from "@/hooks/useSession";
+import { hasFeature } from "@/lib/features";
+import { priceForTier, type PriceTier } from "@/lib/priceTier";
 import { useWarehouseSelection } from "@/hooks/useWarehouseSelection";
 import { useToast } from "@/hooks/useToast";
 
 import type { Item } from "@/types/item";
 import type { PaymentMethod } from "@/types/sale";
+import type { Customer } from "@/types/customer";
 
 type LastSale = {
   cart: CartItem[];
   total: number;
   discountAmount: number;
   createdAt: Date;
+  // Frozen at checkout: the receipt must show the prices actually
+  // charged, even if the cashier changes the selector afterwards.
+  priceTier: PriceTier;
+  // A quote is printed on demand and never prints itself; a real sale
+  // prints automatically when the shop requires it.
+  quote: boolean;
 };
 
 export default function SalesPage() {
-  const { user } = useSession();
+  const { user, business } = useSession();
   const { warehouses, selectedWarehouseId, selectWarehouse } =
     useWarehouseSelection(user?.business_id);
   const toast = useToast();
@@ -44,6 +58,21 @@ export default function SalesPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [maxDiscountPercent, setMaxDiscountPercent] = useState<number | null>(null);
   const [discountAmount, setDiscountAmount] = useState("");
+  const [priceTier, setPriceTier] = useState<PriceTier>(1);
+
+  const tiersEnabled = hasFeature(business, "price_tiers");
+  const creditEnabled = hasFeature(business, "credit_customers");
+
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
+    null
+  );
+
+  // Ties every add/remove/checkout of ONE basket together in the audit
+  // log. Lives in a ref, not state, so logging never triggers a
+  // re-render of the till. Rotated after each completed sale so the
+  // next customer is a new session.
+  const cartSessionId = useRef<string>(crypto.randomUUID());
 
   useEffect(() => {
     loadItems();
@@ -58,6 +87,40 @@ export default function SalesPage() {
     });
   }, [user]);
 
+  useEffect(() => {
+    if (!user || !creditEnabled) return;
+
+    getCustomers(user.business_id).then(setCustomers);
+  }, [user, creditEnabled]);
+
+  async function addCustomerInline() {
+    if (!user) return;
+
+    const name = window.prompt("اسم العميل");
+
+    if (!name?.trim()) return;
+
+    const phone = window.prompt("رقم التليفون (اختياري)") ?? "";
+
+    try {
+      const customer = await createCustomer({
+        businessId: user.business_id,
+        name: name.trim(),
+        phone: phone.trim() || undefined,
+      });
+
+      setCustomers((old) =>
+        [...old, customer].sort((a, b) => a.name.localeCompare(b.name))
+      );
+
+      setSelectedCustomerId(customer.id);
+      toast.success(`اتضاف ${customer.name}`);
+    } catch (err) {
+      console.error(err);
+      toast.error("تعذر إضافة العميل");
+    }
+  }
+
   async function loadItems() {
     setLoading(true);
 
@@ -68,6 +131,19 @@ export default function SalesPage() {
     setLoading(false);
   }
 
+  function changePriceTier(tier: PriceTier) {
+    setPriceTier(tier);
+
+    // Reprice whatever is already in the basket, otherwise the first
+    // few lines would silently keep the previous customer's prices.
+    setCart((oldCart) =>
+      oldCart.map((line) => ({
+        ...line,
+        total: line.quantity * priceForTier(line.item, tier),
+      }))
+    );
+  }
+
   function selectItem(item: Item) {
     setSelectedItem(item);
     setShowPopup(true);
@@ -76,16 +152,18 @@ export default function SalesPage() {
   function addToCart(quantity: number, total: number) {
     if (!selectedItem) return;
 
+    const addedItem = selectedItem;
+
     setCart((oldCart) => {
       const index = oldCart.findIndex(
-        (line) => line.item.id === selectedItem.id
+        (line) => line.item.id === addedItem.id
       );
 
       if (index === -1) {
         return [
           ...oldCart,
           {
-            item: selectedItem,
+            item: addedItem,
             quantity,
             total,
           },
@@ -103,14 +181,69 @@ export default function SalesPage() {
       return newCart;
     });
 
+    if (user) {
+      // Not awaited: the till must stay responsive, and a failed log
+      // line must never stop a sale.
+      void logCartEvent({
+        businessId: user.business_id,
+        userId: user.id,
+        cartSessionId: cartSessionId.current,
+        action: "add",
+        itemId: addedItem.id,
+        itemName: addedItem.name,
+        quantity,
+        unitPrice: priceForTier(addedItem, priceTier),
+        lineTotal: total,
+      });
+    }
+
     setSelectedItem(null);
     setShowPopup(false);
   }
 
   function deleteLine(id: string) {
+    const removedLine = cart.find((line) => line.item.id === id);
+
     setCart((oldCart) =>
       oldCart.filter((line) => line.item.id !== id)
     );
+
+    if (user && removedLine) {
+      void logCartEvent({
+        businessId: user.business_id,
+        userId: user.id,
+        cartSessionId: cartSessionId.current,
+        action: "remove",
+        itemId: removedLine.item.id,
+        itemName: removedLine.item.name,
+        quantity: removedLine.quantity,
+        unitPrice: priceForTier(removedLine.item, priceTier),
+        lineTotal: removedLine.total,
+      });
+    }
+  }
+
+  function printQuote() {
+    if (!user || cart.length === 0) return;
+
+    const subtotal = cart.reduce((sum, line) => sum + line.total, 0);
+
+    void logCartEvent({
+      businessId: user.business_id,
+      userId: user.id,
+      cartSessionId: cartSessionId.current,
+      action: "quote",
+      lineTotal: subtotal,
+    });
+
+    setLastSale({
+      cart,
+      total: subtotal,
+      discountAmount: 0,
+      createdAt: new Date(),
+      priceTier,
+      quote: true,
+    });
   }
 
   async function checkout() {
@@ -135,28 +268,53 @@ export default function SalesPage() {
       }
     }
 
+    if (paymentMethod === "credit" && !selectedCustomerId) {
+      toast.error("اختار العميل الأول عشان تبيع على الحساب");
+      return;
+    }
+
     setCheckingOut(true);
 
     try {
-      await createSale(
+      const sale = await createSale(
         user.business_id,
         user.id,
         cart,
         paymentMethod,
         discountValue,
-        selectedWarehouseId
+        selectedWarehouseId,
+        priceTier,
+        paymentMethod === "credit" ? selectedCustomerId : null
       );
+
+      // Closes the audit session: a cart with adds but no checkout is
+      // what the owner's report flags as suspicious.
+      void logCartEvent({
+        businessId: user.business_id,
+        userId: user.id,
+        cartSessionId: cartSessionId.current,
+        action: "checkout",
+        lineTotal: subtotal - discountValue,
+        saleId: sale?.id ?? null,
+      });
 
       setLastSale({
         cart,
         total: subtotal - discountValue,
         discountAmount: discountValue,
         createdAt: new Date(),
+        priceTier,
+        quote: false,
       });
 
       setCart([]);
       setPaymentMethod("cash");
       setDiscountAmount("");
+      setSelectedCustomerId(null);
+
+      // Next customer, next session.
+      cartSessionId.current = crypto.randomUUID();
+
       await loadItems();
     } catch (err) {
       console.error(err);
@@ -210,10 +368,20 @@ export default function SalesPage() {
               items={items}
               categories={categories}
               onSelect={selectItem}
+              priceTier={priceTier}
             />
 
             <Cart
               cart={cart}
+              priceTiers={
+                tiersEnabled && business
+                  ? {
+                      labels: business.price_tier_labels,
+                      selected: priceTier,
+                      onChange: changePriceTier,
+                    }
+                  : undefined
+              }
               paymentMethod={paymentMethod}
               onPaymentMethodChange={setPaymentMethod}
               maxDiscountPercent={maxDiscountPercent}
@@ -221,6 +389,17 @@ export default function SalesPage() {
               onDiscountAmountChange={setDiscountAmount}
               onDelete={deleteLine}
               onCheckout={checkout}
+              onPrintQuote={printQuote}
+              credit={
+                creditEnabled
+                  ? {
+                      customers,
+                      selectedCustomerId,
+                      onSelectCustomer: setSelectedCustomerId,
+                      onAddCustomer: addCustomerInline,
+                    }
+                  : undefined
+              }
             />
           </div>
         )}
@@ -230,6 +409,7 @@ export default function SalesPage() {
             item={selectedItem}
             onClose={() => setShowPopup(false)}
             onAdd={addToCart}
+            priceTier={priceTier}
           />
         )}
       </main>
@@ -241,6 +421,12 @@ export default function SalesPage() {
           discountAmount={lastSale.discountAmount}
           createdAt={lastSale.createdAt}
           onClose={() => setLastSale(null)}
+          business={business}
+          priceTier={lastSale.priceTier}
+          quote={lastSale.quote}
+          autoPrint={
+            !lastSale.quote && (business?.force_print_on_sale ?? true)
+          }
         />
       )}
     </>
