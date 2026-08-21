@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
+import { monthlyDueFor } from "@/lib/monthlyDue";
+
 // Exact field order Paymob uses to compute the HMAC for the
 // "Transaction Processed Callback" - do not reorder or add fields.
 const HMAC_FIELDS = [
@@ -99,19 +101,45 @@ export async function POST(request: NextRequest) {
   }
 
   const amountCents = Number(obj.amount_cents);
-  const expectedAmountCents = Number(process.env.SUBSCRIPTION_PRICE_EGP) * 100;
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  // What this shop actually owes, worked out the same way the charge
+  // was. This used to compare against Number(SUBSCRIPTION_PRICE_EGP) -
+  // one flat number for every shop - which stopped being true the
+  // moment pricing went per-module (migration 062). create-payment had
+  // already moved to the computed amount, so every real payment was
+  // about to be filed as "failed" and no subscription would have been
+  // extended. Same bug as before, second half of it.
+  let expectedCents: number | null = null;
+
+  try {
+    const due = await monthlyDueFor(supabase, businessId);
+    expectedCents = Math.round(due.due * 100);
+  } catch (err) {
+    console.error("Paymob webhook: could not price the subscription", err);
+  }
+
+  // Paid at least what is owed. Not an equality test: the shop's bill
+  // can move between opening the payment page and Paymob calling back,
+  // and refusing money that covers the bill helps nobody.
+  const amountCovers = expectedCents !== null && amountCents >= expectedCents;
+
+  if (expectedCents !== null && !amountCovers) {
+    console.error(
+      `Paymob webhook: amount ${amountCents} does not cover ${expectedCents} for business ${businessId}`
+    );
+  }
 
   const isSuccessful =
     obj.success === true &&
     obj.pending === false &&
     obj.is_refunded !== true &&
     obj.is_voided !== true &&
-    amountCents === expectedAmountCents;
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+    amountCovers;
 
   const { error: insertError } = await supabase
     .from("subscription_payments")
@@ -140,7 +168,7 @@ export async function POST(request: NextRequest) {
   if (isSuccessful) {
     const { data: business } = await supabase
       .from("businesses")
-      .select("subscription_expires_at")
+      .select("subscription_expires_at, active")
       .eq("id", businessId)
       .single();
 
@@ -156,9 +184,18 @@ export async function POST(request: NextRequest) {
     const newExpiry = new Date(currentExpiry);
     newExpiry.setMonth(newExpiry.getMonth() + 1);
 
+    // Paying is how a suspended shop comes back. Since migration 065 a
+    // shop with active = false can read but not write, so without this
+    // line the owner would pay, watch the expiry date move, and still
+    // not be able to sell - and would have to phone Basel to be let
+    // back in. Extending the date and leaving the door locked is not a
+    // renewal.
     await supabase
       .from("businesses")
-      .update({ subscription_expires_at: newExpiry.toISOString() })
+      .update({
+        subscription_expires_at: newExpiry.toISOString(),
+        ...(business?.active === false ? { active: true } : {}),
+      })
       .eq("id", businessId);
   }
 

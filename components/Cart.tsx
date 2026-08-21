@@ -2,7 +2,6 @@ import { Receipt as ReceiptIcon, Trash2, Banknote, Smartphone, CreditCard, Check
 
 import type { Item } from "@/types/item";
 import type { PaymentMethod } from "@/types/sale";
-import type { PriceTier } from "@/lib/priceTier";
 import type { Customer } from "@/types/customer";
 
 export type CartItem = {
@@ -13,13 +12,6 @@ export type CartItem = {
 
 type Props = {
   cart: CartItem[];
-  // Absent when the shop sells at a single price - the selector is
-  // then never rendered at all, keeping the till as simple as before.
-  priceTiers?: {
-    labels: readonly string[];
-    selected: PriceTier;
-    onChange: (tier: PriceTier) => void;
-  };
   paymentMethod: PaymentMethod;
   onPaymentMethodChange: (method: PaymentMethod) => void;
   maxDiscountPercent: number | null;
@@ -49,7 +41,6 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: LucideIcon }
 
 export default function Cart({
   cart,
-  priceTiers,
   paymentMethod,
   onPaymentMethodChange,
   maxDiscountPercent,
@@ -72,70 +63,46 @@ export default function Cart({
 
   return (
     <div>
-      <h2 className="mb-4 flex items-center gap-2 text-2xl text-paper">
+      <h2 className="mb-4 hidden items-center gap-2 text-2xl text-paper md:flex">
         <ReceiptIcon size={22} />
         السلة
       </h2>
 
-      {priceTiers && (
-        <div className="mb-5">
-          <p className="mb-2 text-sm text-mist">
-            الزبون
-          </p>
-
-          <div className="grid grid-cols-3 gap-2">
-            {priceTiers.labels.map((label, index) => {
-              const tier = (index + 1) as PriceTier;
-              const active = priceTiers.selected === tier;
-
-              return (
-                <button
-                  key={label}
-                  onClick={() => priceTiers.onChange(tier)}
-                  className={`rounded-xl p-3 text-sm font-bold transition ${
-                    active
-                      ? "bg-splash text-ink-950"
-                      : "bg-ink-700 text-mist hover:bg-ink-600"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {cart.length === 0 ? (
-        <p className="text-mist">
+        <p className="py-8 text-center text-mist">
           لا توجد أصناف في السلة
         </p>
       ) : (
         <>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {cart.map((line) => (
               <div
                 key={line.item.id}
-                className="rounded-xl border border-ink-600 bg-ink-800 p-4"
+                className="flex items-center gap-3 rounded-xl border border-ink-600 bg-ink-800 p-3"
               >
-                <div className="font-bold text-paper">
-                  {line.item.name}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-bold text-paper">
+                    {line.item.name}
+                  </div>
+
+                  <div className="text-sm text-mist">
+                    {line.quantity.toFixed(2)} {line.item.unit}
+                  </div>
                 </div>
 
-                <div className="text-mist">
-                  الكمية: {line.quantity.toFixed(2)} {line.item.unit}
+                <div className="shrink-0 font-bold text-green-400">
+                  {line.total.toFixed(2)} ج
                 </div>
 
-                <div className="mb-3 font-bold text-green-400">
-                  {line.total.toFixed(2)} جنيه
-                </div>
-
+                {/* Was a full-width red bar under every line, which on a
+                    phone meant three lines filled the screen. Same job,
+                    one row. */}
                 <button
                   onClick={() => onDelete(line.item.id)}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-red-600 p-2 hover:bg-red-700"
+                  aria-label={`حذف ${line.item.name}`}
+                  className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-red-600/90 text-white active:bg-red-700 md:hover:bg-red-700"
                 >
-                  <Trash2 size={15} />
-                  حذف
+                  <Trash2 size={16} />
                 </button>
               </div>
             ))}
@@ -192,10 +159,10 @@ export default function Cart({
                   <button
                     key={method.value}
                     onClick={() => onPaymentMethodChange(method.value)}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl p-3 text-sm font-semibold transition ${
+                    className={`flex min-h-12 items-center justify-center gap-1.5 rounded-xl p-3 text-sm font-semibold transition ${
                       paymentMethod === method.value
                         ? "bg-splash text-ink-950"
-                        : "bg-ink-700 text-mist hover:bg-ink-600"
+                        : "bg-ink-700 text-mist md:hover:bg-ink-600"
                     }`}
                   >
                     <Icon size={16} />
@@ -241,16 +208,16 @@ export default function Cart({
 
           <button
             onClick={onCheckout}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 p-4 text-lg font-bold text-white hover:bg-green-700"
+            className="mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-green-600 p-4 text-lg font-bold text-white active:bg-green-700 md:hover:bg-green-700"
           >
             <CheckCircle2 size={20} />
-            إنهاء الفاتورة
+            إنهاء الفاتورة · {finalTotal.toFixed(2)} ج
           </button>
 
           {onPrintQuote && (
             <button
               onClick={onPrintQuote}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-ink-600 p-3 text-sm text-mist transition hover:text-paper"
+              className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-ink-600 p-3 text-sm text-mist transition md:hover:text-paper"
             >
               <Printer size={16} />
               طباعة عرض سعر (من غير بيع)

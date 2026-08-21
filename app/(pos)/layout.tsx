@@ -8,6 +8,7 @@ import { ShoppingCart, Wallet } from "lucide-react";
 import { useSession } from "@/hooks/useSession";
 import { logout } from "@/services/auth.service";
 import NotificationBell from "@/components/layout/NotificationBell";
+import SuspendedBanner from "@/components/layout/SuspendedBanner";
 import { homePathFor, type PermissionKey } from "@/lib/permissions";
 
 const TABS: {
@@ -112,6 +113,8 @@ export default function PosLayout({ children }: { children: ReactNode }) {
           </button>
         </div>
       </header>
+
+      <SuspendedBanner />
 
       <main className="p-4">{children}</main>
     </div>

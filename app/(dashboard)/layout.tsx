@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import DesktopSidebar from "@/components/layout/DesktopSidebar";
 import BottomNav from "@/components/layout/BottomNav";
 import AppHeader from "@/components/layout/AppHeader";
+import SuspendedBanner from "@/components/layout/SuspendedBanner";
 
 import { useSession } from "@/hooks/useSession";
 import { homePathFor } from "@/lib/permissions";
@@ -68,7 +69,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <div className="flex flex-1 flex-col">
         <AppHeader />
 
-        <main className="flex-1 p-6 pb-24 md:p-8 md:pb-8">{children}</main>
+        <SuspendedBanner />
+
+        <main className="flex-1 p-4 pb-24 md:p-8 md:pb-8">{children}</main>
       </div>
 
       <BottomNav />

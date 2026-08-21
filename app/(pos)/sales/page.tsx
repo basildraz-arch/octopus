@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, X } from "lucide-react";
 
 import ItemList from "@/components/ItemList";
 import Cart, { type CartItem } from "@/components/Cart";
+import PriceTierPicker from "@/components/pos/PriceTierPicker";
 import SalePopup from "@/components/SalePopup";
 import Receipt from "@/components/Receipt";
 
@@ -51,6 +52,11 @@ export default function SalesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
 
   const [cart, setCart] = useState<CartItem[]>([]);
+
+  // Phone only: the basket sheet. On a desktop the basket is always
+  // the second column and this is never read.
+  const [cartOpen, setCartOpen] = useState(false);
+
   const [showPopup, setShowPopup] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
@@ -308,6 +314,7 @@ export default function SalesPage() {
       });
 
       setCart([]);
+      setCartOpen(false);
       setPaymentMethod("cash");
       setDiscountAmount("");
       setSelectedCustomerId(null);
@@ -330,31 +337,46 @@ export default function SalesPage() {
     }
   }
 
+  const cartCount = cart.length;
+  const cartTotal = cart.reduce((sum, line) => sum + line.total, 0);
+
   return (
     <>
-      <main className="min-h-screen bg-ink-950 p-4 text-paper md:p-6 print:hidden">
-        <h1 className="mb-6 flex items-center gap-2 text-3xl font-bold md:mb-8 md:text-4xl">
+      {/* pb-28 keeps the last row of items clear of the basket bar that
+          floats over the bottom of the screen on a phone. */}
+      <main className="min-h-screen bg-ink-950 pb-28 text-paper md:pb-0 print:hidden">
+        <h1 className="mb-6 hidden items-center gap-2 text-3xl font-bold md:mb-8 md:flex md:text-4xl">
           <ShoppingCart size={28} />
           عملية بيع
         </h1>
 
-        {warehouses.length > 1 && (
-          <div className="mb-6">
-            <label className="mb-1 block text-sm text-mist">
-              البيع من مخزن
-            </label>
+        {/* Settings for the whole invoice, decided before the first
+            item: which warehouse it comes out of and which price list
+            it runs on. */}
+        {(warehouses.length > 1 || (tiersEnabled && business)) && (
+          <div className="mb-4 flex flex-col gap-3 md:mb-6 md:flex-row md:items-center">
+            {warehouses.length > 1 && (
+              <select
+                value={selectedWarehouseId}
+                onChange={(e) => selectWarehouse(e.target.value)}
+                aria-label="البيع من مخزن"
+                className="min-h-12 w-full rounded-xl border border-ink-600 bg-ink-800 px-3 text-paper outline-none md:max-w-xs"
+              >
+                {warehouses.map((warehouse) => (
+                  <option key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name}
+                  </option>
+                ))}
+              </select>
+            )}
 
-            <select
-              value={selectedWarehouseId}
-              onChange={(e) => selectWarehouse(e.target.value)}
-              className="w-full max-w-xs rounded-xl border border-ink-600 bg-ink-800 p-3 text-paper outline-none"
-            >
-              {warehouses.map((warehouse) => (
-                <option key={warehouse.id} value={warehouse.id}>
-                  {warehouse.name}
-                </option>
-              ))}
-            </select>
+            {tiersEnabled && business && (
+              <PriceTierPicker
+                labels={business.price_tier_labels}
+                selected={priceTier}
+                onChange={changePriceTier}
+              />
+            )}
           </div>
         )}
 
@@ -363,7 +385,7 @@ export default function SalesPage() {
             جارِ تحميل الأصناف...
           </div>
         ) : (
-          <div className="grid gap-8 md:grid-cols-2">
+          <div className="md:grid md:grid-cols-2 md:gap-8">
             <ItemList
               items={items}
               categories={categories}
@@ -371,36 +393,62 @@ export default function SalesPage() {
               priceTier={priceTier}
             />
 
-            <Cart
-              cart={cart}
-              priceTiers={
-                tiersEnabled && business
-                  ? {
-                      labels: business.price_tier_labels,
-                      selected: priceTier,
-                      onChange: changePriceTier,
-                    }
-                  : undefined
+            {/* One basket, two shapes. On a phone it is a sheet that
+                slides over the items when asked for; from md up it is
+                simply the second column it always was. Rendering it
+                once rather than twice keeps a single source of truth
+                for what is in the basket. */}
+            <div
+              className={
+                cartOpen
+                  ? "fixed inset-0 z-50 flex flex-col justify-end md:static md:block"
+                  : "hidden md:block"
               }
-              paymentMethod={paymentMethod}
-              onPaymentMethodChange={setPaymentMethod}
-              maxDiscountPercent={maxDiscountPercent}
-              discountAmount={discountAmount}
-              onDiscountAmountChange={setDiscountAmount}
-              onDelete={deleteLine}
-              onCheckout={checkout}
-              onPrintQuote={printQuote}
-              credit={
-                creditEnabled
-                  ? {
-                      customers,
-                      selectedCustomerId,
-                      onSelectCustomer: setSelectedCustomerId,
-                      onAddCustomer: addCustomerInline,
-                    }
-                  : undefined
-              }
-            />
+            >
+              <div
+                onClick={() => setCartOpen(false)}
+                className="flex-1 bg-ink-950/80 md:hidden"
+                aria-hidden
+              />
+
+              <div className="max-h-[85vh] overflow-y-auto rounded-t-3xl border-t border-ink-600 bg-ink-900 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:max-h-none md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:p-0">
+                <div className="mb-3 flex items-center justify-between md:hidden">
+                  <h2 className="text-lg font-bold text-paper">
+                    السلة ({cartCount})
+                  </h2>
+
+                  <button
+                    onClick={() => setCartOpen(false)}
+                    aria-label="إغلاق السلة"
+                    className="flex size-10 items-center justify-center rounded-full bg-ink-700 text-mist"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <Cart
+                  cart={cart}
+                  paymentMethod={paymentMethod}
+                  onPaymentMethodChange={setPaymentMethod}
+                  maxDiscountPercent={maxDiscountPercent}
+                  discountAmount={discountAmount}
+                  onDiscountAmountChange={setDiscountAmount}
+                  onDelete={deleteLine}
+                  onCheckout={checkout}
+                  onPrintQuote={printQuote}
+                  credit={
+                    creditEnabled
+                      ? {
+                          customers,
+                          selectedCustomerId,
+                          onSelectCustomer: setSelectedCustomerId,
+                          onAddCustomer: addCustomerInline,
+                        }
+                      : undefined
+                  }
+                />
+              </div>
+            </div>
           </div>
         )}
 
@@ -413,6 +461,25 @@ export default function SalesPage() {
           />
         )}
       </main>
+
+      {/* The running total, always within thumb reach, never covering
+          the items it belongs to. Hidden the moment the basket is open
+          so it cannot sit on top of the sheet. */}
+      {cartCount > 0 && !cartOpen && (
+        <button
+          onClick={() => setCartOpen(true)}
+          className="fixed inset-x-0 bottom-0 z-40 flex min-h-16 items-center justify-between gap-3 border-t border-ink-600 bg-splash px-5 pb-[env(safe-area-inset-bottom)] text-ink-950 md:hidden print:hidden"
+        >
+          <span className="flex items-center gap-2 font-bold">
+            <ShoppingCart size={20} />
+            السلة ({cartCount})
+          </span>
+
+          <span className="text-lg font-bold">
+            {cartTotal.toFixed(2)} ج
+          </span>
+        </button>
+      )}
 
       {lastSale && (
         <Receipt
