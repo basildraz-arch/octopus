@@ -39,7 +39,7 @@ def S(v):
 
 # ------------------------------------------------------------------ العين
 
-def paint_eye(im, key, top, pdx=0, pdy=0, pscale=1.0, slope=0.0):
+def paint_eye(im, key, top, pdx=0, pdy=0, pscale=1.0, slope=0.0, pupil=True):
     """يرسم العين من أول: بياض من `top` لتحت، وبؤبؤ جواها.
 
     top   = أعلى نقطة بيبان فيها بياض العين. أقل من 300 = عين مفتوحة
@@ -70,6 +70,9 @@ def paint_eye(im, key, top, pdx=0, pdy=0, pscale=1.0, slope=0.0):
 
     im2 = Image.fromarray(a)
 
+    if not pupil:
+        return im2
+
     # البؤبؤ، متقصقص جوه بياض العين
     r = max(5, e["pr"] * pscale)
     px, py = e["pcx"] + pdx, e["pcy"] + pdy
@@ -88,7 +91,7 @@ def paint_eye(im, key, top, pdx=0, pdy=0, pscale=1.0, slope=0.0):
     return Image.composite(pupil_img, im2, mask)
 
 
-def lower_lid(im, key, drop, tilt=0.0):
+def lower_lid(im, key, drop, tilt=0.0, copy_shade=False):
     """ينزّل الجفن البنفسجي. اللون بيتاخد من نفس العمود فوق الجفن،
     فالتظليل الأصلي بيمتد معاه بدل ما نخترع لون."""
     a = np.array(im)
@@ -103,8 +106,16 @@ def lower_lid(im, key, drop, tilt=0.0):
         d = int(round(d))
         if d <= 0:
             continue
-        src = a[e["lid"] - 4, x].copy()
-        a[e["lid"] - 3: e["lid"] + d, x] = src
+        if copy_shade:
+            # للرمشة: بننسخ شريحة من فوق الجفن ونمدّها لتحت مقلوبة،
+            # فالتدرّج ثلاثي الأبعاد بيكمّل طبيعي بدل لون مسطّح.
+            top_src = max(0, e["lid"] - 4 - d)
+            strip = a[top_src: e["lid"] - 4, x][::-1]
+            n = min(len(strip), d + 3)
+            a[e["lid"] - 3: e["lid"] - 3 + n, x] = strip[:n]
+        else:
+            src = a[e["lid"] - 4, x].copy()
+            a[e["lid"] - 3: e["lid"] + d, x] = src
 
     return Image.fromarray(a)
 

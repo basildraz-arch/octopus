@@ -87,6 +87,47 @@ const BOUNCE_STRETCH_Y = -0.6;
 const RECOIL_KICK_X = 11;
 const RECOIL_KICK_Y = 6;
 
+// ---- The eyes ----
+//
+// The mascot used to be a bought animation file that blinked and looked
+// around, and losing that made him read as a sticker instead of a
+// creature. Rather than buy another one or generate a new drawing (which
+// would not be the same octopus), the drawing we own is split into
+// layers - body with blank eye-whites, a pupil, and a closed-eye frame -
+// and the life is put back with code. tools/make_rig.py builds them.
+//
+// Positions are fractions of the 768px artwork, measured from it, so
+// they hold at any rendered size.
+const PUPIL_AT = {
+  L: { x: 295 / 768, y: 374 / 768 },
+  R: { x: 474 / 768, y: 374 / 768 },
+};
+const PUPIL_SIZE = 91 / 768;
+// How far a pupil may slide inside the eye-white before it would clip
+// through the edge. The eyeball is 69x58 and the pupil radius 35, so
+// this is deliberately short of that.
+const PUPIL_TRAVEL_X = 18 / 768;
+const PUPIL_TRAVEL_Y = 11 / 768;
+
+const BLINK_MS = 110;
+const BLINK_MIN_GAP_MS = 2500;
+const BLINK_MAX_GAP_MS = 6500;
+const DOUBLE_BLINK_CHANCE = 0.18;
+// After this long without the pointer, he stops staring at it and starts
+// glancing around on his own.
+const GAZE_IDLE_AFTER_MS = 1200;
+
+// Every full-size layer sits in exactly the same box, so they stay
+// registered with each other whatever size he is rendered at.
+const layerStyle = {
+  display: "block",
+  width: "100%",
+  height: "100%",
+  objectFit: "contain",
+  userSelect: "none",
+  WebkitUserDrag: "none",
+};
+
 function springStep(pos, vel, target, stiffness, damping) {
   const force = (target - pos) * stiffness;
   const newVel = (vel + force) * damping;
@@ -115,12 +156,19 @@ function springStep(pos, vel, target, stiffness, damping) {
  */
 export default function OctopusMascot({
   size = 120,
-  imageSrc = "/hebr.png",
+  // "neutral" is the live, blinking, eye-tracking rig. Any other mood is
+  // a single still frame (public/hebr/<mood>.png) - used for a moment of
+  // reaction, then handed back to neutral.
+  mood = "neutral",
   className = "",
 }) {
   const outerRef = useRef(null);
   const wrapRef = useRef(null);
   const inkLayerRef = useRef(null);
+  const pupilLRef = useRef(null);
+  const pupilRRef = useRef(null);
+  const blinkRef = useRef(null);
+  const alive = mood === "neutral";
   const filterId = `octopus-ink-goo-${useId().replace(/:/g, "")}`;
   const [effectiveSize, setEffectiveSize] = useState(size);
   const { user } = useSession();
@@ -158,6 +206,68 @@ export default function OctopusMascot({
       bounceScale = 1,
       bounceVel = 0,
       raf;
+
+    // --- the eyes ---
+    // Read through the refs each time rather than captured once, so this
+    // effect does not have to re-run (and re-place him from scratch)
+    // whenever the layers are swapped for a mood frame.
+    let gazeTargetX = 0,
+      gazeTargetY = 0,
+      gazeX = 0,
+      gazeY = 0,
+      gazeVelX = 0,
+      gazeVelY = 0,
+      lastPointerAt = 0;
+
+    // Every timer here has to be collected, not just the last one: a
+    // double blink schedules a nested one, and a component unmounted
+    // mid-blink would otherwise touch a detached node.
+    const timers = new Set();
+    const later = (fn, ms) => {
+      const id = setTimeout(() => {
+        timers.delete(id);
+        fn();
+      }, ms);
+      timers.add(id);
+      return id;
+    };
+
+    function doBlink(after) {
+      const blink = blinkRef.current;
+      if (!blink) return;
+      blink.style.opacity = "1";
+      later(() => {
+        blink.style.opacity = "0";
+        after?.();
+      }, BLINK_MS);
+    }
+
+    function scheduleBlink() {
+      later(() => {
+        doBlink(() => {
+          // People rarely blink once. The occasional double is most of
+          // what makes it read as breathing rather than a timer.
+          if (Math.random() < DOUBLE_BLINK_CHANCE) later(doBlink, 150);
+        });
+        scheduleBlink();
+      }, BLINK_MIN_GAP_MS + Math.random() * (BLINK_MAX_GAP_MS - BLINK_MIN_GAP_MS));
+    }
+
+    function scheduleGlance() {
+      later(() => {
+        if (
+          pupilLRef.current &&
+          Date.now() - lastPointerAt > GAZE_IDLE_AFTER_MS
+        ) {
+          gazeTargetX = (Math.random() * 2 - 1) * 0.8;
+          gazeTargetY = (Math.random() * 2 - 1) * 0.6;
+        }
+        scheduleGlance();
+      }, 1500 + Math.random() * 2500);
+    }
+
+    scheduleBlink();
+    scheduleGlance();
 
     // --- wandering state ---
     const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
@@ -336,8 +446,18 @@ export default function OctopusMascot({
       const rect = wrap.getBoundingClientRect();
       const relX = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2);
       const relY = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
-      targetX = Math.max(-1, Math.min(1, relX)) * 18;
-      targetY = Math.max(-1, Math.min(1, relY)) * 10;
+      const clampedX = Math.max(-1, Math.min(1, relX));
+      const clampedY = Math.max(-1, Math.min(1, relY));
+
+      targetX = clampedX * 18;
+      targetY = clampedY * 10;
+
+      // The eyes follow further than the body tilts - he turns his head a
+      // little and his eyes the rest of the way, which is what makes it
+      // feel like being looked at.
+      gazeTargetX = clampedX;
+      gazeTargetY = clampedY;
+      lastPointerAt = Date.now();
     };
 
     const resetTilt = () => {
@@ -384,6 +504,22 @@ export default function OctopusMascot({
       wrap.style.transform = `perspective(600px) translateY(${idleBobY}px) rotateY(${
         curX + idleTiltX
       }deg) rotateX(${-curY}deg) scale(${scaleX}, ${scaleY})`;
+
+      const pupilL = pupilLRef.current;
+      const pupilR = pupilRRef.current;
+      if (pupilL && pupilR) {
+        [gazeX, gazeVelX] = springStep(gazeX, gazeVelX, gazeTargetX, 0.13, 0.74);
+        [gazeY, gazeVelY] = springStep(gazeY, gazeVelY, gazeTargetY, 0.13, 0.74);
+
+        const px = gazeX * PUPIL_TRAVEL_X * effectiveSize;
+        // A hair of the idle bob leaks into the eyes as well, so they
+        // are not the one part of him holding perfectly still.
+        const py =
+          gazeY * PUPIL_TRAVEL_Y * effectiveSize + idleBobY * 0.06;
+        const t = `translate(calc(-50% + ${px}px), calc(-50% + ${py}px))`;
+        pupilL.style.transform = t;
+        pupilR.style.transform = t;
+      }
 
       raf = requestAnimationFrame(tick);
     };
@@ -435,6 +571,7 @@ export default function OctopusMascot({
       window.removeEventListener("resize", handleResize);
 
       clearTimeout(wanderTimer);
+      timers.forEach(clearTimeout);
       cancelAnimationFrame(raf);
     };
   }, [effectiveSize]);
@@ -613,25 +750,65 @@ export default function OctopusMascot({
               </defs>
             </svg>
 
-            {/* A still picture, not an animation file. Every bit of
-                life he has - the drifting, the tilt, the idle bob, the
-                squash when he is kicked, the ink - is done by the
-                transforms above, so swapping the drawing costs nothing.
-                The old file was a stock Lottie whose licence we could
-                not stand behind; this one is ours. */}
+            {/* Three stacked drawings, not an animation file.
+                body (blank eye-whites) -> pupils -> closed-eye frame.
+                The pupils are moved and the closed-eye frame flashed by
+                the loop above, which is where the blinking and the
+                looking-around come from. The old file did this too, but
+                it was a stock animation we had no licence to; these are
+                cut from the drawing we own (tools/make_rig.py). */}
             <img
-              src={imageSrc}
+              src={alive ? "/hebr/body.png" : `/hebr/${mood}.png`}
               alt=""
               aria-hidden="true"
               draggable={false}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                userSelect: "none",
-                WebkitUserDrag: "none",
-              }}
+              style={layerStyle}
             />
+
+            {alive && (
+              <>
+                {[
+                  ["L", pupilLRef],
+                  ["R", pupilRRef],
+                ].map(([side, ref]) => (
+                  <img
+                    key={side}
+                    ref={ref}
+                    src="/hebr/pupil.png"
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      left: `${PUPIL_AT[side].x * 100}%`,
+                      top: `${PUPIL_AT[side].y * 100}%`,
+                      width: `${PUPIL_SIZE * 100}%`,
+                      height: `${PUPIL_SIZE * 100}%`,
+                      transform: "translate(-50%, -50%)",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      WebkitUserDrag: "none",
+                    }}
+                  />
+                ))}
+
+                <img
+                  ref={blinkRef}
+                  src="/hebr/blink.png"
+                  alt=""
+                  aria-hidden="true"
+                  draggable={false}
+                  style={{
+                    ...layerStyle,
+                    position: "absolute",
+                    inset: 0,
+                    opacity: 0,
+                    pointerEvents: "none",
+                  }}
+                />
+              </>
+            )}
+
             <div
               ref={inkLayerRef}
               style={{
