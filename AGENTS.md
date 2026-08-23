@@ -47,13 +47,36 @@ This version has breaking changes — APIs, conventions, and file structure may 
 `protect_ui_labels`، `protect_plan_columns`، `protect_notification_columns`،
 `protect_change_request_columns`.
 
+**مصيدتين في المنع اتكلّفونا وقت - الاتنين بينجحوا بصمت:**
+
+١. `revoke ... from anon` على دالة **مش كفاية**. `PUBLIC` بياخد
+`EXECUTE` افتراضيًا على أي دالة جديدة وanon بيورث منه. الصح:
+`revoke all on function ... from public, anon;` وبعدها
+`grant execute ... to authenticated;`
+
+٢. `revoke select (عمود) on جدول from authenticated` **مابيعملش حاجة**
+لو الدور معاه `SELECT` على الجدول كله - وPostgres مابيديش أي خطأ.
+الصح: `revoke select on الجدول` وبعدها `grant select (الأعمدة بالاسم)`.
+
+**القاعدة اللي طلعت منهم: بعد أي منع، اسأل قاعدة البيانات إذا كان
+اتنفّذ فعلًا** - `has_function_privilege` أو استعلام بحساب حقيقي.
+"نفّذت الأمر" مش دليل.
+
 **جداول append-only** (مفيهاش UPDATE ولا DELETE policies خالص، عن قصد):
 `cart_audit_log`، `assistant_actions`، `referral_payouts`،
 `platform_admin_actions`. ما تضيفلهاش policies.
 
 **الـhelpers** (كلها `SECURITY DEFINER` بـ`search_path` مثبّت):
 `get_my_business_id()`، `is_business_owner()`، `is_platform_admin()`،
-`has_permission()`.
+`has_permission()`، `has_read_permission()`، `my_user_id()`،
+`subscription_open()`، `available_quantity()`، `stock_by_warehouse()`،
+`inventory_value()`.
+
+**سعر الشرا** (`items.buy_price`) ممنوع على مستوى العمود من
+`authenticated` كله - حتى صاحب المحل. الباب الوحيد هو الـview
+`item_costs`، وفي الكود `repositories/itemCost.repository.ts`.
+`items` بتتقرا بقايمة أعمدة صريحة في `item.repository.ts` - **`select("*")`
+هيقع**. أي عمود جديد في `items` لازم يتضاف في المكانين.
 
 ---
 

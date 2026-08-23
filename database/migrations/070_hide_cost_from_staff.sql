@@ -37,7 +37,26 @@ create policy stock_batches_read on stock_batches
 -- الأونر كمان. الأونر بياخد التكلفة من item_costs فوق، مش من الجدول
 -- مباشرة. ده مقصود: باب واحد بيتحرس، بدل عمود مكشوف وكل استعلام
 -- بيحاول يفتكر إنه يستبعده.
-revoke select (buy_price) on public.items from authenticated, anon;
+--
+-- **مصيدة:** السطر البديهي
+--
+--     revoke select (buy_price) on items from authenticated;
+--
+-- بيتنفّذ من غير أي خطأ، **ومابيعملش حاجة**. الدور كان معاه SELECT على
+-- الجدول كله، وPostgres مابيطرحش عمود من صلاحية على مستوى الجدول.
+-- جرّبناه فعلًا وبعده الكاشير كان لسه بيقرا الـ93 تكلفة. الطريقة
+-- الوحيدة: تشيل صلاحية الجدول وترجّع الأعمدة بالاسم.
+--
+-- ولو اتضاف عمود جديد لـitems، لازم يتضاف هنا - وإلا محدش هيقدر
+-- يقراه. ده مقصود كمان: النسيان هنا بيمنع، مش بيكشف.
+revoke select on public.items from authenticated, anon;
+
+grant select (
+    id, business_id, category_id, name, barcode, item_type, sale_method,
+    unit, sell_price, sell_price_2, sell_price_3, min_sell_price,
+    stock, minimum_stock, has_stock, image, keywords, active,
+    created_at, updated_at
+) on public.items to authenticated;
 
 -- ---------------------------------------------------------------- لسه ناقص
 --
@@ -49,3 +68,17 @@ revoke select (buy_price) on public.items from authenticated, anon;
 -- مش صفر. الحل الصح إن إنشاء الفاتورة كله ينتقل لدالة واحدة في
 -- قاعدة البيانات تكتب التكلفة بنفسها، فالمتصفح ما يشوفهاش أصلًا.
 -- ده تعديل في مسار البيع نفسه ومحتاج تجربة بيعة حقيقية بعده.
+
+-- ---------------------------------------------------------------- التجربة
+--
+-- اتجرّب بحساب كاشير حقيقي على البيانات الحقيقية، قبل وبعد:
+--
+--   قبل:  93 تكلفة صنف + 105 تكلفة دفعة، وأغلى تكلفة 280.00
+--   بعد:  قراءة العمود -> permission denied for table items
+--         stock_batches -> 0 صف
+--         item_costs    -> 0 صف
+--         الأصناف لسه 93 وسعر البيع لسه باين -> البيع شغال
+--         available_quantity لسه بترجّع رقم -> التوفّر شغال
+--
+--   صاحب محل عادي (مش أدمن المنصة): 3 أصناف، 3 تكاليف من الـview،
+--   3 دفعات، وقيمة المخزون 15079.00 -> ما اتكسرش حاجة.
