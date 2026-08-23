@@ -7,6 +7,7 @@ import { Package, Warehouse, Tag, Plus, Search, FileSpreadsheet } from "lucide-r
 import ProductTable from "@/components/items/ItemTable";
 
 import { getItems, updateItem } from "@/repositories/item.repository";
+import { attachCosts } from "@/repositories/itemCost.repository";
 import type { Item } from "@/types/item";
 
 export default function ItemsPage() {
@@ -21,7 +22,9 @@ export default function ItemsPage() {
   async function loadItems() {
     setLoading(true);
 
-    const data = await getItems();
+    // الأصناف بتيجي من غير تكلفة (العمود ممنوع - ميجريشن 069)،
+    // وattachCosts بتحطها لو اللي فاتح الصفحة معاه صلاحية.
+    const data = await attachCosts(await getItems());
 
     setItems(data);
 
@@ -45,7 +48,7 @@ export default function ItemsPage() {
     return items.reduce((sum, item) => {
       if (!item.has_stock) return sum;
 
-      return sum + item.stock * item.buy_price;
+      return sum + item.stock * (item.buy_price ?? 0);
     }, 0);
   }, [items]);
 

@@ -43,19 +43,14 @@ export async function getInventoryValue(
   supabase: SupabaseClient,
   businessId: string
 ): Promise<number> {
-  const { data, error } = await supabase
-    .from("items")
-    .select("stock, buy_price")
-    .eq("business_id", businessId)
-    .eq("active", true)
-    .eq("has_stock", true);
+  // كان بيقرا التكلفة عمود بعمود من items. العمود ده بقى ممنوع
+  // (ميجريشن 069)، والجمع بقى جوه قاعدة البيانات - وبيرجّع null لو
+  // اللي سأل مالوش صلاحية التقارير.
+  const { data, error } = await supabase.rpc("inventory_value");
 
   if (error) throw error;
 
-  return (data ?? []).reduce(
-    (sum, item) => sum + Number(item.stock) * Number(item.buy_price),
-    0
-  );
+  return Number(data ?? 0);
 }
 
 export async function getSalesTotal(

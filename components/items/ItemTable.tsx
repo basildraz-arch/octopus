@@ -177,7 +177,9 @@ export default function ProductTable({
                 </td>
 
                 <td className="p-4 text-center">
-                  {item.buy_price}
+                  {/* undefined معناها إن اللي فاتح الصفحة مالوش صلاحية
+                      يشوف التكلفة - مش إنها صفر. */}
+                  {item.buy_price ?? "—"}
                 </td>
 
                 <td className="p-4 text-center font-bold text-green-400">

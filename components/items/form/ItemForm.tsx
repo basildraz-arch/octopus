@@ -97,7 +97,7 @@ export default function ItemForm({ item }: Props) {
           sale_method: item.sale_method,
           unit: item.unit,
 
-          buy_price: item.buy_price,
+          buy_price: item.buy_price ?? 0,
           sell_price: item.sell_price,
 
           stock: item.stock,

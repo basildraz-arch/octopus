@@ -25,7 +25,10 @@ export interface Item {
 
   unit: string;
 
-  buy_price: number;
+  // مش موجود إلا لو اللي بيقرا معاه صلاحية. العمود نفسه ممنوع على
+  // مستوى قاعدة البيانات (ميجريشن 069) وبييجي من item_costs عن طريق
+  // attachCosts()، فالغياب هنا معناه "مش من حقك تشوفه" - مش صفر.
+  buy_price?: number;
 
   // Tier 1 - the default/walk-in price. The only one a single-price
   // shop ever sets, which is why it keeps the plain name.

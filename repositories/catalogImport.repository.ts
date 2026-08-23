@@ -78,14 +78,24 @@ export async function bulkCreateItems(
 ): Promise<{ id: string; name: string; stock: number; buy_price: number }[]> {
   if (items.length === 0) return [];
 
+  // التكلفة مابتترجعش من قاعدة البيانات - العمود ممنوع للقراءة
+  // (ميجريشن 069). وهي أصلًا معروفة: إحنا اللي بعتناها. فبنطابق
+  // الراجع بالمبعوت بالاسم بدل ما نسأل عليها تاني.
   const { data, error } = await supabase
     .from("items")
     .insert(items)
-    .select("id, name, stock, buy_price");
+    .select("id, name, stock");
 
   if (error) throw error;
 
-  return data ?? [];
+  const costByName = new Map(items.map((i) => [i.name, i.buy_price]));
+
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    name: row.name as string,
+    stock: Number(row.stock),
+    buy_price: Number(costByName.get(row.name as string) ?? 0),
+  }));
 }
 
 // Opening stock. Without these rows the item shows a quantity that

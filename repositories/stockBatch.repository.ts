@@ -45,39 +45,26 @@ export async function createBatch(
   return data as StockBatch;
 }
 
-export async function getAvailableBatches(
-  itemId: string,
-  warehouseId: string
-): Promise<StockBatch[]> {
-  const { data, error } = await supabase
-    .from("stock_batches")
-    .select("*")
-    .eq("item_id", itemId)
-    .eq("warehouse_id", warehouseId)
-    .gt("remaining_quantity", 0)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    console.error("Supabase Error:", error.message);
-    return [];
-  }
-
-  return (data ?? []) as StockBatch[];
-}
-
+// كان بيقرا الدفعات كلها من المتصفح عشان يجمع الكميات - وde كان
+// بيمرّ عليه سعر الشرا بتاع كل دفعة كمان. الكاشير محتاج يعرف "فيه كام
+// متاح؟" وبس، فالسؤال ده بقى دالة في قاعدة البيانات بترجّع رقم واحد
+// (ميجريشن 069). دلوقتي قراءة stock_batches نفسها بقت محتاجة صلاحية.
 export async function checkAvailability(
   itemId: string,
   quantityNeeded: number,
   warehouseId: string
 ): Promise<boolean> {
-  const batches = await getAvailableBatches(itemId, warehouseId);
+  const { data, error } = await supabase.rpc("available_quantity", {
+    p_item_id: itemId,
+    p_warehouse_id: warehouseId,
+  });
 
-  const totalAvailable = batches.reduce(
-    (sum, batch) => sum + Number(batch.remaining_quantity),
-    0
-  );
+  if (error) {
+    console.error("Supabase Error:", error.message);
+    return false;
+  }
 
-  return totalAvailable >= quantityNeeded;
+  return Number(data ?? 0) >= quantityNeeded;
 }
 
 // The FIFO draw used to happen here: read the batches, then send one
@@ -145,44 +132,22 @@ export type WarehouseStock = {
   quantity: number;
 };
 
-type StockBatchWithWarehouse = {
-  warehouse_id: string;
-  remaining_quantity: number;
-  warehouses: { name: string } | null;
-};
-
+// نفس السبب: التجميع بقى في قاعدة البيانات، والراجع كمية بس.
 export async function getStockByWarehouse(
   itemId: string
 ): Promise<WarehouseStock[]> {
-  const { data, error } = await supabase
-    .from("stock_batches")
-    .select("warehouse_id, remaining_quantity, warehouses ( name )")
-    .eq("item_id", itemId)
-    .gt("remaining_quantity", 0);
+  const { data, error } = await supabase.rpc("stock_by_warehouse", {
+    p_item_id: itemId,
+  });
 
   if (error) {
     console.error("Supabase Error:", error.message);
     return [];
   }
 
-  const rows = (data ?? []) as unknown as StockBatchWithWarehouse[];
-
-  const totals = new Map<string, WarehouseStock>();
-
-  for (const row of rows) {
-    const existing = totals.get(row.warehouse_id);
-    const quantity = Number(row.remaining_quantity);
-
-    if (existing) {
-      existing.quantity += quantity;
-    } else {
-      totals.set(row.warehouse_id, {
-        warehouse_id: row.warehouse_id,
-        warehouse_name: row.warehouses?.name ?? "",
-        quantity,
-      });
-    }
-  }
-
-  return Array.from(totals.values());
+  return ((data ?? []) as WarehouseStock[]).map((row) => ({
+    warehouse_id: row.warehouse_id,
+    warehouse_name: row.warehouse_name ?? "",
+    quantity: Number(row.quantity),
+  }));
 }

@@ -79,7 +79,8 @@ export default function DashboardHomePage() {
   const managementTiles = visibleTiles(ctx, labels, "management");
 
   const stockValue = items.reduce(
-    (sum, item) => (item.has_stock ? sum + item.stock * item.buy_price : sum),
+    (sum, item) =>
+      item.has_stock ? sum + item.stock * (item.buy_price ?? 0) : sum,
     0
   );
 

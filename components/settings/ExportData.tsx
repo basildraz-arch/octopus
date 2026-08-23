@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Download } from "lucide-react";
 
 import { getItems } from "@/repositories/item.repository";
+import { attachCosts } from "@/repositories/itemCost.repository";
 import { getSalesByDateRange } from "@/repositories/sale.repository";
 import { getCustomerBalances } from "@/repositories/customer.repository";
 import { toCsv, downloadCsv, dateStamp } from "@/lib/csv";
@@ -46,7 +47,7 @@ export default function ExportData({
   }
 
   async function exportItems() {
-    const items = await getItems();
+    const items = await attachCosts(await getItems());
 
     const csv = toCsv(
       ["الاسم", "سعر البيع", "سعر 2", "سعر 3", "التكلفة", "الكمية", "الوحدة"],
@@ -55,7 +56,7 @@ export default function ExportData({
         item.sell_price,
         item.sell_price_2 ?? "",
         item.sell_price_3 ?? "",
-        item.buy_price,
+        item.buy_price ?? "",
         item.has_stock ? item.stock : "",
         item.unit,
       ])

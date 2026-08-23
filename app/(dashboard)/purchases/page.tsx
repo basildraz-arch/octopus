@@ -49,7 +49,7 @@ export default function PurchasesPage() {
     const item = products.find((i) => i.id === id);
 
     if (item) {
-      setBuyPrice(String(item.buy_price));
+      setBuyPrice(item.buy_price === undefined ? "" : String(item.buy_price));
     }
   }
 
@@ -163,7 +163,7 @@ export default function PurchasesPage() {
         {selectedItem && (
           <p className="text-sm text-mist">
             المخزون الحالي: {selectedItem.stock} {selectedItem.unit} — سعر
-            الشراء الحالي: {selectedItem.buy_price} ج
+            الشراء الحالي: {selectedItem.buy_price ?? "—"} ج
           </p>
         )}
 
