@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Lottie from "lottie-react";
 
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/hooks/useSession";
@@ -169,15 +168,6 @@ export default function AssistantChat() {
   const [busyProposal, setBusyProposal] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [animationData, setAnimationData] = useState<object | null>(null);
-
-  useEffect(() => {
-    fetch("/hebr-animation.json")
-      .then((res) => res.json())
-      .then(setAnimationData)
-      .catch(() => setAnimationData(null));
-  }, []);
-
   useEffect(() => {
     if (isOpen) {
       setVisible(true);
@@ -660,20 +650,15 @@ export default function AssistantChat() {
         >
           <div className="flex flex-none items-center border-b border-ink-600 p-5">
             <h2 className="flex items-center gap-2 font-bold">
-              {animationData ? (
-                <Lottie
-                  animationData={animationData}
-                  loop
-                  autoplay
-                  style={{ width: 40, height: 40 }}
-                />
-              ) : (
-                <img
-                  src="/hebr-final-1.jpg"
-                  alt="حبر"
-                  className="h-10 w-10 rounded-full object-cover"
-                />
-              )}
+              {/* حبر - نفس الصورة اللي في العوّامة (OctopusMascot).
+                  كانت هنا نسخة تانية من ملف الأنيميشن المجاب من موقع
+                  أصول جاهزة، وورا صورة مؤقتة مختلفة الشكل خالص - يعني
+                  المستخدم كان بيشوف تلات أخطبوطات في برنامج واحد. */}
+              <img
+                src="/hebr.png"
+                alt="حبر"
+                className="h-10 w-10 object-contain"
+              />
               اسأل الأخطبوط
             </h2>
           </div>

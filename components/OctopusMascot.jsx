@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useCallback } from "react";
-import Lottie from "lottie-react";
 
 import { useSession } from "@/hooks/useSession";
 import { useAssistantChat } from "@/hooks/useAssistantChat";
@@ -99,7 +98,7 @@ function springStep(pos, vel, target, stiffness, damping) {
  *
  * The single site-wide mascot instance — mounted once in the root layout
  * as a fixed-position element that wanders the viewport on its own, and
- * layers on top of the Lottie animation:
+ * layers motion on top of a single still drawing:
  *   - autonomous wandering movement (picks a new spot every 5-9s, drifts
  *     there with a slow spring)
  *   - a spring-driven 3D parallax tilt that follows the pointer (mouse
@@ -116,14 +115,13 @@ function springStep(pos, vel, target, stiffness, damping) {
  */
 export default function OctopusMascot({
   size = 120,
-  animationPath = "/animations/octopus.json",
+  imageSrc = "/hebr.png",
   className = "",
 }) {
   const outerRef = useRef(null);
   const wrapRef = useRef(null);
   const inkLayerRef = useRef(null);
   const filterId = `octopus-ink-goo-${useId().replace(/:/g, "")}`;
-  const [animationData, setAnimationData] = useState(null);
   const [effectiveSize, setEffectiveSize] = useState(size);
   const { user } = useSession();
   const { open: openAssistantChat } = useAssistantChat();
@@ -140,28 +138,12 @@ export default function OctopusMascot({
     return () => window.removeEventListener("resize", updateSize);
   }, [size]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    fetch(animationPath)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled) setAnimationData(data);
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, [animationPath]);
-
   // Wandering + pointer-follow tilt + idle sway + eye tracking, all driven
   // by one shared animation loop so they compose into transforms on two
   // nested elements instead of fighting each other:
   //   outerRef  (fixed, viewport position) <- wander target
   //   wrapRef   (relative, inside outer)   <- tilt/idle/bounce
   useEffect(() => {
-    if (!animationData) return;
     const outer = outerRef.current;
     const wrap = wrapRef.current;
     if (!outer || !wrap) return;
@@ -455,7 +437,7 @@ export default function OctopusMascot({
       clearTimeout(wanderTimer);
       cancelAnimationFrame(raf);
     };
-  }, [animationData, effectiveSize]);
+  }, [effectiveSize]);
 
   const spawnInk = useCallback(
     (clientX, clientY) => {
@@ -603,9 +585,7 @@ export default function OctopusMascot({
           userSelect: "none",
         }}
       >
-        {animationData && (
-          <>
-            <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
+        <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
               <defs>
                 <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
@@ -633,11 +613,24 @@ export default function OctopusMascot({
               </defs>
             </svg>
 
-            <Lottie
-              animationData={animationData}
-              loop
-              autoplay
-              style={{ width: "100%", height: "100%" }}
+            {/* A still picture, not an animation file. Every bit of
+                life he has - the drifting, the tilt, the idle bob, the
+                squash when he is kicked, the ink - is done by the
+                transforms above, so swapping the drawing costs nothing.
+                The old file was a stock Lottie whose licence we could
+                not stand behind; this one is ours. */}
+            <img
+              src={imageSrc}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                userSelect: "none",
+                WebkitUserDrag: "none",
+              }}
             />
             <div
               ref={inkLayerRef}
@@ -648,8 +641,6 @@ export default function OctopusMascot({
                 pointerEvents: "none",
               }}
             />
-          </>
-        )}
       </div>
     </div>
   );
