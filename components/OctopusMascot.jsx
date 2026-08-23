@@ -109,10 +109,19 @@ const PUPIL_SIZE = 91 / 768;
 const PUPIL_TRAVEL_X = 18 / 768;
 const PUPIL_TRAVEL_Y = 11 / 768;
 
-const BLINK_MS = 110;
-const BLINK_MIN_GAP_MS = 2500;
-const BLINK_MAX_GAP_MS = 6500;
-const DOUBLE_BLINK_CHANCE = 0.18;
+// A blink is three drawings, not an on/off switch. Swapping straight
+// between open and shut reads as a glitch - a frame of half-closed on
+// the way down and again on the way up is what makes it read as an
+// eyelid. It also closes faster than it opens, like a real one.
+const BLINK_CLOSE_MS = 30;
+const BLINK_HOLD_MS = 55;
+const BLINK_OPEN_MS = 45;
+const BLINK_MIN_GAP_MS = 2200;
+const BLINK_MAX_GAP_MS = 6000;
+const DOUBLE_BLINK_CHANCE = 0.22;
+// People very often blink as their eyes land somewhere new, so a glance
+// sometimes drags a blink along with it.
+const BLINK_AFTER_GLANCE_CHANCE = 0.35;
 // After this long without the pointer, he stops staring at it and starts
 // glancing around on his own.
 const GAZE_IDLE_AFTER_MS = 1200;
@@ -155,7 +164,7 @@ function springStep(pos, vel, target, stiffness, damping) {
  *   <OctopusMascot />
  */
 export default function OctopusMascot({
-  size = 120,
+  size = 96,
   // "neutral" is the live, blinking, eye-tracking rig. Any other mood is
   // a single still frame (public/hebr/<mood>.png) - used for a moment of
   // reaction, then handed back to neutral.
@@ -167,7 +176,8 @@ export default function OctopusMascot({
   const inkLayerRef = useRef(null);
   const pupilLRef = useRef(null);
   const pupilRRef = useRef(null);
-  const blinkRef = useRef(null);
+  const lidHalfRef = useRef(null);
+  const lidShutRef = useRef(null);
   const alive = mood === "neutral";
   const filterId = `octopus-ink-goo-${useId().replace(/:/g, "")}`;
   const [effectiveSize, setEffectiveSize] = useState(size);
@@ -179,7 +189,7 @@ export default function OctopusMascot({
   useEffect(() => {
     function updateSize() {
       const mobile = window.innerWidth < MOBILE_BREAKPOINT;
-      setEffectiveSize(mobile ? Math.min(size, 90) : size);
+      setEffectiveSize(mobile ? Math.min(size, 70) : size);
     }
     updateSize();
     window.addEventListener("resize", updateSize);
@@ -233,13 +243,23 @@ export default function OctopusMascot({
     };
 
     function doBlink(after) {
-      const blink = blinkRef.current;
-      if (!blink) return;
-      blink.style.opacity = "1";
+      const half = lidHalfRef.current;
+      const shut = lidShutRef.current;
+      if (!half || !shut) return;
+
+      half.style.opacity = "1";
       later(() => {
-        blink.style.opacity = "0";
-        after?.();
-      }, BLINK_MS);
+        half.style.opacity = "0";
+        shut.style.opacity = "1";
+        later(() => {
+          shut.style.opacity = "0";
+          half.style.opacity = "1";
+          later(() => {
+            half.style.opacity = "0";
+            after?.();
+          }, BLINK_OPEN_MS);
+        }, BLINK_HOLD_MS);
+      }, BLINK_CLOSE_MS);
     }
 
     function scheduleBlink() {
@@ -261,6 +281,8 @@ export default function OctopusMascot({
         ) {
           gazeTargetX = (Math.random() * 2 - 1) * 0.8;
           gazeTargetY = (Math.random() * 2 - 1) * 0.6;
+
+          if (Math.random() < BLINK_AFTER_GLANCE_CHANCE) later(doBlink, 90);
         }
         scheduleGlance();
       }, 1500 + Math.random() * 2500);
@@ -498,8 +520,14 @@ export default function OctopusMascot({
       outer.style.transform = `translate(${wanderX}px, ${wanderY}px)`;
 
       const bounceOffset = bounceScale - 1;
-      const scaleX = 1 + bounceOffset * BOUNCE_STRETCH_X;
-      const scaleY = 1 + bounceOffset * BOUNCE_STRETCH_Y;
+      // A slow breath under everything else: he swells a little and
+      // narrows a little, on a cycle far slower than the bob. Small
+      // enough that you would not name it if asked, which is the point -
+      // holding perfectly still is what made the still image read as a
+      // sticker.
+      const breathe = Math.sin(idlePhase * 0.31) * 0.012;
+      const scaleX = 1 + bounceOffset * BOUNCE_STRETCH_X - breathe * 0.6;
+      const scaleY = 1 + bounceOffset * BOUNCE_STRETCH_Y + breathe;
 
       wrap.style.transform = `perspective(600px) translateY(${idleBobY}px) rotateY(${
         curX + idleTiltX
@@ -792,20 +820,30 @@ export default function OctopusMascot({
                   />
                 ))}
 
-                <img
-                  ref={blinkRef}
-                  src="/hebr/blink.png"
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                  style={{
-                    ...layerStyle,
-                    position: "absolute",
-                    inset: 0,
-                    opacity: 0,
-                    pointerEvents: "none",
-                  }}
-                />
+                {/* The eyelids are cut out as their own transparent
+                    layers rather than whole-body frames, so at half
+                    closed the pupil still shows underneath instead of
+                    the eye going blank for a frame. */}
+                {[
+                  ["half", lidHalfRef],
+                  ["shut", lidShutRef],
+                ].map(([stage, ref]) => (
+                  <img
+                    key={stage}
+                    ref={ref}
+                    src={`/hebr/lid-${stage}.png`}
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                    style={{
+                      ...layerStyle,
+                      position: "absolute",
+                      inset: 0,
+                      opacity: 0,
+                      pointerEvents: "none",
+                    }}
+                  />
+                ))}
               </>
             )}
 

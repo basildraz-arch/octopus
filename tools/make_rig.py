@@ -6,7 +6,8 @@
 #
 #   body.png   - حبر كامل، بياض العين موجود، من غير بؤبؤ
 #   pupil.png  - بؤبؤ واحد لوحده (بينتسخ مرتين في الكود)
-#   blink.png  - نفس حبر بس العينين مقفولين، بيتحط فوق لجزء من الثانية
+#   lid-half   - الجفن نص نازل (طبقة شفافة، البؤبؤ باين تحتها)
+#   lid-shut   - الجفن مقفول تمامًا
 #
 # الفايدة إن البؤبؤ بقى عنصر مستقل - يتحرك ورا الماوس أو يبص حواليه
 # لوحده، والرمشة بقت تبديل صورة، مش ملف ٢٠٠ كيلوبايت.
@@ -39,17 +40,41 @@ d.ellipse([S(c - 24 - 5), S(c - 16 - 5), S(c - 24 + 5), S(c - 16 + 5)], fill=GLI
 lay.resize((box, box), Image.LANCZOS).save(f"{OUT}/pupil.png")
 print("pupil", box)
 
-# ---------------------------------------------------------- الرمشة
-# الجفن بينزل لحد ما يغطي العين كلها، وبعدين خط رفيع مكان الإغلاق.
-im = load()
-for k in "LR":
-    im = paint_eye(im, k, EYES[k]["lid"], pupil=False)
-    im = lower_lid(im, k, 76, copy_shade=True)
-lay, dr, merge = overlay(im)
-for k in "LR":
-    e = EYES[k]
-    y = e["lid"] + 62
-    curve(dr, arc_pts(e["cx"], y, e["rx"] * 1.5, 7), 6, (86, 58, 178, 255))
-im = merge(im)
-im.save(f"{OUT}/blink.png")
-print("blink")
+# ------------------------------------------------- الجفن كطبقة لوحده
+# الرمشة الأولى كانت صورة كاملة بتتحط فوق الكل، فالبؤبؤ كان بيختفي
+# تحتها. ده تمام لما العين مقفولة تمامًا، بس مش تمام لنص رمشة - هناك
+# الجفن المفروض يغطي النص الأعلى من العين والبؤبؤ يفضل باين تحته.
+#
+# فبنطلّع الجفن كطبقة شفافة: بنرسم العين والجفن نازل، وبنقارن بالجسم،
+# واللي اتغيّر بس هو اللي بيتحفظ. الباقي شفاف.
+import numpy as np
+
+body = np.array(Image.open(f"{OUT}/body.png").convert("RGBA")).astype(int)
+
+def lid_layer(drop, name):
+    im = load()
+    for k in "LR":
+        im = paint_eye(im, k, EYES[k]["lid"], pupil=False)
+        im = lower_lid(im, k, drop, copy_shade=True)
+    if drop > 60:                       # مقفولة: خط الإغلاق
+        lay, dr, merge = overlay(im)
+        for k in "LR":
+            e = EYES[k]
+            curve(dr, arc_pts(e["cx"], e["lid"] + 62, e["rx"] * 1.5, 7), 6,
+                  (86, 58, 178, 255))
+        im = merge(im)
+
+    a = np.array(im).astype(int)
+    changed = np.abs(a[..., :3] - body[..., :3]).max(axis=2) > 6
+    out = a.copy()
+    out[..., 3] = np.where(changed, 255, 0)
+    img = Image.fromarray(out.clip(0, 255).astype("uint8"), "RGBA")
+    # تنعيم حافة الطبقة عشان ما تبانش مقصوصة فوق العين
+    al = img.split()[3].filter(ImageFilter.GaussianBlur(1.2))
+    img.putalpha(al)
+    img.save(f"{OUT}/{name}.png")
+    print(name)
+
+from PIL import ImageFilter
+lid_layer(34, "lid-half")
+lid_layer(76, "lid-shut")

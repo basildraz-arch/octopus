@@ -1,13 +1,15 @@
-﻿# مسح الملفين اللي مبقاش لهم لازمة بعد تغيير الأخطبوط.
+﻿# مسح الملفات اللي مبقاش لها لازمة.
 #
-# الأول هو ملف الأنيميشن اللي كان متجاب من موقع أصول جاهزة - ده
-# السبب الوحيد اللي لسه رابط المشروع بيه، ولازم يتشال.
+# blink.png كانت رمشة من صورة كاملة بتتحط فوق الكل - اتشالت لأن
+# البؤبؤ كان بيختفي تحتها في نص الرمشة. مكانها دلوقتي طبقتين
+# شفافتين للجفن: lid-half و lid-shut.
 
 Set-Location -LiteralPath $PSScriptRoot
 
 $targets = @(
     "public\animations\octopus.json",
-    "public\hebr-animation.json"
+    "public\hebr-animation.json",
+    "public\hebr\blink.png"
 )
 
 foreach ($t in $targets) {
