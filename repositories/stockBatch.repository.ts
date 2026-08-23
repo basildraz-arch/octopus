@@ -59,9 +59,16 @@ export async function checkAvailability(
     p_warehouse_id: warehouseId,
   });
 
+  // بترمي بدل ما ترجّع false.
+  //
+  // كانت بترجّع false عند أي خطأ، والنتيجة إن الكاشير كان بيشوف
+  // "الكمية أكبر من المخزون" وهو المخزون مليان - رسالة بتكدب. حصل
+  // فعلًا: الدالة كانت لسه مش في فهرس Supabase فالنداء رجع 404،
+  // والشاشة قالت للكاشير إن البضاعة خلصت.
+  //
+  // خطأ في الاتصال مش نفس "مفيش كمية"، ولازم يبان زي ما هو.
   if (error) {
-    console.error("Supabase Error:", error.message);
-    return false;
+    throw new Error(`مش قادر أتأكد من المخزون: ${error.message}`);
   }
 
   return Number(data ?? 0) >= quantityNeeded;

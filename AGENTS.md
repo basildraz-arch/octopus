@@ -62,6 +62,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 اتنفّذ فعلًا** - `has_function_privilege` أو استعلام بحساب حقيقي.
 "نفّذت الأمر" مش دليل.
 
+**أي ميجريشن بيضيف دالة لازم ينتهي بـ`notify pgrst, 'reload schema';`.**
+Supabase بيمسك فهرس للدوال المتاحة ومابيتحدّثش فورًا، فالتطبيق بينادي
+دالة موجودة في القاعدة والرد بيرجع "مش لاقيها". حصل فعلًا في `069`:
+البيع وقف وقال للكاشير إن المخزون خلص وهو مليان.
+
+**وما تخليش دالة ترجّع "لأ" عند خطأ اتصال.** نفس الحادثة: `checkAvailability`
+كانت بترجّع `false` عند أي خطأ، فالكاشير شاف "الكمية أكبر من المخزون"
+والمخزون مليان. الخطأ التقني لازم يبان زي ما هو - رسالة بتكدب أسوأ من
+رسالة بتقول "فيه مشكلة".
+
 **جداول append-only** (مفيهاش UPDATE ولا DELETE policies خالص، عن قصد):
 `cart_audit_log`، `assistant_actions`، `referral_payouts`،
 `platform_admin_actions`. ما تضيفلهاش policies.

@@ -109,3 +109,14 @@ grant execute on function public.available_quantity(uuid, uuid) to authenticated
 grant execute on function public.stock_by_warehouse(uuid) to authenticated;
 grant execute on function public.inventory_value() to authenticated;
 
+
+
+-- لازم يفضل آخر سطر.
+--
+-- Supabase بيمسك فهرس للدوال المتاحة، والفهرس ده مابيتحدّثش فورًا بعد
+-- إضافة دالة جديدة. النتيجة: التطبيق بينادي دالة موجودة في القاعدة
+-- والرد بيرجع "مش لاقيها". حصل فعلًا هنا - البيع وقف وقال للكاشير إن
+-- المخزون خلص وهو مليان.
+--
+-- أي ميجريشن بيضيف دالة لازم ينتهي بالسطر ده.
+notify pgrst, 'reload schema';
