@@ -291,6 +291,27 @@ export default function OctopusMascot({
     scheduleBlink();
     scheduleGlance();
 
+    // التبويب لما يتخفي، المتصفح بيوقّف requestAnimationFrame بس
+    // بيسيب المؤقتات شغالة - وبيبطّئها لحد مرة كل دقيقة. يعني رمشة
+    // بدأت قبل ما تبدّل التبويب ممكن تفضل "مقفولة" لدقيقة كاملة،
+    // وترجع تلاقي حبر مغمّض. فبنقفل الجفون ونسكت وهو مخفي.
+    const handleVisibility = () => {
+      // بيتنادى في الحالتين - راح وجه. في الاتنين بنلغي المؤقتات
+      // ونفتح العين، وبعدين نرجّع الجدولة لو التبويب باين.
+      timers.forEach(clearTimeout);
+      timers.clear();
+
+      if (lidHalfRef.current) lidHalfRef.current.style.opacity = "0";
+      if (lidShutRef.current) lidShutRef.current.style.opacity = "0";
+
+      if (document.visibilityState === "visible") {
+        scheduleBlink();
+        scheduleGlance();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+
     // --- wandering state ---
     const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
 
@@ -597,6 +618,7 @@ export default function OctopusMascot({
       window.removeEventListener("pointercancel", handleDragEnd);
       wrap.removeEventListener("dblclick", handleUnpin);
       window.removeEventListener("resize", handleResize);
+      document.removeEventListener("visibilitychange", handleVisibility);
 
       clearTimeout(wanderTimer);
       timers.forEach(clearTimeout);
