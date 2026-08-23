@@ -53,9 +53,30 @@ rgb[band] = clean_rgb[band]
 mask = alpha >= 190
 mask = ndimage.binary_closing(mask, structure=np.ones((5, 5)))
 mask = ndimage.median_filter(mask.astype(np.uint8), size=5).astype(bool)
+
+# ثقوب صغيرة جوه الجسم - بتبان نقط سودا لما يتحط على خلفية غامقة.
+# fill_holes بتملا المناطق المقفولة بالكامل بس، فالفراغ اللي بين
+# الأذرع بيفضل شفاف زي ما هو لأنه موصول بالإطار.
+holes = ndimage.binary_fill_holes(mask) & ~mask
+if holes.any():
+    print("filled %d interior holes (%d px)"
+          % (ndimage.label(holes)[1], int(holes.sum())))
+mask = ndimage.binary_fill_holes(mask)
 mask = mask.astype(np.float32)
 soft = ndimage.gaussian_filter(mask, 0.9)
 new_alpha = np.clip(soft * 1.18, 0, 1) * 255.0
+
+# نقط داكنة شاذة جوه الجسم - بقايا من القص الأصلي. بنقارن كل بكسل
+# بالوسيط حواليه، واللي أغمق بفارق كبير بياخد لون جيرانه. ده بيشيل
+# النقط من غير ما يلمس التظليل الحقيقي، لأن التظليل بيتغير بالتدريج
+# فبيبقى قريب من وسيطه.
+lum = rgb.mean(2)
+local = ndimage.median_filter(lum, 7)
+speck = (mask > 0) & (lum < local - 38)
+if speck.any():
+    smooth = np.dstack([ndimage.median_filter(rgb[..., i], 7) for i in range(3)])
+    rgb[speck] = smooth[speck]
+    print("cleaned %d dark specks" % int(speck.sum()))
 
 out = np.dstack([rgb, new_alpha]).clip(0, 255).astype(np.uint8)
 Image.fromarray(out, "RGBA").save(SRC)

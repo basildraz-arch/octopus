@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, useCallback } from "react";
 
+import { subscribeMascotMood } from "@/lib/mascotMood";
 import { useSession } from "@/hooks/useSession";
 import { useAssistantChat } from "@/hooks/useAssistantChat";
 
@@ -109,6 +110,24 @@ const PUPIL_SIZE = 91 / 768;
 const PUPIL_TRAVEL_X = 18 / 768;
 const PUPIL_TRAVEL_Y = 11 / 768;
 
+// ---- المشاعر ----
+//
+// كل شعور صورة كاملة متحاذية على نفس الإطار (tools/mood_from_render.py).
+//
+// جرّبنا الأول نطلّع الوش كطبقة شفافة فوق الرِّج، عشان حبر يفضل يرمش
+// وعينه تتبع الماوس وهو بيعبّر. الفكرة سليمة والمحاذاة اشتغلت (فرق
+// أقل من 1%)، بس النتيجة كانت وحشة: تظليل الرأس في الرسمة المولّدة
+// مختلف عن الأصل، فحدود القص كانت بتبان كرقعة أفتح على وشه. القياس
+// مامسكش ده - الصورة بالحجم الكامل هي اللي كشفته.
+//
+// فالتعبير بقى صورة كاملة، والثمن إن الرمشة وتتبّع النظرة بيقفوا
+// ثانيتين وقت التعبير. الطوفان والميل والنَفَس والنطة بيفضلوا شغالين
+// لأنهم على العنصر الحاوي مش على الصورة - فهو لسه عايش وهو بيعبّر،
+// بس عينه ثابتة.
+const MOOD_NAMES = ["happy", "sad", "surprised", "scared", "angry"];
+// التبديل بتلاشي - القطع المفاجئ بيبان زي الغلطة.
+const MOOD_FADE_MS = 190;
+
 // A blink is three drawings, not an on/off switch. Swapping straight
 // between open and shut reads as a glitch - a frame of half-closed on
 // the way down and again on the way up is what makes it read as an
@@ -165,10 +184,6 @@ function springStep(pos, vel, target, stiffness, damping) {
  */
 export default function OctopusMascot({
   size = 96,
-  // "neutral" is the live, blinking, eye-tracking rig. Any other mood is
-  // a single still frame (public/hebr/<mood>.png) - used for a moment of
-  // reaction, then handed back to neutral.
-  mood = "neutral",
   className = "",
 }) {
   const outerRef = useRef(null);
@@ -178,11 +193,29 @@ export default function OctopusMascot({
   const pupilRRef = useRef(null);
   const lidHalfRef = useRef(null);
   const lidShutRef = useRef(null);
-  const alive = mood === "neutral";
+  const [mood, setMood] = useState("neutral");
+  // الحلقة بتشتغل مرة واحدة وبتفضل شغالة، فلو قرت mood من الـstate
+  // هتفضل شايفة أول قيمة للأبد. الـref بتتحدّث من غير ما تعيد الحلقة.
+  const moodRef = useRef("neutral");
   const filterId = `octopus-ink-goo-${useId().replace(/:/g, "")}`;
   const [effectiveSize, setEffectiveSize] = useState(size);
   const { user } = useSession();
   const { open: openAssistantChat } = useAssistantChat();
+
+  // حبر متركّب مرة واحدة فوق الراوتر، فالصفحات مابتقدرش تمرّرله props.
+  // بيسمع على القناة بدل كده (lib/mascotMood.ts).
+  useEffect(
+    () =>
+      subscribeMascotMood((next) => {
+        moodRef.current = next;
+        setMood(next);
+
+        // نطة صغيرة مع تغيير المزاج - التعبير من غير حركة جسم بيبان
+        // زي ما الوش اتبدّل، مش زي ما هو حسّ بحاجة.
+        if (next !== "neutral") wrapRef.current?.__setBounce?.(0.3);
+      }),
+    []
+  );
 
   // Smaller footprint on narrow screens - a 120px mascot is a big chunk
   // of a ~390px-wide phone screen.
@@ -243,6 +276,10 @@ export default function OctopusMascot({
     };
 
     function doBlink(after) {
+      // مافيش رمشة وهو بيعبّر: صورة التعبير فيها العين مرسومة، فطبقة
+      // الجفن هتنزل على وش تاني وتبان زي الغلطة.
+      if (moodRef.current !== "neutral") return;
+
       const half = lidHalfRef.current;
       const shut = lidShutRef.current;
       if (!half || !shut) return;
@@ -565,6 +602,7 @@ export default function OctopusMascot({
         // are not the one part of him holding perfectly still.
         const py =
           gazeY * PUPIL_TRAVEL_Y * effectiveSize + idleBobY * 0.06;
+
         const t = `translate(calc(-50% + ${px}px), calc(-50% + ${py}px))`;
         pupilL.style.transform = t;
         pupilR.style.transform = t;
@@ -808,16 +846,15 @@ export default function OctopusMascot({
                 it was a stock animation we had no licence to; these are
                 cut from the drawing we own (tools/make_rig.py). */}
             <img
-              src={alive ? "/hebr/body.png" : `/hebr/${mood}.png`}
+              src="/hebr/body.png"
               alt=""
               aria-hidden="true"
               draggable={false}
               style={layerStyle}
             />
 
-            {alive && (
-              <>
-                {[
+            <>
+              {[
                   ["L", pupilLRef],
                   ["R", pupilRRef],
                 ].map(([side, ref]) => (
@@ -835,6 +872,10 @@ export default function OctopusMascot({
                       width: `${PUPIL_SIZE * 100}%`,
                       height: `${PUPIL_SIZE * 100}%`,
                       transform: "translate(-50%, -50%)",
+                      // صورة التعبير فيها عينين مرسومين، فالبؤبؤ
+                      // المتحرك لازم يختفي وإلا يبقى فيه أربع عيون.
+                      opacity: mood === "neutral" ? 1 : 0,
+                      transition: `opacity ${MOOD_FADE_MS}ms ease`,
                       pointerEvents: "none",
                       userSelect: "none",
                       WebkitUserDrag: "none",
@@ -846,6 +887,24 @@ export default function OctopusMascot({
                     layers rather than whole-body frames, so at half
                     closed the pupil still shows underneath instead of
                     the eye going blank for a frame. */}
+                {MOOD_NAMES.map((m) => (
+                  <img
+                    key={`mood-${m}`}
+                    src={`/hebr/mood-${m}.png`}
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                    style={{
+                      ...layerStyle,
+                      position: "absolute",
+                      inset: 0,
+                      opacity: mood === m ? 1 : 0,
+                      transition: `opacity ${MOOD_FADE_MS}ms ease`,
+                      pointerEvents: "none",
+                    }}
+                  />
+                ))}
+
                 {[
                   ["half", lidHalfRef],
                   ["shut", lidShutRef],
@@ -866,8 +925,7 @@ export default function OctopusMascot({
                     }}
                   />
                 ))}
-              </>
-            )}
+            </>
 
             <div
               ref={inkLayerRef}

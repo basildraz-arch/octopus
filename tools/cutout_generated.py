@@ -46,13 +46,25 @@ def cutout(src, dst, fix_colour=True, photo_bg=False):
         border.discard(0)
         solid = ~np.isin(lab, list(border))
 
-        # الظل اللي على الأرض مش خلفية ومش شخصية - لونه مختلف عن
-        # الركن فبيعدّي، وبيطلع بقعة رمادية طايرة تحت حبر. أكبر كتلة
-        # متصلة بتشيله لأنه منفصل عن الجسم.
+        # حاجتان منفصلتان عن الجسم بيطلعوا في الرندر: ظل الأرض،
+        # وعناصر مقصودة زي حروف Z فوق راسه وهو نايم. "أكبر كتلة بس"
+        # بتشيل الاتنين - وده كان هيضيّع الـZ.
+        #
+        # الفرق بينهم إن الظل **أغمق** من الخلفية وأي عنصر مرسوم
+        # بيبقى أفتح أو مختلف بوضوح. فبنقيس السطوع.
         lab2, n2 = ndimage.label(solid)
         if n2 > 1:
             sizes = ndimage.sum(solid, lab2, range(1, n2 + 1))
-            solid = lab2 == (int(np.argmax(sizes)) + 1)
+            main = int(np.argmax(sizes)) + 1
+            bg_lum = corner.mean()
+            keep = np.zeros_like(solid)
+            for i in range(1, n2 + 1):
+                part = lab2 == i
+                if i == main:
+                    keep |= part
+                elif part.sum() > 200 and a[part].mean() > bg_lum + 4:
+                    keep |= part          # عنصر مرسوم، مش ظل
+            solid = keep
     elif photo_bg:
         subject = ((b > r + 25) & (b > g + 35)) | ((g > r + 25) & (g > b + 25))
 
@@ -83,6 +95,24 @@ def cutout(src, dst, fix_colour=True, photo_bg=False):
         border = set(lab[0, :]) | set(lab[-1, :]) | set(lab[:, 0]) | set(lab[:, -1])
         border.discard(0)
         solid = ~np.isin(lab, list(border))
+
+    if photo_bg == "flat":
+        # ظل الأرض الملتصق بالجسم.
+        #
+        # الظل المنفصل بيتشال بقاعدة السطوع فوق، بس اللي تحت الأذرع
+        # ملتصق بالجسم فبيعدّي معاه وبيبان بقعة رمادية باهتة. الفرق
+        # إن حبر مشبّع (بنفسجي أو أخضر) والظل رمادي، والشرط محصور في
+        # النص السفلي عشان بياض العين ما يتأثرش.
+        h = a.shape[0]
+        sat = a.max(2) - a.min(2)
+        yy = np.arange(h)[:, None]
+        # جرّبنا نضيف شرط السطوع كمان (lum > 168) عشان نمسك آخر
+        # بقايا الظل - فأكل حتت من الأذرع، لأن الأجزاء المضيئة من
+        # الجسم بتوصل لنفس السطوع. بقعة باهتة أهون من ذراع ناقصة.
+        shadow = solid & (sat < 48) & (yy > h * 0.60)
+        if shadow.any():
+            solid = solid & ~shadow
+            print("  شال ظل ملتصق: %d px" % int(shadow.sum()))
 
     # نتوءات وثقوب صغيرة من التشويش
     solid = ndimage.binary_closing(solid, structure=np.ones((5, 5)))

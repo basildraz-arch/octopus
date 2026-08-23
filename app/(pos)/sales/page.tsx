@@ -11,6 +11,7 @@ import Receipt from "@/components/Receipt";
 
 import { getActiveItems } from "@/repositories/item.repository";
 import { createSale } from "@/repositories/sale.repository";
+import { setMascotMood } from "@/lib/mascotMood";
 import { getBusiness } from "@/repositories/business.repository";
 import { getCategories, type Category } from "@/repositories/category.repository";
 import { logCartEvent } from "@/repositories/cartAudit.repository";
@@ -319,6 +320,10 @@ export default function SalesPage() {
       setDiscountAmount("");
       setSelectedCustomerId(null);
 
+      // حبر بيفرح مع البيعة. مش زينة: الكاشير بيقف على الشاشة دي
+      // اليوم كله، وحاجة صغيرة بتتفاعل معاه بتفرق.
+      setMascotMood("happy", 2200);
+
       // Next customer, next session.
       cartSessionId.current = crypto.randomUUID();
 
@@ -332,6 +337,7 @@ export default function SalesPage() {
           : "حدث خطأ أثناء إتمام البيع";
 
       toast.error(message);
+      setMascotMood("surprised", 1800);
     } finally {
       setCheckingOut(false);
     }
