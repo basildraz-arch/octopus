@@ -2,10 +2,7 @@ import { supabase } from "@/lib/supabase";
 import type { CartItem } from "@/components/Cart";
 import type { PaymentMethod } from "@/types/sale";
 import { getOrCreateOpenShift } from "@/repositories/shift.repository";
-import {
-  checkAvailability,
-  drawFromBatches,
-} from "@/repositories/stockBatch.repository";
+import { checkAvailability } from "@/repositories/stockBatch.repository";
 import { logActivity } from "@/repositories/activity.repository";
 import { priceForTier, type PriceTier } from "@/lib/priceTier";
 
@@ -118,39 +115,27 @@ export async function createSale(
 
   if (saleError) throw saleError;
 
-  const costByItemId: Record<string, number> = {};
-
+  // سطر سطر، وكل سطر بيتكتب جوه قاعدة البيانات (ميجريشن 071).
+  //
+  // كان الكود هنا بينادي draw_stock_fifo، **بيستلم سعر شرا كل دفعة
+  // اتسحبت**، بيضرب ويجمع، وبيكتب sale_items.cost. يعني تكلفة كل
+  // صنف بيبيعه الكاشير كانت بتعدّي على متصفحه.
+  //
+  // sell_line بتعمل التلات خطوات جوه القاعدة: تسحب FIFO، تحسب
+  // التكلفة، وتكتب السطر. الراجع للمتصفح "تمام" وبس. التكلفة
+  // مابتتحسبش هنا أصلًا، فمفيش حاجة تتسرّب حتى لو حد قرا الكود كله.
   for (const line of cart) {
-    if (line.item.has_stock) {
-      const draws = await drawFromBatches(line.item.id, line.quantity, warehouseId);
+    const { error } = await supabase.rpc("sell_line", {
+      p_sale_id: sale.id,
+      p_item_id: line.item.id,
+      p_quantity: line.quantity,
+      p_warehouse_id: warehouseId,
+      p_unit_price: priceForTier(line.item, priceTier),
+      p_total: line.total,
+    });
 
-      costByItemId[line.item.id] = draws.reduce(
-        (sum, draw) => sum + draw.quantity * draw.buyPrice,
-        0
-      );
-    }
+    if (error) throw new Error(error.message);
   }
-
-  const saleItems = cart.map((line) => ({
-    sale_id: sale.id,
-    item_id: line.item.id,
-    quantity: line.quantity,
-    unit_price: priceForTier(line.item, priceTier),
-    total: line.total,
-    cost: line.item.has_stock ? costByItemId[line.item.id] : null,
-  }));
-
-  const { error: itemsError } = await supabase
-    .from("sale_items")
-    .insert(saleItems);
-
-  if (itemsError) throw itemsError;
-
-  // The item's stock and average cost are recalculated inside
-  // draw_stock_fifo, in the same transaction as the draw itself
-  // (migration 053). Writing them again from here would need the till
-  // to hold UPDATE on items, which is exactly what that migration
-  // took away.
 
   await logActivity(createdBy, businessId);
 
