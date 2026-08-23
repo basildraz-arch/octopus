@@ -325,9 +325,6 @@ export default function OctopusMascot({
       }, 1500 + Math.random() * 2500);
     }
 
-    scheduleBlink();
-    scheduleGlance();
-
     // التبويب لما يتخفي، المتصفح بيوقّف requestAnimationFrame بس
     // بيسيب المؤقتات شغالة - وبيبطّئها لحد مرة كل دقيقة. يعني رمشة
     // بدأت قبل ما تبدّل التبويب ممكن تفضل "مقفولة" لدقيقة كاملة،
@@ -346,6 +343,12 @@ export default function OctopusMascot({
         scheduleGlance();
       }
     };
+
+    // بيتنادى مرة على طول كمان، مش بس عند التغيير: لو الصفحة فتحت
+    // في تبويب مخفي من الأساس، الحدث مابيحصلش خالص - فكان بيفضل
+    // يرمش في الخلفية. اتكشفت بقياس من المتصفح: 8 فريمات رمشة
+    // والتبويب hidden.
+    handleVisibility();
 
     document.addEventListener("visibilitychange", handleVisibility);
 

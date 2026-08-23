@@ -10,6 +10,10 @@
 # favicon.ico تحديدًا لازم تتشال: المتصفحات بتفضّلها على أي أيقونة
 # تانية، فطول ما هي موجودة اللي بيظهر في التبويب هو أيقونة Next
 # الافتراضية مهما حطينا صور تانية. اتأكدنا من ده من المتصفح نفسه.
+#
+# types\plan.ts و repositories\plan.repository.ts بيشاوروا على جدول
+# plans اللي اتشال في ميجريشن 062. اتأكدنا بالبحث إن مفيش ولا ملف
+# بيستوردهم - وجودهم بيضلّل اللي يقرا الكود بعدين.
 
 Set-Location -LiteralPath $PSScriptRoot
 
@@ -18,7 +22,9 @@ $targets = @(
     "public\hebr-animation.json",
     "public\hebr\blink.png",
     "app\icon.svg",
-    "app\favicon.ico"
+    "app\favicon.ico",
+    "types\plan.ts",
+    "repositories\plan.repository.ts"
 )
 
 foreach ($t in $targets) {
