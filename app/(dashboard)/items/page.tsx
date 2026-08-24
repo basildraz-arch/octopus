@@ -44,6 +44,11 @@ export default function ItemsPage() {
     });
   }, [items, search]);
 
+  const lowStockCount = useMemo(
+    () => items.filter((i) => i.has_stock && i.stock <= i.minimum_stock).length,
+    [items]
+  );
+
   const totalStockValue = useMemo(() => {
     return items.reduce((sum, item) => {
       if (!item.has_stock) return sum;
@@ -53,90 +58,30 @@ export default function ItemsPage() {
   }, [items]);
 
   return (
-    <main className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold">
-            <Package size={28} />
-            إدارة الأصناف
-          </h1>
+    // الترتيب هنا مقصود: الصفحة دي شغلها إنك تلاقي صنف وتعدّله.
+    //
+    // كانت بتبدأ بأربع أزرار كاملة العرض وتلات كروت إحصائيات - يعني
+    // على الموبايل بتنزل خمس شاشات قبل ما تشوف أول منتج. والأسوأ إن
+    // "عدد الأصناف" كان مكتوب مرتين: في العنوان وفي كارت لوحده.
+    //
+    // دلوقتي: زرار واحد (اللي بتستعمله كل يوم)، البحث، الأصناف.
+    // والباقي - المخازن والفئات والاستيراد - حاجات بتتظبط مرة كل كام
+    // شهر، فمطويّة تحت. نفس نمط <details> المستعمل في الإعدادات
+    // والماستر.
+    <main className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="flex items-center gap-2 text-2xl font-bold sm:text-3xl">
+          <Package size={26} />
+          الأصناف
+        </h1>
 
-          <p className="mt-1 text-mist">
-            إجمالي الأصناف: {items.length}
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Link
-            href="/warehouses"
-            className="flex items-center justify-center gap-2 rounded-lg bg-ink-700 px-5 py-3 text-center font-semibold transition hover:bg-ink-600"
-          >
-            <Warehouse size={18} />
-            إدارة المخازن
-          </Link>
-
-          <Link
-            href="/categories"
-            className="flex items-center justify-center gap-2 rounded-lg bg-ink-700 px-5 py-3 text-center font-semibold transition hover:bg-ink-600"
-          >
-            <Tag size={18} />
-            إدارة الفئات
-          </Link>
-
-          <Link
-            href="/import"
-            className="flex items-center justify-center gap-2 rounded-lg bg-ink-700 px-5 py-3 text-center font-semibold transition hover:bg-ink-600"
-          >
-            <FileSpreadsheet size={18} />
-            استيراد من ملف
-          </Link>
-
-          <Link
-            href="/items/new"
-            className="flex items-center justify-center gap-2 rounded-lg bg-splash px-5 py-3 text-center font-semibold text-ink-950 transition hover:bg-splash-deep"
-          >
-            <Plus size={18} />
-            إضافة صنف
-          </Link>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
-          <p className="text-sm text-mist">
-            عدد الأصناف
-          </p>
-
-          <h2 className="mt-2 text-3xl font-bold">
-            {items.length}
-          </h2>
-        </div>
-
-        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
-          <p className="text-sm text-mist">
-            قيمة المخزون
-          </p>
-
-          <h2 className="mt-2 text-3xl font-bold text-green-400">
-            {totalStockValue.toFixed(2)} ج
-          </h2>
-        </div>
-
-        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
-          <p className="text-sm text-mist">
-            أصناف قليلة
-          </p>
-
-          <h2 className="mt-2 text-3xl font-bold text-red-400">
-            {
-              items.filter(
-                (i) =>
-                  i.has_stock &&
-                  i.stock <= i.minimum_stock
-              ).length
-            }
-          </h2>
-        </div>
+        <Link
+          href="/items/new"
+          className="flex min-h-11 items-center gap-2 rounded-lg bg-splash px-4 font-semibold text-ink-950 transition hover:bg-splash-deep"
+        >
+          <Plus size={18} />
+          إضافة صنف
+        </Link>
       </div>
 
       <div className="relative">
@@ -153,6 +98,24 @@ export default function ItemsPage() {
         />
       </div>
 
+      {/* سطر واحد بدل تلات كروت. الأرقام اللي بتتقرا بسرعة مش
+          محتاجة كارت لكل واحد. */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-1 text-sm text-mist">
+        <span>
+          {items.length} صنف
+        </span>
+
+        <span className="text-green-400">
+          قيمة المخزون {totalStockValue.toFixed(0)} ج
+        </span>
+
+        {lowStockCount > 0 && (
+          <span className="text-red-400">
+            {lowStockCount} قليل
+          </span>
+        )}
+      </div>
+
       <div className="overflow-hidden rounded-xl border border-ink-600 bg-ink-800">
         {loading ? (
           <div className="p-8 text-center">
@@ -165,6 +128,38 @@ export default function ItemsPage() {
           />
         )}
       </div>
+
+      <details className="rounded-xl border border-ink-600 bg-ink-900">
+        <summary className="cursor-pointer select-none p-4 font-semibold">
+          إعدادات الأصناف
+        </summary>
+
+        <div className="flex flex-col gap-2 p-4 pt-0 sm:flex-row">
+          <Link
+            href="/warehouses"
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-ink-700 px-4 font-semibold transition hover:bg-ink-600"
+          >
+            <Warehouse size={18} />
+            المخازن
+          </Link>
+
+          <Link
+            href="/categories"
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-ink-700 px-4 font-semibold transition hover:bg-ink-600"
+          >
+            <Tag size={18} />
+            الفئات
+          </Link>
+
+          <Link
+            href="/import"
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-ink-700 px-4 font-semibold transition hover:bg-ink-600"
+          >
+            <FileSpreadsheet size={18} />
+            استيراد من ملف
+          </Link>
+        </div>
+      </details>
     </main>
   );
 }

@@ -20,6 +20,7 @@ import {
 } from "@/repositories/category.repository";
 import { getWarehouses } from "@/repositories/warehouse.repository";
 import { getStockByWarehouse } from "@/repositories/stockBatch.repository";
+import { getItemCost } from "@/repositories/itemCost.repository";
 import { useSession } from "@/hooks/useSession";
 import { getExampleHints } from "@/lib/examples";
 import { useToast } from "@/hooks/useToast";
@@ -97,7 +98,10 @@ export default function ItemForm({ item }: Props) {
           sale_method: item.sale_method,
           unit: item.unit,
 
-          buy_price: item.buy_price ?? 0,
+          // بيتملا بعدين من item_costs. القراءة المباشرة ممنوعة
+          // (ميجريشن 070) فالقيمة هنا بتبقى undefined دايمًا - وde
+          // اللي كان بيخلي الحفظ يمسح تكلفة الصنف.
+          buy_price: 0,
           sell_price: item.sell_price,
 
           stock: item.stock,
@@ -123,6 +127,18 @@ export default function ItemForm({ item }: Props) {
   const itemType = watch("item_type");
   const name = watch("name");
 
+  // التكلفة الحقيقية لصنف موجود.
+  //
+  // undefined = لسه بنجيبها أو اللي فاتح الشاشة مالوش صلاحية يشوفها.
+  // الفرق بينها وبين صفر مهم: صفر رقم، وundefined معناها "مش من حقك".
+  const [realCost, setRealCost] = useState<number | undefined>();
+
+  useEffect(() => {
+    if (!item) return;
+
+    getItemCost(item.id).then(setRealCost);
+  }, [item]);
+
   useEffect(() => {
     setDuplicateItem(null);
   }, [name]);
@@ -147,7 +163,14 @@ export default function ItemForm({ item }: Props) {
 
     try {
       if (item) {
-        const { stock: newStock, ...rest } = values;
+        // buy_price بيتشال من التعديل عن قصد.
+        //
+        // تكلفة صنف موجود بتتحسب من دفعات المخزون (نفس قاعدة stock)،
+        // والقاعدة بترفض أي رقم جاي من هنا أصلًا بعد ميجريشن 072.
+        // بعتُه هنا ماكانش بيعمل غير إنه يوهم إن الحقل شغال.
+        const { stock: newStock, buy_price: _cost, ...rest } = values;
+
+        void _cost;
 
         await updateItem(item.id, {
           ...rest,
@@ -324,16 +347,33 @@ export default function ItemForm({ item }: Props) {
               سعر الشراء
             </label>
 
-            <Input
-              type="number"
-              step="0.01"
-              {...register("buy_price")}
-              className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
-            />
+            {item ? (
+              /* صنف موجود: التكلفة بتتحسب من دفعات المخزون، فالرقم
+                 بيتعرض ومابيتكتبش. حقل قابل للكتابة هنا كان بيكدب -
+                 القاعدة بترفض اللي بيتبعت منه (ميجريشن 072). */
+              <>
+                <div className="rounded-md border border-ink-600 bg-ink-900 px-3 py-2 text-paper">
+                  {realCost === undefined ? "—" : `${realCost.toFixed(2)} ج`}
+                </div>
 
-            <p className="mt-1 text-sm text-red-500">
-              {errors.buy_price?.message}
-            </p>
+                <p className="mt-1 text-xs text-mist">
+                  بيتحسب لوحده من المشتريات. عشان تغيّره، سجّل عملية شرا.
+                </p>
+              </>
+            ) : (
+              <>
+                <Input
+                  type="number"
+                  step="0.01"
+                  {...register("buy_price")}
+                  className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
+                />
+
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.buy_price?.message}
+                </p>
+              </>
+            )}
           </div>
         )}
 

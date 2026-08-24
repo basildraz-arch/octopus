@@ -5,6 +5,7 @@ import {
   getCurrentStockAndCost,
 } from "@/repositories/stockBatch.repository";
 import { getDefaultWarehouse } from "@/repositories/warehouse.repository";
+import { getItemCost } from "@/repositories/itemCost.repository";
 
 import type {
   Item,
@@ -142,16 +143,25 @@ export async function adjustItemStock(
   const warehouse = await getDefaultWarehouse(businessId);
 
   if (diff > 0) {
-    // التكلفة بتاعة الدفعة الجديدة. لو اللي بيعدّل مالوش صلاحية
-    // يشوف التكلفة فمش هيوصل للشاشة دي أصلًا (manage_items)، بس
-    // الاحتياط أرخص من دفعة بتكلفة صفر.
+    // تكلفة الدفعة الجديدة لازم تتجاب من الباب بتاعها.
+    //
+    // كان مكتوب item.buy_price ?? 0 - وde بقى **صفر دايمًا** بعد
+    // ميجريشن 070، لأن getItems مابترجّعش العمود. يعني كل تصحيح جرد
+    // بالزيادة كان بيضيف بضاعة بتكلفة صفر وينزّل متوسط التكلفة،
+    // فتقرير الأرباح يطلع أعلى من الحقيقة. من غير أي رسالة خطأ.
+    //
+    // المتوسط الحالي هو أقرب تقدير عندنا - البضاعة الزيادة دي أصلًا
+    // مالهاش فاتورة شرا، عشان كده هي "تصحيح جرد" مش "شرا".
+    const knownCost =
+      (await getItemCost(item.id)) ?? (await getCurrentStockAndCost(item.id)).averageCost;
+
     await createBatch(
       businessId,
       item.id,
       warehouse.id,
       null,
       diff,
-      item.buy_price ?? 0
+      knownCost
     );
   } else {
     await drawFromBatches(item.id, Math.abs(diff), warehouse.id);

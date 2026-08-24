@@ -3,13 +3,38 @@ import { createClient } from "@supabase/supabase-js";
 
 import { verifyPin } from "@/lib/pin";
 import { MAX_FAILED_ATTEMPTS, LOCKOUT_MINUTES } from "@/lib/pinRules";
+import { clientKey, rateLimit } from "@/lib/rateLimit";
 
 // Deliberately vague: the same message for "no such cashier", "no PIN
 // set" and "wrong PIN", so this endpoint can't be used to work out
 // which cashiers exist or which have PINs configured.
 const GENERIC_ERROR = "الرقم السري غلط";
 
+// القفل بتاع الحساب (٥ محاولات / ٥ دقايق) بيحمي كاشير واحد. بس
+// /api/auth/shop-staff بترجّع كل موظفي المحل بالـid، فمهاجم واحد يقدر
+// يلف على كل الموظفين بالتوازي - كل واحد بحصّته الكاملة - ويطلّع
+// مئات المحاولات في الدقيقة من نفس الجهاز من غير ما يوصل لقفل أي
+// حساب. الحد ده بيقفل التوسّع ده، ومابيضايقش كاشير بيغلط مرتين.
+const MAX_ATTEMPTS_PER_IP = 30;
+const WINDOW_MS = 60_000;
+
 export async function POST(request: NextRequest) {
+  const limit = rateLimit(
+    clientKey(request, "pin-login"),
+    MAX_ATTEMPTS_PER_IP,
+    WINDOW_MS
+  );
+
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "محاولات كتير - استنى شوية" },
+      {
+        status: 429,
+        headers: { "Retry-After": String(limit.retryAfterSeconds) },
+      }
+    );
+  }
+
   const body = await request.json().catch(() => null);
 
   const employeeId = body?.employeeId;

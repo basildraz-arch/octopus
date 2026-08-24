@@ -4,7 +4,10 @@ import type { PaymentMethod } from "@/types/sale";
 import { getOrCreateOpenShift } from "@/repositories/shift.repository";
 import { checkAvailability } from "@/repositories/stockBatch.repository";
 import { logActivity } from "@/repositories/activity.repository";
-import { priceForTier, type PriceTier } from "@/lib/priceTier";
+// priceForTier اتشال من هنا عن قصد: السعر بقى بيتحدد في القاعدة
+// (record_sale)، والملف ده مابقاش يعرف بكام بيتباع. لسه مستعمل في
+// الشاشات عشان توري السعر للكاشير قبل ما يبيع.
+import type { PriceTier } from "@/lib/priceTier";
 
 export type SaleWithItems = {
   id: string;
@@ -91,53 +94,39 @@ export async function createSale(
 
   const shift = await getOrCreateOpenShift(businessId);
 
-  const subtotal = cart.reduce(
-    (sum, line) => sum + line.total,
-    0
-  );
-
-  const total = subtotal - discountAmount;
-
-  const { data: sale, error: saleError } = await supabase
-    .from("sales")
-    .insert({
-      business_id: businessId,
-      created_by: createdBy,
-      shift_id: shift.id,
-      payment_method: paymentMethod,
-      total,
-      discount_amount: discountAmount,
-      price_tier: priceTier,
-      customer_id: customerId,
-    })
-    .select()
-    .single();
-
-  if (saleError) throw saleError;
-
-  // سطر سطر، وكل سطر بيتكتب جوه قاعدة البيانات (ميجريشن 071).
+  // الفاتورة كلها نداء واحد (ميجريشن 075).
   //
-  // كان الكود هنا بينادي draw_stock_fifo، **بيستلم سعر شرا كل دفعة
-  // اتسحبت**، بيضرب ويجمع، وبيكتب sale_items.cost. يعني تكلفة كل
-  // صنف بيبيعه الكاشير كانت بتعدّي على متصفحه.
+  // اللي اتغير مش شكلي - حاجتين:
   //
-  // sell_line بتعمل التلات خطوات جوه القاعدة: تسحب FIFO، تحسب
-  // التكلفة، وتكتب السطر. الراجع للمتصفح "تمام" وبس. التكلفة
-  // مابتتحسبش هنا أصلًا، فمفيش حاجة تتسرّب حتى لو حد قرا الكود كله.
-  for (const line of cart) {
-    const { error } = await supabase.rpc("sell_line", {
-      p_sale_id: sale.id,
-      p_item_id: line.item.id,
-      p_quantity: line.quantity,
-      p_warehouse_id: warehouseId,
-      p_unit_price: priceForTier(line.item, priceTier),
-      p_total: line.total,
-    });
+  // ١. **مفيش أسعار بتتبعت.** بنبعت الصنف والكمية بس، والقاعدة
+  //    بتجيب السعر من items حسب التسعيرة. قبل كده الكود هنا كان
+  //    بيحسب السعر ويبعته كرقم، والقاعدة بتكتبه زي ما هو - يعني
+  //    أي حد يفتح أدوات المطوّر كان يقدر يبيع صنف بـ٢٣٠ بجنيه.
+  //    اتجرّب وعدّى فعلًا.
+  //
+  // ٢. **الفاتورة بقت عملية واحدة.** كان كل سطر بينداله sell_line
+  //    لوحده، فلو النت قطع في النص، اللي فات بيبقى اتخصم من
+  //    المخزون والباقي لأ.
+  //
+  // الخصم لسه بيتبعت لأنه رقم المالك بيسمّيه وقت البيع - بس القاعدة
+  // بتتحقق منه: صلاحية give_discount، وحد max_discount_percent،
+  // ومايزيدش عن قيمة الفاتورة.
+  const { data: saleId, error } = await supabase.rpc("record_sale", {
+    p_shift_id: shift.id,
+    p_warehouse_id: warehouseId,
+    p_payment_method: paymentMethod,
+    p_price_tier: priceTier,
+    p_discount: discountAmount,
+    p_customer_id: customerId,
+    p_lines: cart.map((line) => ({
+      item_id: line.item.id,
+      quantity: line.quantity,
+    })),
+  });
 
-    if (error) throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   await logActivity(createdBy, businessId);
 
-  return sale;
+  return { id: saleId as string };
 }

@@ -45,3 +45,17 @@ next-env.d.ts
 
 # build output captured for review
 build.log
+types.log
+
+# مخرجات رندر الريلز.
+#
+# `marketing/reel/frames/` فيها ١٣٠ ألف صورة PNG - كل كادر لوحده.
+# `git add -A` كان بيحاول يضيفهم كلهم فالرفع بيقف ساعات، والريبو
+# بيتضخّم للأبد لأن Git بيحتفظ بكل نسخة من كل ملف.
+#
+# دي مخرجات، مش مصدر: الاسكريبت اللي بيولّدهم (build_frames.py)
+# متحفوظ، والفيديو النهائي بيتحفظ لوحده. الكادرات نفسها بتتولّد تاني
+# في أي وقت.
+marketing/reel/frames/
+marketing/reel/*.wav
+marketing/reel/*.mp4

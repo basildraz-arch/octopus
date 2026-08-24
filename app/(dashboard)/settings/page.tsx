@@ -43,6 +43,8 @@ import {
   BUSINESS_TYPE_LABELS,
   BUSINESS_TYPE_OPTIONS,
 } from "@/lib/examples";
+import { getBusinessTemplates } from "@/repositories/businessTemplate.repository";
+import type { BusinessTemplate } from "@/types/businessTemplate";
 import {
   CHANGE_REQUEST_STATUS_LABELS,
   type ChangeRequest,
@@ -79,6 +81,18 @@ export default function SettingsPage() {
   const [businessType, setBusinessType] = useState<BusinessType | "">("");
   const [savingType, setSavingType] = useState(false);
 
+  // أنواع النشاط بتتقرا من business_templates - نفس المصدر اللي
+  // شاشة التسجيل بتقرا منه.
+  //
+  // كانت مكتوبة في lib/examples.ts هنا بس، فالمصدرين اختلفوا فعلًا:
+  // في القاعدة coffee = "كافيه / كوفي شوب"، وفي الكود coffee =
+  // "محمصة / محل بن وقهوة" وrestaurant = "مطعم / كافيه". يعني نفس
+  // المحل كان بياخد اسمين مختلفين حسب الشاشة اللي بيبص منها.
+  //
+  // ولأن الاسطمبة اللي بتتضاف من الماستر ماكانتش بتظهر هنا خالص،
+  // إضافة نشاط جديد كانت بتحتاج رفعة كود. دلوقتي بقت صف في جدول.
+  const [templates, setTemplates] = useState<BusinessTemplate[]>([]);
+
   const [receiptPaper, setReceiptPaper] = useState("thermal_80");
   const [savingPaper, setSavingPaper] = useState(false);
 
@@ -102,6 +116,11 @@ export default function SettingsPage() {
   const [pricing, setPricing] = useState<PricingSettings | null>(null);
   const [priceOverride, setPriceOverride] = useState<number | null>(null);
   const [limits, setLimits] = useState({ staff: 2, warehouses: 1, branches: 1 });
+
+  useEffect(() => {
+    // مش محتاجة user - الاسطمبات مالهاش علاقة بالمحل.
+    getBusinessTemplates().then(setTemplates);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -315,7 +334,13 @@ export default function SettingsPage() {
           requestedBy: user.id,
           kind: "change_business_type",
           payload: { business_type: value },
-          note: `تغيير نوع النشاط لـ ${BUSINESS_TYPE_LABELS[value]}`,
+          // الاسم من الاسطمبة الأول - BUSINESS_TYPE_LABELS فيها
+          // الأنواع الأصلية بس، وأي نوع جديد بيطلّع undefined.
+          note: `تغيير نوع النشاط لـ ${
+            templates.find((t) => t.business_type === value)?.label ??
+            BUSINESS_TYPE_LABELS[value] ??
+            value
+          }`,
         });
 
         toast.success("الطلب اتبعت - هيتنفذ بعد الموافقة");
@@ -510,7 +535,12 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <details className="rounded-xl border border-ink-600 bg-ink-900/40" open>
+      {/* مقفولة زي أختيها. كانت مفتوحة، وجواها خمس بطاقات (تصدير
+          البيانات، نوع النشاط، الفاتورة المطبوعة، أسماء التسعيرات،
+          الخصم) - فأول ما تفتح الإعدادات تلاقي حيط، والمجموعتين
+          التانيتين تحت الطية. وهي مقفولة الصفحة بقت تلات سطور
+          مقروءة. */}
+      <details className="rounded-xl border border-ink-600 bg-ink-900/40">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
           <span>
             <span className="block text-lg font-bold text-paper">
@@ -548,9 +578,21 @@ export default function SettingsPage() {
             اختار نوع نشاطك
           </option>
 
-          {BUSINESS_TYPE_OPTIONS.map((type) => (
-            <option key={type} value={type}>
-              {BUSINESS_TYPE_LABELS[type]}
+          {/* لو القراءة وقعت (مفيش نت مثلًا) بنرجع للقايمة المكتوبة
+              في الكود بدل ما القايمة تبقى فاضية والمالك ما يقدرش
+              يغيّر نوع نشاطه خالص. */}
+          {(templates.length > 0
+            ? templates.map((t) => ({
+                value: t.business_type,
+                label: `${t.icon} ${t.label}`,
+              }))
+            : BUSINESS_TYPE_OPTIONS.map((type) => ({
+                value: type,
+                label: BUSINESS_TYPE_LABELS[type],
+              }))
+          ).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>

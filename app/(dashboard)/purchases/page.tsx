@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Truck, Save } from "lucide-react";
 
 import { getItems } from "@/repositories/item.repository";
+import { attachCosts } from "@/repositories/itemCost.repository";
 import { createPurchase } from "@/repositories/purchase.repository";
 import { useSession } from "@/hooks/useSession";
 import { useWarehouseSelection } from "@/hooks/useWarehouseSelection";
@@ -31,7 +32,10 @@ export default function PurchasesPage() {
   async function load() {
     setLoading(true);
 
-    const data = await getItems();
+    // attachCosts عشان سطر "سعر الشراء الحالي" يوري رقم.
+    // getItems مابترجّعش العمود (ميجريشن 070) فالسطر كان بيوري شرطة
+    // دايمًا - حتى لصاحب المحل.
+    const data = await attachCosts(await getItems());
 
     setItems(data);
 
@@ -163,7 +167,10 @@ export default function PurchasesPage() {
         {selectedItem && (
           <p className="text-sm text-mist">
             المخزون الحالي: {selectedItem.stock} {selectedItem.unit} — سعر
-            الشراء الحالي: {selectedItem.buy_price ?? "—"} ج
+            الشراء الحالي:{" "}
+            {selectedItem.buy_price === undefined
+              ? "—"
+              : `${selectedItem.buy_price.toFixed(2)} ج`}
           </p>
         )}
 

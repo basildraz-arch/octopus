@@ -13,6 +13,7 @@ import {
   getCartAuditByDate,
   summarizeCartSessions,
 } from "@/repositories/cartAudit.repository";
+import { supabase } from "@/lib/supabase";
 import { useSession } from "@/hooks/useSession";
 import { contextFor, labelsFor, visibleTiles } from "@/lib/navItems";
 
@@ -40,6 +41,7 @@ export default function DashboardHomePage() {
   const [shift, setShift] = useState<Shift | null>(null);
   const [todayReport, setTodayReport] = useState<ReportSummary | null>(null);
   const [suspiciousToday, setSuspiciousToday] = useState(0);
+  const [stockValue, setStockValue] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,16 +57,30 @@ export default function DashboardHomePage() {
 
     const today = todayString();
 
-    const [itemsData, openShift, report, auditEvents] = await Promise.all([
-      getItems(),
-      getOpenShift(user.business_id),
-      getReportSummary(user.business_id, today, today),
-      getCartAuditByDate(user.business_id, today),
-    ]);
+    const [itemsData, openShift, report, auditEvents, invValue] =
+      await Promise.all([
+        getItems(),
+        getOpenShift(user.business_id),
+        getReportSummary(user.business_id, today, today),
+        getCartAuditByDate(user.business_id, today),
+
+        // القيمة بتتجمّع جوه القاعدة. الجمع في المتصفح مبقاش ينفع:
+        // items.buy_price ممنوع للقراءة (ميجريشن 070) فالمجموع كان
+        // بيطلع صفر لكل الناس - حتى صاحب المحل.
+        //
+        // بننادي الـRPC مباشرة مش getInventoryValue، عشان دي بتحوّل
+        // الـnull لصفر (المساعد محتاج رقم). هنا الفرق مهم: null
+        // معناها "مش من حقك تشوف القيمة" فبنخفي السطر خالص، وصفر
+        // معناها "المخزن فاضي" وde رقم يستاهل يتعرض.
+        supabase.rpc("inventory_value"),
+      ]);
 
     setItems(itemsData);
     setShift(openShift);
     setTodayReport(report);
+    setStockValue(
+      invValue.error || invValue.data == null ? null : Number(invValue.data)
+    );
 
     setSuspiciousToday(
       summarizeCartSessions(auditEvents).filter(
@@ -77,12 +93,6 @@ export default function DashboardHomePage() {
 
   const dailyTiles = visibleTiles(ctx, labels, "daily");
   const managementTiles = visibleTiles(ctx, labels, "management");
-
-  const stockValue = items.reduce(
-    (sum, item) =>
-      item.has_stock ? sum + item.stock * (item.buy_price ?? 0) : sum,
-    0
-  );
 
   if (loading) {
     return <main className="p-8 text-center text-mist">جارِ التحميل...</main>;
@@ -114,9 +124,11 @@ export default function DashboardHomePage() {
           <span>
             {items.length} من {labels.items}
           </span>
-          <span>
-            {labels.stock} بـ {stockValue.toFixed(0)} ج
-          </span>
+          {stockValue !== null && (
+            <span>
+              {labels.stock} بـ {stockValue.toFixed(0)} ج
+            </span>
+          )}
         </div>
       </div>
 
