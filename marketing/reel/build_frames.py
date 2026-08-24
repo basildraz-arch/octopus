@@ -9,7 +9,7 @@ OUT = os.path.join(BASE, "marketing", "reel", "frames")
 os.makedirs(OUT, exist_ok=True)
 
 W, H, FPS, DUR = 1080, 1920, 30, 16
-TOTAL = W * H * DUR * FPS
+TOTAL = DUR * FPS
 
 BG_TOP = (5, 7, 14)      # #05070E
 BG_BOT = (10, 18, 34)    # subtle deep blue gradient
