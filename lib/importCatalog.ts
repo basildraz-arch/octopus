@@ -182,6 +182,7 @@ export function parseCatalog(rows: CellValue[][]): ParsedCatalog {
 
   const items: ImportedItem[] = [];
   const seen = new Set<string>();
+  const seenCodes = new Set<string>();
 
   for (let i = headerIndex + 1; i < rows.length; i++) {
     const row = rows[i];
@@ -215,6 +216,26 @@ export function parseCatalog(rows: CellValue[][]): ParsedCatalog {
       continue;
     }
 
+    // الباركود عليه قيد unique على مستوى القاعدة كلها (مش لكل محل)،
+    // فأي تكرار جوه الملف أو حتى مع بيزنس تاني هيوقع الإدخال الكل.
+    // نشوفه هنا ونسكّت الصف برسالة واضحة بدل ما الكل يقع بصمت.
+    const code =
+      cols.code === -1 ? null : String(row[cols.code] ?? "").trim() || null;
+
+    if (code) {
+      const codeKey = code.toLowerCase();
+
+      if (seenCodes.has(codeKey)) {
+        skipped.push({
+          row: rowNumber,
+          reason: `الكود "${code}" مكرر في الملف`,
+        });
+        continue;
+      }
+
+      seenCodes.add(codeKey);
+    }
+
     seen.add(key);
 
     items.push({
@@ -223,7 +244,7 @@ export function parseCatalog(rows: CellValue[][]): ParsedCatalog {
         cols.category === -1
           ? null
           : String(row[cols.category] ?? "").trim() || null,
-      code: cols.code === -1 ? null : String(row[cols.code] ?? "").trim() || null,
+      code,
       unit:
         (cols.unit === -1 ? "" : String(row[cols.unit] ?? "").trim()) || "قطعة",
       price1,
