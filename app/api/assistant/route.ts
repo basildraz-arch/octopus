@@ -163,7 +163,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: 503 });
     }
 
-    console.error(err);
+    console.error(
+      "assistant: question failed:",
+      err instanceof Error
+        ? `${err.name}: ${err.message}\n${err.stack?.slice(0, 800)}`
+        : JSON.stringify(err)
+    );
 
     return NextResponse.json(
       { error: "حدث خطأ أثناء معالجة السؤال" },
