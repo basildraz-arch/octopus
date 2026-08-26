@@ -149,13 +149,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const result = await answerQuestion(
-      supabase,
-      appUser.business_id,
-      trimmed
-    );
+let stage = "freeform_answer";
+    try {
+      const result = await answerQuestion(
+        supabase,
+        appUser.business_id,
+        trimmed
+      );
 
-    return NextResponse.json({ ...result, remaining: spend.remaining });
+      return NextResponse.json({ ...result, remaining: spend.remaining });
+} catch (err) {
+      console.error(
+        `assistant: failed at stage [${stage}]:`,
+        err instanceof Error
+          ? `${err.name}: ${err.message}\n${String(err.stack).slice(0, 600)}`
+          : JSON.stringify(err)
+      );
+      throw err;
+    }
   } catch (err) {
     // Worth telling apart: "come back tomorrow" is a different
     // instruction to the shop than "something broke".
