@@ -133,10 +133,7 @@ export async function getExistingItemNames(
     .select("name")
     .eq("business_id", businessId);
 
-  if (error) {
-    console.error("Supabase Error:", error.message);
-    return new Set();
-  }
+  if (error) throw error;
 
   return new Set((data ?? []).map((r) => r.name.trim().toLowerCase()));
 }
@@ -149,10 +146,7 @@ export async function getExistingCategoryMap(
     .select("id, name")
     .eq("business_id", businessId);
 
-  if (error) {
-    console.error("Supabase Error:", error.message);
-    return {};
-  }
+  if (error) throw error;
 
   const byName: Record<string, string> = {};
 

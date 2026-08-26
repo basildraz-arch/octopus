@@ -23,6 +23,7 @@ import { getStockByWarehouse } from "@/repositories/stockBatch.repository";
 import { getItemCost } from "@/repositories/itemCost.repository";
 import { useSession } from "@/hooks/useSession";
 import { getExampleHints } from "@/lib/examples";
+import { hasFeature } from "@/lib/features";
 import { useToast } from "@/hooks/useToast";
 
 import { itemSchema, ItemSchema } from "./validation";
@@ -43,6 +44,12 @@ export default function ItemForm({ item }: Props) {
   // Examples drawn from this shop's trade rather than generic ones.
   const hints = getExampleHints(business);
   const toast = useToast();
+  const tiersEnabled = hasFeature(business, "price_tiers");
+  const tierLabels = business?.price_tier_labels ?? [
+    "التسعيرة الأولى",
+    "التسعيرة الثانية",
+    "التسعيرة الثالثة",
+  ];
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [duplicateItem, setDuplicateItem] = useState<Item | null>(null);
@@ -103,6 +110,8 @@ export default function ItemForm({ item }: Props) {
           // اللي كان بيخلي الحفظ يمسح تكلفة الصنف.
           buy_price: 0,
           sell_price: item.sell_price,
+          sell_price_2: item.sell_price_2 ?? null,
+          sell_price_3: item.sell_price_3 ?? null,
 
           stock: item.stock,
           minimum_stock: item.minimum_stock,
@@ -118,6 +127,8 @@ export default function ItemForm({ item }: Props) {
 
           buy_price: 0,
           sell_price: 0,
+          sell_price_2: null,
+          sell_price_3: null,
 
           stock: 0,
           minimum_stock: 0,
@@ -379,7 +390,7 @@ export default function ItemForm({ item }: Props) {
 
         <div>
           <label className="mb-2 block text-sm">
-            سعر البيع
+            {tiersEnabled ? tierLabels[0] : "سعر البيع"}
           </label>
 
           <Input
@@ -393,6 +404,52 @@ export default function ItemForm({ item }: Props) {
             {errors.sell_price?.message}
           </p>
         </div>
+
+        {tiersEnabled && (
+          <>
+            <div>
+              <label className="mb-2 block text-sm">
+                {tierLabels[1]}
+              </label>
+
+              <Input
+                type="number"
+                step="0.01"
+                {...register("sell_price_2", {
+                  setValueAs: (value) =>
+                    value === "" ? null : Number(value),
+                })}
+                placeholder={`لو فاضية هتستخدم ${tierLabels[0]}`}
+                className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
+              />
+
+              <p className="mt-1 text-sm text-red-500">
+                {errors.sell_price_2?.message}
+              </p>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm">
+                {tierLabels[2]}
+              </label>
+
+              <Input
+                type="number"
+                step="0.01"
+                {...register("sell_price_3", {
+                  setValueAs: (value) =>
+                    value === "" ? null : Number(value),
+                })}
+                placeholder={`لو فاضية هتستخدم ${tierLabels[0]}`}
+                className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
+              />
+
+              <p className="mt-1 text-sm text-red-500">
+                {errors.sell_price_3?.message}
+              </p>
+            </div>
+          </>
+        )}
 
         {itemType === "product" && (
           <>
