@@ -165,9 +165,10 @@ export async function POST(request: NextRequest) {
 
     console.error(
       "assistant: question failed:",
-      err instanceof Error
-        ? `${err.name}: ${err.message}\n${err.stack?.slice(0, 800)}`
-        : JSON.stringify(err)
+      JSON.stringify(
+        err,
+        Object.getOwnPropertyNames(err as object).concat(["cause"])
+      ).slice(0, 1000)
     );
 
     return NextResponse.json(
