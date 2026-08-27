@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Printer } from "lucide-react";
+import { Printer, MessageCircle } from "lucide-react";
 
 import type { CartItem } from "@/components/Cart";
 import type { Business } from "@/types/business";
 import { hasFeature } from "@/lib/features";
 import type { PriceTier } from "@/lib/priceTier";
+import { buildReceiptText, whatsAppLink } from "@/lib/whatsappReceipt";
 
 type Props = {
   cart: CartItem[];
@@ -22,6 +23,11 @@ type Props = {
   // A price quote, not a sale. Marked loudly so it can never be
   // mistaken for proof of payment.
   quote?: boolean;
+
+  // تليفون العميل لو البيعة على الحساب. لو مفيش، زرار واتساب بيفتح
+  // "اختار جهة اتصال" بدل ما يختفي - الفاتورة نفسها هي الفايدة،
+  // والرقم بيوفّر خطوة بس.
+  customerPhone?: string | null;
 };
 
 // Printable width in millimetres. 58mm and 80mm rolls lose a few mm
@@ -67,6 +73,7 @@ export default function Receipt({
   priceTier = 1,
   autoPrint = false,
   quote = false,
+  customerPhone,
 }: Props) {
   const subtotal = cart.reduce((sum, line) => sum + line.total, 0);
   const printed = useRef(false);
@@ -106,7 +113,7 @@ export default function Receipt({
       <div
         dir={english ? "ltr" : "rtl"}
         style={{ width: paper.width }}
-        className="max-h-full overflow-y-auto rounded-2xl bg-white p-4 text-gray-900 print:max-h-none print:overflow-visible print:rounded-none print:p-2 print:shadow-none"
+        className="max-h-full overflow-y-auto rounded-2xl bg-white p-4 text-gray-900 print:max-h-none print:overflow-visible print:rounded-none print:p-2 print:shadow-none print:translate-x-[3mm]"
       >
         {quote && (
           <p className="mb-2 rounded border border-gray-900 py-1 text-center text-xs font-bold">
@@ -181,6 +188,29 @@ export default function Receipt({
         <p className="mt-3 text-center text-xs text-gray-500">{t.thanks}</p>
 
         <div className="mt-4 flex gap-2 print:hidden">
+          {/* واتساب: رابط wa.me برسالة مكتوبة. مابيبعتش لوحده -
+              بيفتح المحادثة وصاحب المحل بيدوس إرسال. مفيش API ولا
+              حساب أعمال ولا تكلفة. */}
+          <a
+            href={whatsAppLink(
+              buildReceiptText({
+                businessName: business?.name,
+                lines: cart,
+                total,
+                discountAmount,
+                createdAt,
+                quote,
+              }),
+              customerPhone
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 p-3 font-bold text-white hover:bg-green-700"
+          >
+            <MessageCircle size={18} />
+            واتساب
+          </a>
+
           <button
             onClick={() => window.print()}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 p-3 font-bold text-white hover:bg-blue-700"
