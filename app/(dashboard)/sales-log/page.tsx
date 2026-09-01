@@ -139,12 +139,23 @@ function SalesLogContent() {
               key={sale.id}
               className="rounded-xl border border-ink-600 bg-ink-800 p-4"
             >
-              <summary className="flex cursor-pointer items-center justify-between">
-                <span className="text-sm text-mist">
-                  {new Date(sale.created_at).toLocaleString("ar-EG", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
+              <summary className="flex cursor-pointer items-center justify-between gap-3">
+                <span className="min-w-0">
+                  {/* الرقم قبل التاريخ: كيرو بيدوّر على "الفاتورة
+                      اللي اتسجّلت غلط"، والزبون بيرجع بالرقم اللي
+                      على ورقته - مش بالساعة والدقيقة. */}
+                  {sale.invoice_number != null && (
+                    <span className="block font-bold text-paper">
+                      فاتورة {sale.invoice_number}
+                    </span>
+                  )}
+
+                  <span className="block text-sm text-mist">
+                    {new Date(sale.created_at).toLocaleString("ar-EG", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </span>
                 </span>
 
                 <span className="font-bold text-green-400">

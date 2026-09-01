@@ -13,6 +13,7 @@ import {
   RefreshCw,
   CheckCircle2,
   Sparkles,
+  Percent,
 } from "lucide-react";
 
 import { changePassword } from "@/services/auth.service";
@@ -103,6 +104,11 @@ export default function SettingsPage() {
   const [forcePrint, setForcePrint] = useState(true);
   const [savingForcePrint, setSavingForcePrint] = useState(false);
 
+  const [taxEnabled, setTaxEnabled] = useState(false);
+  const [taxRate, setTaxRate] = useState("14");
+  const [taxNumber, setTaxNumber] = useState("");
+  const [savingTax, setSavingTax] = useState(false);
+
   const [tierLabels, setTierLabels] = useState<string[]>([]);
   const [savingTiers, setSavingTiers] = useState(false);
 
@@ -144,6 +150,10 @@ export default function SettingsPage() {
       if (business?.receipt_paper) {
         setReceiptPaper(business.receipt_paper);
       }
+
+      setTaxEnabled(business?.tax_enabled ?? false);
+      setTaxRate(String(business?.tax_rate ?? 14));
+      setTaxNumber(business?.tax_number ?? "");
 
       setPriceOverride(
         business?.monthly_price == null ? null : Number(business.monthly_price)
@@ -215,6 +225,43 @@ export default function SettingsPage() {
       toast.error("تعذر حفظ الإعداد");
     } finally {
       setSavingForcePrint(false);
+    }
+  }
+
+  // ============================================================
+  // الضريبة
+  // ============================================================
+  //
+  // الحفظ لمرة واحدة للتلات حاجات مع بعض عن قصد. نسبة اتحفظت
+  // ورقم ضريبي ماتحفظش = فاتورة بتقول "فاتورة ضريبية" من غير رقم،
+  // وde مستند ناقص مش إعداد نص محفوظ.
+  async function handleSaveTax() {
+    if (!user) return;
+
+    const rate = Number(taxRate);
+
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+      toast.error("النسبة لازم تكون رقم من ٠ لـ١٠٠");
+      return;
+    }
+
+    setSavingTax(true);
+
+    try {
+      await updateBusiness(user.business_id, {
+        tax_enabled: taxEnabled,
+        tax_rate: rate,
+        tax_number: taxNumber.trim() === "" ? null : taxNumber.trim(),
+      });
+
+      toast.success(
+        taxEnabled ? "الضريبة هتظهر في الفاتورة" : "الضريبة اتقفلت"
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error("تعذر حفظ إعدادات الضريبة");
+    } finally {
+      setSavingTax(false);
     }
   }
 
@@ -549,7 +596,7 @@ export default function SettingsPage() {
             </span>
 
             <span className="mt-0.5 block text-xs text-mist">
-              نوع النشاط · الفاتورة المطبوعة واللوجو · أسماء التسعيرات · الخصم
+              نوع النشاط · الفاتورة واللوجو · الضريبة · أسماء التسعيرات · الخصم
             </span>
           </span>
 
@@ -708,6 +755,122 @@ export default function SettingsPage() {
             بتطلع رمادي باهت.
           </p>
         </div>
+      </div>
+
+      {/* ============================================================
+          الضريبة
+          ============================================================
+
+          جوه مجموعة "محلك" وتحت الفاتورة المطبوعة مباشرةً، لأن ده
+          مكانها الوحيد اللي بتظهر فيه.
+
+          والجملة اللي تحت الشرح («أسعارك ما تتغيّرش») هي أهم حاجة
+          في الكارت ده. أول سؤال بيخطر لصاحب محل لما يشوف كلمة
+          "ضريبة" هو "يعني هزوّد أسعاري؟" - ولو مالقاش الإجابة
+          قدامه، هيقفل الصفحة ومايشغّلهاش. */}
+      <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-bold">
+          <Percent size={18} />
+          الضريبة في الفاتورة
+        </h2>
+
+        <p className="mb-4 text-xs text-mist">
+          لو محلك مسجّل ضريبيًا، الفاتورة هتفكّ الضريبة في سطر لوحده
+          وهتكتب رقمك الضريبي فوق.
+        </p>
+
+        <label className="flex items-start gap-3 rounded-lg border border-ink-600 bg-ink-900 p-3">
+          <input
+            type="checkbox"
+            checked={taxEnabled}
+            onChange={(e) => setTaxEnabled(e.target.checked)}
+            className="mt-0.5 h-5 w-5"
+          />
+
+          <span>
+            <span className="block text-sm text-paper">
+              اطبع الضريبة في الفاتورة
+            </span>
+
+            <span className="mt-1 block text-xs text-mist">
+              <span className="font-semibold text-paper">
+                أسعارك ما تتغيّرش.
+              </span>{" "}
+              اللي بتبيع بيه دلوقتي محسوب إن الضريبة جواه، فالزبون
+              بيدفع نفس الرقم بالظبط. الفاتورة بس بتوضّح منه كام
+              ضريبة.
+            </span>
+          </span>
+        </label>
+
+        {taxEnabled && (
+          <div className="mt-4 space-y-4">
+            <div>
+              <label className="mb-2 block text-sm text-mist">
+                نسبة الضريبة ٪
+              </label>
+
+              <input
+                type="number"
+                inputMode="decimal"
+                value={taxRate}
+                onChange={(e) => setTaxRate(e.target.value)}
+                className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-paper outline-none"
+              />
+
+              <p className="mt-1 text-xs text-mist">
+                ضريبة القيمة المضافة في مصر ١٤٪. سيبها زي ما هي لو مش
+                متأكد.
+              </p>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm text-mist">
+                رقم التسجيل الضريبي
+              </label>
+
+              <input
+                type="text"
+                dir="ltr"
+                value={taxNumber}
+                onChange={(e) => setTaxNumber(e.target.value)}
+                placeholder="123-456-789"
+                className="w-full rounded-xl border border-ink-600 bg-ink-900 p-3 text-start text-paper outline-none"
+              />
+
+              <p className="mt-1 text-xs text-mist">
+                اللي في البطاقة الضريبية. بيتطبع فوق الفاتورة - من
+                غيره الورقة مش بتعتبر فاتورة ضريبية.
+              </p>
+            </div>
+
+            {/* التأثير بيبان برقم قبل الحفظ. "١٤٪" رقم مجرّد،
+                و"من كل ١٠٠ ج فيهم ١٢.٢٨ ضريبة" حاجة صاحب المحل
+                بيفهمها من غير حساب. */}
+            {Number(taxRate) > 0 && Number(taxRate) <= 100 && (
+              <p className="rounded-lg bg-ink-900 p-3 text-xs text-mist">
+                يعني فاتورة بـ<span className="font-bold text-paper">١٠٠ ج</span>{" "}
+                هتتكتب:{" "}
+                <span className="font-bold text-paper">
+                  {(100 - (100 * Number(taxRate)) / (100 + Number(taxRate))).toFixed(2)} ج
+                </span>{" "}
+                قبل الضريبة +{" "}
+                <span className="font-bold text-paper">
+                  {((100 * Number(taxRate)) / (100 + Number(taxRate))).toFixed(2)} ج
+                </span>{" "}
+                ضريبة = ١٠٠ ج.
+              </p>
+            )}
+          </div>
+        )}
+
+        <button
+          onClick={handleSaveTax}
+          disabled={savingTax}
+          className="mt-4 w-full rounded-xl bg-splash p-3 font-bold text-ink-950 transition hover:opacity-90 disabled:opacity-50"
+        >
+          {savingTax ? "بيحفظ..." : "احفظ"}
+        </button>
       </div>
 
       {enabledFeatures?.includes("price_tiers") && tierLabels.length === 3 && (

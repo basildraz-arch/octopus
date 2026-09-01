@@ -29,6 +29,11 @@ type Props = {
   // "اختار جهة اتصال" بدل ما يختفي - الفاتورة نفسها هي الفايدة،
   // والرقم بيوفّر خطوة بس.
   customerPhone?: string | null;
+
+  // رقم الفاتورة المسلسل، جاي من القاعدة بعد ما البيعة تتسجّل
+  // (`sales.invoice_number`، ميجريشن ٠٩٣). بيبقى null في عرض
+  // السعر - عرض السعر مش فاتورة ومايستهلكش رقم.
+  invoiceNumber?: number | null;
 };
 
 // ============================================================
@@ -93,6 +98,11 @@ const TEXT = {
     print: "طباعة",
     close: "إغلاق",
     locale: "ar-EG",
+    taxInvoice: "فاتورة ضريبية مبسطة",
+    invoiceNo: "فاتورة رقم",
+    taxNumber: "الرقم الضريبي",
+    beforeTax: "الإجمالي قبل الضريبة",
+    tax: "ضريبة القيمة المضافة",
   },
   en: {
     subtotal: "Subtotal",
@@ -104,6 +114,11 @@ const TEXT = {
     print: "طباعة",
     close: "إغلاق",
     locale: "en-GB",
+    taxInvoice: "Simplified Tax Invoice",
+    invoiceNo: "Invoice No.",
+    taxNumber: "Tax Reg. No.",
+    beforeTax: "Subtotal before VAT",
+    tax: "VAT",
   },
 };
 
@@ -118,6 +133,7 @@ export default function Receipt({
   autoPrint = false,
   quote = false,
   customerPhone,
+  invoiceNumber,
 }: Props) {
   const subtotal = cart.reduce((sum, line) => sum + line.total, 0);
   const printed = useRef(false);
@@ -142,6 +158,28 @@ export default function Receipt({
   const t = english ? TEXT.en : TEXT.ar;
 
   const paper = PAPER[business?.receipt_paper ?? "thermal_80"] ?? PAPER.thermal_80;
+
+  // ============================================================
+  // الضريبة: بتتفكّ من الإجمالي، مابتتزوّدش عليه
+  // ============================================================
+  //
+  // السعر شامل الضريبة. يعني ٦٠ ج على المنيو = ٦٠ ج في إيد الزبون،
+  // وجواها ضريبة. المعادلة:
+  //
+  //     الضريبة  = الإجمالي × النسبة ÷ (١٠٠ + النسبة)
+  //     قبلها    = الإجمالي − الضريبة
+  //
+  // مش `الإجمالي × النسبة ÷ ١٠٠` - دي المعادلة بتاعة السعر اللي
+  // **مش** شامل، وهتدّي رقم أكبر من الحقيقي (٨.٤٠ بدل ٧.٣٧ على
+  // فاتورة بـ٦٠).
+  //
+  // و«قبلها» بتتحسب بالطرح مش بقسمة مستقلة، عشان السطرين يجمعوا
+  // على الإجمالي بالظبط. القسمتين المنفصلتين بيفرقوا قرش في بعض
+  // الأرقام، والورقة اللي مجموعها مش مظبوط بتوقّف الزبون.
+  const taxRate = business?.tax_enabled ? Number(business.tax_rate ?? 0) : 0;
+  const taxAmount =
+    taxRate > 0 ? (total * taxRate) / (100 + taxRate) : 0;
+  const beforeTax = total - taxAmount;
 
   // الفاتورة بتتعلّق في `<body>` مباشرة مش جوه شاشة البيع — عشان
   // وقت الطباعة تبقى المحتوى الوحيد على الورقة. التفاصيل والسبب
@@ -205,7 +243,34 @@ export default function Receipt({
             <p className="text-xs text-gray-600">{business.phone}</p>
           )}
 
+          {/* العنوان والرقم الضريبي من متطلبات الفاتورة الضريبية.
+              بيظهروا لو موجودين بس - محل مش مسجّل ضريبيًا فاتورته
+              تفضل زي ما هي من غير سطور فاضية. */}
+          {taxRate > 0 && business?.address && (
+            <p className="text-xs text-gray-600">{business.address}</p>
+          )}
+
+          {taxRate > 0 && business?.tax_number && (
+            <p className="text-xs text-gray-600">
+              {t.taxNumber}: {business.tax_number}
+            </p>
+          )}
+
+          {taxRate > 0 && !quote && (
+            <p className="mt-1 border-y border-gray-400 py-0.5 text-xs font-bold">
+              {t.taxInvoice}
+            </p>
+          )}
+
           <p className="mt-1 text-xs text-gray-500">
+            {/* رقم الفاتورة قبل التاريخ: ده اللي الزبون بيرجع بيه،
+                وde اللي بيتكتب في الدفتر. */}
+            {invoiceNumber != null && !quote && (
+              <span className="block font-semibold text-gray-700">
+                {t.invoiceNo} {invoiceNumber}
+              </span>
+            )}
+
             {createdAt.toLocaleString(t.locale)}
           </p>
         </div>
@@ -225,20 +290,45 @@ export default function Receipt({
         </div>
 
         <div className="mt-2 space-y-0.5">
-          <div className="flex justify-between text-xs text-gray-600">
-            <span>{t.subtotal}</span>
-            <span>
-              {subtotal.toFixed(2)} {t.currency}
-            </span>
-          </div>
-
+          {/* «الإجمالي قبل الخصم» بيظهر لما يكون فيه خصم بس.
+              من غير خصم هو نفس الإجمالي بالظبط - سطر بيكرّر اللي
+              تحته ومابيضيفش معلومة، وعلى ورق حراري كل سطر بيتحسب. */}
           {discountAmount > 0 && (
-            <div className="flex justify-between text-xs text-gray-600">
-              <span>{t.discount}</span>
-              <span>
-                {discountAmount.toFixed(2)} {t.currency}
-              </span>
-            </div>
+            <>
+              <div className="flex justify-between text-xs text-gray-600">
+                <span>{t.subtotal}</span>
+                <span>
+                  {subtotal.toFixed(2)} {t.currency}
+                </span>
+              </div>
+
+              <div className="flex justify-between text-xs text-gray-600">
+                <span>{t.discount}</span>
+                <span>
+                  {discountAmount.toFixed(2)} {t.currency}
+                </span>
+              </div>
+            </>
+          )}
+
+          {taxRate > 0 && (
+            <>
+              <div className="flex justify-between text-xs text-gray-600">
+                <span>{t.beforeTax}</span>
+                <span>
+                  {beforeTax.toFixed(2)} {t.currency}
+                </span>
+              </div>
+
+              <div className="flex justify-between text-xs text-gray-600">
+                <span>
+                  {t.tax} {taxRate}%
+                </span>
+                <span>
+                  {taxAmount.toFixed(2)} {t.currency}
+                </span>
+              </div>
+            </>
           )}
 
           <div className="flex justify-between border-t border-dashed border-gray-400 pt-1 text-sm font-bold">

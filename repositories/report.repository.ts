@@ -261,3 +261,50 @@ export async function getEmployeeReports(
 
   return Array.from(rows.values()).sort((a, b) => b.totalSales - a.totalSales);
 }
+
+// ============================================================
+// الضريبة المحصّلة في فترة
+// ============================================================
+//
+// الرقم اللي بيتحط في الإقرار الضريبي.
+//
+// الجمع كله في القاعدة (`tax_summary`، ميجريشن ٠٩٣) مش هنا - نفس
+// سبب `profit_by_item`: لو اتحسب في المتصفح، اللي مالوش
+// `view_reports` كان هيشوف مجموع **بيعاته هو** ويفتكره رقم المحل،
+// لأن الـRLS بترجّعله فواتيره وبس. ورقم ناقص أخطر من رسالة "ممنوع".
+//
+// بترجّع null لما تترفض (مش مسموح) أو لما مافيش ولا فاتورة عليها
+// ضريبة - والشاشة بتخفي الكارت خالص في الحالتين. كارت بيقول صفر
+// لمحل مش مسجّل ضريبيًا مساحة ضايعة.
+export type TaxSummary = {
+  netTotal: number;
+  taxTotal: number;
+  grossTotal: number;
+  saleCount: number;
+};
+
+export async function getTaxSummary(
+  startDate: string,
+  endDate: string
+): Promise<TaxSummary | null> {
+  const { data, error } = await supabase.rpc("tax_summary", {
+    p_from: startDate,
+    p_to: endDate,
+  });
+
+  if (error) {
+    console.error("Supabase Error:", error.message);
+    return null;
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+
+  if (!row || Number(row.sale_count) === 0) return null;
+
+  return {
+    netTotal: Number(row.net_total),
+    taxTotal: Number(row.tax_total),
+    grossTotal: Number(row.gross_total),
+    saleCount: Number(row.sale_count),
+  };
+}

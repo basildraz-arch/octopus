@@ -13,6 +13,9 @@ export type SaleWithItems = {
   id: string;
   total: number;
   created_at: string;
+  // الرقم المسلسل. بيفضل null في الفواتير اللي اتسجّلت قبل
+  // ميجريشن ٠٩٣ لو حصل، والشاشة بتخفيه ساعتها.
+  invoice_number: number | null;
   sale_items: {
     id: string;
     // لازم للمرتجع: الدالة بتاخد `item_id` مش `id` بتاع السطر.
@@ -39,6 +42,7 @@ export async function getSalesByDateRange(
       id,
       total,
       created_at,
+      invoice_number,
       sale_items (
         id,
         item_id,
@@ -131,7 +135,25 @@ export async function createSale(
 
   await logActivity(createdBy, businessId);
 
-  return { id: saleId as string };
+  // رقم الفاتورة المسلسل بيتخصّص جوه `record_sale` (ميجريشن ٠٩٣).
+  //
+  // بيتجاب بنداء تاني بدل ما نغيّر نوع اللي بترجّعه الدالة: تغيير
+  // توقيع دالة شغّالة على محل حقيقي معناه drop + create، ولحظة
+  // بينهم البيع واقف. النداء ده قراءة سطر واحد بمفتاحه.
+  //
+  // ولو فشل، البيعة **اتسجّلت خلاص** - الرقم بيغيب عن الورقة وبس.
+  // عشان كده مفيش throw هنا: فاتورة من غير رقم أحسن من رسالة خطأ
+  // بعد بيعة ناجحة.
+  const { data: row } = await supabase
+    .from("sales")
+    .select("invoice_number")
+    .eq("id", saleId as string)
+    .maybeSingle();
+
+  return {
+    id: saleId as string,
+    invoiceNumber: (row?.invoice_number as number | null) ?? null,
+  };
 }
 
 // ============================================================

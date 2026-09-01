@@ -2,13 +2,21 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BarChart3, AlertTriangle, ClipboardList, Users } from "lucide-react";
+import {
+  BarChart3,
+  AlertTriangle,
+  ClipboardList,
+  Users,
+  Percent,
+} from "lucide-react";
 
 import {
   getReportSummary,
   getEmployeeReports,
+  getTaxSummary,
   type ReportSummary,
   type EmployeeReportRow,
+  type TaxSummary,
 } from "@/repositories/report.repository";
 import { useSession } from "@/hooks/useSession";
 import WarehousePulseDashboard from "@/components/reports/WarehousePulseDashboard";
@@ -57,6 +65,7 @@ export default function ReportsPage() {
   const [endDate, setEndDate] = useState(toDateString(new Date()));
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [staffRows, setStaffRows] = useState<EmployeeReportRow[]>([]);
+  const [tax, setTax] = useState<TaxSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   const isWarehouseManagement = hasFeature("warehouse_reports");
@@ -72,13 +81,15 @@ export default function ReportsPage() {
 
     setLoading(true);
 
-    const [data, perStaff] = await Promise.all([
+    const [data, perStaff, taxData] = await Promise.all([
       getReportSummary(user.business_id, startDate, endDate),
       getEmployeeReports(user.business_id, startDate, endDate),
+      getTaxSummary(startDate, endDate),
     ]);
 
     setSummary(data);
     setStaffRows(perStaff);
+    setTax(taxData);
 
     setLoading(false);
   }
@@ -236,6 +247,43 @@ export default function ReportsPage() {
               {summary.netProfit.toFixed(2)} ج
             </h2>
           </div>
+
+          {/* الضريبة المحصّلة.
+              بيظهر لما يكون فيه فواتير عليها ضريبة فعلًا في الفترة
+              دي - محل مش مسجّل ضريبيًا مابيشوفش الكارت من أصله.
+              وde الرقم اللي بيتحط في الإقرار. */}
+          {tax && (
+            <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+              <h2 className="mb-1 flex items-center gap-2 text-lg font-bold">
+                <Percent size={18} />
+                الضريبة المحصّلة
+              </h2>
+
+              <p className="mb-4 text-xs text-mist">
+                من {tax.saleCount} فاتورة عليها ضريبة في الفترة دي
+              </p>
+
+              <p className="text-3xl font-bold text-amber-300">
+                {tax.taxTotal.toFixed(2)} ج
+              </p>
+
+              <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-mist">
+                <span>
+                  قبل الضريبة{" "}
+                  <span className="font-semibold text-paper">
+                    {tax.netTotal.toFixed(2)} ج
+                  </span>
+                </span>
+
+                <span>
+                  المحصّل من الزباين{" "}
+                  <span className="font-semibold text-paper">
+                    {tax.grossTotal.toFixed(2)} ج
+                  </span>
+                </span>
+              </div>
+            </div>
+          )}
 
           {staffRows.length > 0 && (
             <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">

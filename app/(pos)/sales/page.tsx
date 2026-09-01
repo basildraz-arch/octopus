@@ -49,6 +49,10 @@ type LastSale = {
   // بيتجمّد مع الفاتورة زي التسعيرة: الكاشير ممكن يمسح اختيار العميل
   // بعد البيعة، والفاتورة اللي على الشاشة لسه بتاعة نفس الزبون.
   customerPhone: string | null;
+
+  // الرقم المسلسل الراجع من القاعدة. null في عرض السعر - عرض
+  // السعر مش فاتورة ومايستهلكش رقم من الدفتر.
+  invoiceNumber: number | null;
 };
 
 export default function SalesPage() {
@@ -339,6 +343,7 @@ export default function SalesPage() {
       priceTier,
       quote: true,
       customerPhone: null,
+      invoiceNumber: null,
     });
   }
 
@@ -403,6 +408,7 @@ export default function SalesPage() {
         quote: false,
         customerPhone:
           customers.find((c) => c.id === selectedCustomerId)?.phone ?? null,
+        invoiceNumber: sale?.invoiceNumber ?? null,
       });
 
       // الفاتورة اتدفعت خلاص - بتتقفل مش بتتفضّى. لو فضلت مفتوحة
@@ -614,6 +620,7 @@ export default function SalesPage() {
           business={business}
           priceTier={lastSale.priceTier}
           customerPhone={lastSale.customerPhone}
+          invoiceNumber={lastSale.invoiceNumber}
           quote={lastSale.quote}
           autoPrint={
             !lastSale.quote && (business?.force_print_on_sale ?? true)
