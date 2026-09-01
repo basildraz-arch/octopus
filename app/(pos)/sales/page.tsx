@@ -8,6 +8,10 @@ import Cart, { type CartItem } from "@/components/Cart";
 import PriceTierPicker from "@/components/pos/PriceTierPicker";
 import SalePopup from "@/components/SalePopup";
 import Receipt from "@/components/Receipt";
+import ShiftAgeWarning from "@/components/ShiftAgeWarning";
+import CartTabs from "@/components/pos/CartTabs";
+import MyShiftSummary from "@/components/pos/MyShiftSummary";
+import { useCarts } from "@/hooks/useCarts";
 
 import { getActiveItems } from "@/repositories/item.repository";
 import { createSale } from "@/repositories/sale.repository";
@@ -22,6 +26,7 @@ import {
 import { useSession } from "@/hooks/useSession";
 import { hasFeature } from "@/lib/features";
 import { priceForTier, type PriceTier } from "@/lib/priceTier";
+import { nextQuantity } from "@/lib/cartStep";
 import { useWarehouseSelection } from "@/hooks/useWarehouseSelection";
 import { useToast } from "@/hooks/useToast";
 
@@ -40,6 +45,10 @@ type LastSale = {
   // A quote is printed on demand and never prints itself; a real sale
   // prints automatically when the shop requires it.
   quote: boolean;
+
+  // بيتجمّد مع الفاتورة زي التسعيرة: الكاشير ممكن يمسح اختيار العميل
+  // بعد البيعة، والفاتورة اللي على الشاشة لسه بتاعة نفس الزبون.
+  customerPhone: string | null;
 };
 
 export default function SalesPage() {
@@ -52,7 +61,24 @@ export default function SalesPage() {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
 
-  const [cart, setCart] = useState<CartItem[]>([]);
+  // العربية محفوظة، وممكن تكون أكتر من واحدة.
+  //
+  // `cart` و`setCart` ليهم نفس توقيع `useState` بالظبط، فكل كود
+  // البيع تحت مااتغيّرش. اللي اتغيّر إن العربية بقت بتعيش بعد
+  // الخروج من الشاشة، وإن الكاشير يقدر يفتح فاتورة تانية لزبون
+  // تاني من غير ما يضيّع الأولى.
+  const {
+    cart,
+    setCart,
+    tickets,
+    activeId,
+    switchTo,
+    openTicket,
+    closeTicket,
+    renameTicket,
+    clearActive,
+    canOpenMore,
+  } = useCarts(user?.business_id ?? null);
 
   // Phone only: the basket sheet. On a desktop the basket is always
   // the second column and this is never read.
@@ -156,6 +182,68 @@ export default function SalesPage() {
     setShowPopup(true);
   }
 
+  // زيادة/نقصان كمية سطر موجود في السلة.
+  //
+  // ============================================================
+  // سعر الوحدة بيتحسب من السطر نفسه
+  // ============================================================
+  //
+  // `line.total / line.quantity` مش `priceForTier(...)`.
+  //
+  // ليه: السطر ممكن يكون اتضاف على تسعيرة، وبعدين التسعيرة اتغيّرت،
+  // و`changePriceTier` أعادت تسعير السلة. القسمة بتدّي **السعر
+  // الفعلي اللي السطر شغّال بيه** أيًا كان مصدره. لو حسبناه من
+  // التسعيرة الحالية، دوسة على "+" كانت هتعيد تسعير السطر بالصمت
+  // - وde تغيير في السعر مالوش أي علاقة بطلب الزبون إنه يزوّد حبة.
+  //
+  // والسعر الحقيقي بيتقرا من القاعدة وقت الدفع على أي حال
+  // (`record_sale`، ميجريشن ٠٧٥) - اللي هنا للعرض بس.
+  function stepLine(itemId: string, direction: 1 | -1) {
+    setCart((oldCart) =>
+      oldCart.map((line) => {
+        if (line.item.id !== itemId) return line;
+
+        const next = nextQuantity(line.item, line.quantity, direction);
+
+        // `null` = الدوسة مالهاش معنى (هتوصّل لصفر). السطر بيفضل
+        // زي ما هو - **المسح ليه زرار لوحده**، وحاجة بتمسح بدوسة
+        // على "−" بتحصل بالغلط.
+        if (next === null) return line;
+
+        const unitPrice =
+          line.quantity > 0 ? line.total / line.quantity : 0;
+
+        return { ...line, quantity: next, total: next * unitPrice };
+      })
+    );
+
+    if (user) {
+      const line = cart.find((l) => l.item.id === itemId);
+
+      if (line) {
+        const next = nextQuantity(line.item, line.quantity, direction);
+
+        if (next !== null) {
+          // مش awaited: الشاشة لازم تفضل سريعة، وسطر تسجيل فاشل
+          // مايوقفش بيعة.
+          void logCartEvent({
+            businessId: user.business_id,
+            userId: user.id,
+            cartSessionId: cartSessionId.current,
+            action: direction === 1 ? "add" : "remove",
+            itemId: line.item.id,
+            itemName: line.item.name,
+            quantity: Math.abs(next - line.quantity),
+            unitPrice: priceForTier(line.item, priceTier),
+            lineTotal:
+              (line.quantity > 0 ? line.total / line.quantity : 0) *
+              Math.abs(next - line.quantity),
+          });
+        }
+      }
+    }
+  }
+
   function addToCart(quantity: number, total: number) {
     if (!selectedItem) return;
 
@@ -250,6 +338,7 @@ export default function SalesPage() {
       createdAt: new Date(),
       priceTier,
       quote: true,
+      customerPhone: null,
     });
   }
 
@@ -312,9 +401,14 @@ export default function SalesPage() {
         createdAt: new Date(),
         priceTier,
         quote: false,
+        customerPhone:
+          customers.find((c) => c.id === selectedCustomerId)?.phone ?? null,
       });
 
-      setCart([]);
+      // الفاتورة اتدفعت خلاص - بتتقفل مش بتتفضّى. لو فضلت مفتوحة
+      // وفاضية، الكاشير بيلاقي تبويب "فاتورة ١" فاضي بعد كل بيعة
+      // ومش عارف هو ده جديد ولا اللي لسه باعه.
+      clearActive();
       setCartOpen(false);
       setPaymentMethod("cash");
       setDiscountAmount("");
@@ -355,6 +449,28 @@ export default function SalesPage() {
           <ShoppingCart size={28} />
           عملية بيع
         </h1>
+
+        {/* الوردية سايبة من أيام؟ الكاشير هو اللي بيقفل اليوم عادةً،
+            فالتنبيه لازم يوصله هو - مش صاحب المحل بس. مابيمنعش البيع. */}
+        <div className="mb-4">
+          <ShiftAgeWarning />
+        </div>
+
+        {/* "أنا بعت بكام؟" - أرقامه هو بس، من غير تكلفة ولا ربح ولا
+            شغل زمايله. مقفولة افتراضيًا. */}
+        <MyShiftSummary />
+
+        {/* تبويبات الفواتير المفتوحة. بتختفي خالص للمحل اللي بيبيع
+            لزبون واحد في المرة - بتظهر أول ما يدوس "فاتورة تانية". */}
+        <CartTabs
+          tickets={tickets}
+          activeId={activeId}
+          canOpenMore={canOpenMore}
+          onSwitch={switchTo}
+          onOpen={openTicket}
+          onClose={closeTicket}
+          onRename={renameTicket}
+        />
 
         {/* Settings for the whole invoice, decided before the first
             item: which warehouse it comes out of and which price list
@@ -440,6 +556,7 @@ export default function SalesPage() {
                   discountAmount={discountAmount}
                   onDiscountAmountChange={setDiscountAmount}
                   onDelete={deleteLine}
+                  onStep={stepLine}
                   onCheckout={checkout}
                   onPrintQuote={printQuote}
                   credit={
@@ -496,6 +613,7 @@ export default function SalesPage() {
           onClose={() => setLastSale(null)}
           business={business}
           priceTier={lastSale.priceTier}
+          customerPhone={lastSale.customerPhone}
           quote={lastSale.quote}
           autoPrint={
             !lastSale.quote && (business?.force_print_on_sale ?? true)

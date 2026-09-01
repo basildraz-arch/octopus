@@ -12,77 +12,36 @@ import type { CellValue } from "@/lib/xlsx";
 // cheapest. In a typical Egyptian price list that is
 // قطاعي > نص جملة > جملة, which is exactly how they are mapped here.
 const HEADER_ALIASES: Record<string, string[]> = {
-  name: [
-    "الاسم",
-    "اسم الصنف",
-    "الصنف",
-    "المنتج",
-    "منتج",
-    "اسم",
-    "name",
-    "item",
-    "product",
-  ],
-  category: [
-    "المجموعة",
-    "مجموعة",
-    "الفئة",
-    "فئة",
-    "التصنيف",
-    "تصنيف",
-    "category",
-    "group",
-  ],
-  code: [
-    "الكود",
-    "كود",
-    "باركود",
-    "الباركود",
-    "code",
-    "barcode",
-    "sku",
-  ],
-  unit: ["الوحدة الصغرى", "الوحدة", "وحدة", "unit"],
+  name: ["الاسم", "اسم الصنف", "الصنف", "المنتج", "name", "item", "product"],
+  category: ["المجموعة", "الفئة", "التصنيف", "category", "group"],
+  code: ["الكود", "كود", "باركود", "الباركود", "code", "barcode", "sku"],
+  unit: ["الوحدة الصغرى", "الوحدة", "unit"],
   price1: [
     "سعر قطاعي",
     "قطاعي",
     "سعر البيع",
     "السعر",
-    "سعر",
-    "سعر بيع",
     "price",
     "retail",
     "retail price",
   ],
-  price2: [
-    "نص جملة",
-    "نصف جملة",
-    "سعر نص جملة",
-    "mid",
-    "half wholesale",
-  ],
+  price2: ["نص جملة", "نصف جملة", "سعر نص جملة", "mid", "half wholesale"],
   price3: ["سعر جملة", "جملة", "wholesale", "wholesale price"],
-  buyPrice: [
-    "سعر الشراء",
-    "الشراء",
-    "شراء",
-    "التكلفة",
-    "تكلفة",
-    "cost",
-    "buy price",
-  ],
-  stock: [
-    "الكمية",
-    "كمية",
-    "المخزون",
-    "مخزون",
-    "الرصيد",
-    "رصيد",
-    "qty",
-    "quantity",
-    "stock",
-  ],
+  buyPrice: ["سعر الشراء", "الشراء", "التكلفة", "cost", "buy price"],
+  stock: ["الكمية", "المخزون", "الرصيد", "qty", "quantity", "stock"],
 };
+
+// أطول اسم صنف بيتقبل. الشاشة بتقص عند حوالي ٤٠ حرف، والفاتورة
+// المطبوعة ٣٢. اسم بألف حرف مابيكسرش حاجة بس بيبوّظ كل قايمة الصنف
+// بيظهر فيها، وde النوع اللي بيتلاقى بعد الاستيراد بشهر.
+const MAX_NAME = 120;
+
+// أكبر عدد أسطر في ملف واحد.
+//
+// ده مش حد تعسّفي: كل الأسطر بتترفع في `insert` واحد، وملف بمية ألف
+// سطر بيقفل تبويب المتصفح ويسيب الاستيراد في النص. أكبر قايمة أسعار
+// شفناها كانت ٧٩ صنف؛ الألفين هامش واسع.
+const MAX_ROWS = 2000;
 
 export type ImportedItem = {
   name: string;
@@ -182,7 +141,6 @@ export function parseCatalog(rows: CellValue[][]): ParsedCatalog {
 
   const items: ImportedItem[] = [];
   const seen = new Set<string>();
-  const seenCodes = new Set<string>();
 
   for (let i = headerIndex + 1; i < rows.length; i++) {
     const row = rows[i];
@@ -216,35 +174,45 @@ export function parseCatalog(rows: CellValue[][]): ParsedCatalog {
       continue;
     }
 
-    // الباركود عليه قيد unique على مستوى القاعدة كلها (مش لكل محل)،
-    // فأي تكرار جوه الملف أو حتى مع بيزنس تاني هيوقع الإدخال الكل.
-    // نشوفه هنا ونسكّت الصف برسالة واضحة بدل ما الكل يقع بصمت.
-    const code =
-      cols.code === -1 ? null : String(row[cols.code] ?? "").trim() || null;
+    // ملف الأسعار مش مصدر موثوق.
+    //
+    // `toNumber` بتشيل أي حرف مش رقم، بس بتسيب الشرطة — فـ"-50" بترجع
+    // -50. وسعر بيع بالسالب معناه إن الصنف **بيقلّل** الفاتورة: زوّد
+    // منه ٢٠ حبة والإجمالي ينزل. ده مش سيناريو نظري، ده ناتج شرطة
+    // زيادة في ملف إكسل.
+    //
+    // ورصيد بالسالب أخطر شوية: الرصيد بيتكتب في `items.stock` عند
+    // الإضافة (تريجر ٠٧٢ بيشتغل على UPDATE مش INSERT)، والدفعة
+    // مابتتعملش لأن الفلتر `stock > 0`. فبيبقى عندك صنف بيقول -١٠
+    // ومفيش دفعات وراه.
+    //
+    // بنتخطى السطر ونقول ليه، مش بنصلّحه بالسكوت. صاحب المحل لازم
+    // يبص على الملف.
+    const negative = [
+      ["سعر البيع", price1],
+      ["سعر النص جملة", cols.price2 === -1 ? null : toNumber(row[cols.price2])],
+      ["سعر الجملة", cols.price3 === -1 ? null : toNumber(row[cols.price3])],
+      ["سعر الشرا", cols.buyPrice === -1 ? null : toNumber(row[cols.buyPrice])],
+      ["الكمية", cols.stock === -1 ? null : toNumber(row[cols.stock])],
+    ].find(([, value]) => typeof value === "number" && value < 0);
 
-    if (code) {
-      const codeKey = code.toLowerCase();
-
-      if (seenCodes.has(codeKey)) {
-        skipped.push({
-          row: rowNumber,
-          reason: `الكود "${code}" مكرر في الملف`,
-        });
-        continue;
-      }
-
-      seenCodes.add(codeKey);
+    if (negative) {
+      skipped.push({
+        row: rowNumber,
+        reason: `"${name}" ${negative[0]} بالسالب (${negative[1]})`,
+      });
+      continue;
     }
 
     seen.add(key);
 
     items.push({
-      name,
+      name: name.slice(0, MAX_NAME),
       category:
         cols.category === -1
           ? null
           : String(row[cols.category] ?? "").trim() || null,
-      code,
+      code: cols.code === -1 ? null : String(row[cols.code] ?? "").trim() || null,
       unit:
         (cols.unit === -1 ? "" : String(row[cols.unit] ?? "").trim()) || "قطعة",
       price1,
@@ -253,6 +221,12 @@ export function parseCatalog(rows: CellValue[][]): ParsedCatalog {
       buyPrice: (cols.buyPrice === -1 ? null : toNumber(row[cols.buyPrice])) ?? 0,
       stock: (cols.stock === -1 ? null : toNumber(row[cols.stock])) ?? 0,
     });
+  }
+
+  if (items.length > MAX_ROWS) {
+    throw new Error(
+      `الملف فيه ${items.length} صنف — الحد ${MAX_ROWS} في المرة الواحدة. قسّمه لملفات أصغر.`
+    );
   }
 
   const categories = Array.from(

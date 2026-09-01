@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Pencil } from "lucide-react";
 
 import ItemForm from "@/components/items/form/ItemForm";
+import RecipeEditor from "@/components/items/RecipeEditor";
 import { getItemById } from "@/repositories/item.repository";
 import type { Item } from "@/types/item";
 
@@ -53,6 +54,10 @@ export default function EditItemPage() {
       <div className="rounded-2xl border border-ink-600 bg-ink-800 p-8">
         <ItemForm item={item} />
       </div>
+
+      {/* برّه النموذج عن قصد: نموذج جوه نموذج HTML غلط. والوصفة
+          بتتحفظ فورًا مش مع حفظ الصنف. */}
+      <RecipeEditor item={item} businessId={item.business_id} />
     </main>
   );
 }

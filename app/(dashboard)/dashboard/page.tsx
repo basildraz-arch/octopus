@@ -16,6 +16,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/hooks/useSession";
 import { contextFor, labelsFor, visibleTiles } from "@/lib/navItems";
+import ShiftAgeWarning from "@/components/ShiftAgeWarning";
 
 import type { Item } from "@/types/item";
 
@@ -100,6 +101,10 @@ export default function DashboardHomePage() {
 
   return (
     <main className="space-y-6">
+      {/* اليوم مش متقفل من كام يوم؟ لازم يبان هنا قبل الأرقام - لأن
+          الأرقام نفسها بتبقى غلط لما الوردية تفضل مفتوحة أيام. */}
+      <ShiftAgeWarning />
+
       {/* Today, in one glance. Small on purpose - the buttons below
           are what the screen is for. */}
       <div className="rounded-2xl border border-ink-600 bg-ink-800 p-5">

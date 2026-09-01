@@ -1,4 +1,6 @@
-import { Receipt as ReceiptIcon, Trash2, Banknote, Smartphone, CreditCard, CheckCircle2, Printer, NotebookPen, UserPlus, type LucideIcon } from "lucide-react";
+import { Receipt as ReceiptIcon, Trash2, Banknote, Smartphone, CreditCard, CheckCircle2, Printer, NotebookPen, UserPlus, Plus, Minus, type LucideIcon } from "lucide-react";
+
+import { stepFor, nextQuantity } from "@/lib/cartStep";
 
 import type { Item } from "@/types/item";
 import type { PaymentMethod } from "@/types/sale";
@@ -18,6 +20,10 @@ type Props = {
   discountAmount: string;
   onDiscountAmountChange: (value: string) => void;
   onDelete: (id: string) => void;
+
+  // زيادة/نقصان كمية سطر. اختيارية عشان الشاشات اللي بتعرض السلة
+  // للقراءة بس (المعاينة، عرض السعر) ما تبقاش مضطرة تمرّرها.
+  onStep?: (id: string, direction: 1 | -1) => void;
   onCheckout: () => void;
   // Printing without selling - a price quote. Optional by design,
   // unlike the sale receipt which always prints.
@@ -47,6 +53,7 @@ export default function Cart({
   discountAmount,
   onDiscountAmountChange,
   onDelete,
+  onStep,
   onCheckout,
   onPrintQuote,
   credit,
@@ -89,6 +96,32 @@ export default function Cart({
                     {line.quantity.toFixed(2)} {line.item.unit}
                   </div>
                 </div>
+
+                {/* + و− على السطر نفسه.
+                    قبل كده الكمية ماكانتش بتتعدّل خالص بعد الإضافة -
+                    الزبون يقول "خليهم اتنين" فالكاشير يمسح السطر
+                    ويدخّل الصنف من الأول. والخطوة حسب نوع البيع:
+                    حبة للقطعة وربع كيلو للوزن (`lib/cartStep.ts`). */}
+                {stepFor(line.item) !== null && (
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => onStep?.(line.item.id, -1)}
+                      aria-label={`قلّل ${line.item.name}`}
+                      disabled={nextQuantity(line.item, line.quantity, -1) === null}
+                      className="flex size-11 items-center justify-center rounded-lg bg-ink-700 text-paper active:bg-ink-600 disabled:opacity-30 md:hover:bg-ink-600"
+                    >
+                      <Minus size={16} />
+                    </button>
+
+                    <button
+                      onClick={() => onStep?.(line.item.id, 1)}
+                      aria-label={`زوّد ${line.item.name}`}
+                      className="flex size-11 items-center justify-center rounded-lg bg-ink-700 text-paper active:bg-ink-600 md:hover:bg-ink-600"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                )}
 
                 <div className="shrink-0 font-bold text-green-400">
                   {line.total.toFixed(2)} ج

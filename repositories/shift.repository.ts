@@ -196,3 +196,68 @@ export async function getShiftSummary(
       byPaymentMethod.cash + customerPaymentsCash - totalExpenses,
   };
 }
+
+// ============================================================
+// شغل الكاشير هو في ورديته
+// ============================================================
+//
+// `getShiftSummary` فوق بترجّع الوردية كلها - شغل كل اللي فيها.
+// دي بترجّع **شغل اللي بينادي بس**.
+//
+// الفرق مش تجميلي: `view_reports` صلاحية واحدة بتفتح مبيعات المحل
+// والأرباح وشغل كل زميل. فصاحب المحل كان قدامه اختيارين بس - يدّي
+// الكاشير كل ده، أو مايشوفش ولا رقم عن يومه هو. والاتنين غلط:
+// الكاشير محتاج يعرف باع بكام عشان يعدّ الدرج ويسلّم.
+//
+// الحاجز في `my_shift_report` (ميجريشن ٠٨٦) مش صلاحية - هو **محتوى
+// الرد نفسه**: مفيش تكلفة ولا ربح ولا أي رقم يخص حد تاني. الأرقام
+// دي هو اللي كتبها بإيده، إحنا بنجمّعها له بس.
+export type MyShiftReport = {
+  shiftId: string;
+  openedAt: string;
+  saleCount: number;
+  totalSales: number;
+  cashSales: number;
+  otherSales: number;
+  creditSales: number;
+  myExpenses: number;
+  expectedCash: number;
+};
+
+export async function getMyShiftReport(): Promise<MyShiftReport | null> {
+  const { data, error } = await supabase.rpc("my_shift_report");
+
+  if (error) throw new Error(error.message);
+
+  const row = (data ?? [])[0] as Record<string, unknown> | undefined;
+
+  // مفيش صف = مفيش وردية مفتوحة. مش خطأ.
+  if (!row) return null;
+
+  return {
+    shiftId: row.shift_id as string,
+    openedAt: row.opened_at as string,
+    saleCount: Number(row.sale_count),
+    totalSales: Number(row.total_sales),
+    cashSales: Number(row.cash_sales),
+    otherSales: Number(row.other_sales),
+    creditSales: Number(row.credit_sales),
+    myExpenses: Number(row.my_expenses),
+    expectedCash: Number(row.expected_cash),
+  };
+}
+
+// تسليم الوردية لزميل: قفل بجرد + فتح وردية جديدة، عملية واحدة.
+//
+// الاتنين لازم يحصلوا مع بعض. لو القفل نجح والفتح فشل، المحل يفضل
+// من غير وردية والكاشير التاني مش هيعرف يبيع. عشان كده الشغل كله
+// في `handover_shift` (ميجريشن ٠٨٧) مش هنا.
+export async function handoverShift(countedCash: number): Promise<string> {
+  const { data, error } = await supabase.rpc("handover_shift", {
+    p_counted_cash: countedCash,
+  });
+
+  if (error) throw new Error(error.message);
+
+  return data as string;
+}

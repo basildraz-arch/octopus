@@ -133,7 +133,17 @@ export async function getExistingItemNames(
     .select("name")
     .eq("business_id", businessId);
 
-  if (error) throw error;
+  // بنرمي مش بنرجّع فاضي.
+  //
+  // المجموعة دي هي اللي بتمنع التكرار. لو رجعت فاضية عند خطأ، الاستيراد
+  // بيكمّل وهو فاكر إن المحل فاضي و**بيضيف الكتالوج كله تاني**. صاحب
+  // المحل بيشوف "اتضاف ٧٩ صنف" ويفتكرها نجاح، والقايمة بقت ١٥٨.
+  //
+  // ووقتها التنضيف يدوي: ٧٩ صنف يتمسحوا واحد واحد، ومحدش عارف مين
+  // النسخة الأصلية ومين المكررة.
+  //
+  // خطأ واضح وقت الاستيراد أرخص من ده بكتير.
+  if (error) throw new Error(`مش قادر أقرا أصناف المحل: ${error.message}`);
 
   return new Set((data ?? []).map((r) => r.name.trim().toLowerCase()));
 }
@@ -146,7 +156,9 @@ export async function getExistingCategoryMap(
     .select("id, name")
     .eq("business_id", businessId);
 
-  if (error) throw error;
+  // نفس السبب: لو دي رجعت فاضية، كل الفئات الموجودة هتتعمل تاني
+  // بنفس الأسماء.
+  if (error) throw new Error(`مش قادر أقرا فئات المحل: ${error.message}`);
 
   const byName: Record<string, string> = {};
 

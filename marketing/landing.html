@@ -1,0 +1,539 @@
+<title>الأخطبوط</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Changa:wght@500;700;800&family=Almarai:wght@400;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+
+<style>
+  /* ============================================================
+     الهوية
+
+     اللون: بنفسجي الأخطبوط على حبر غامق - دي هوية المشروع الموجودة
+     أصلًا، مش اختيار جديد. اللي اتضاف: ورق الفاتورة الحراري كخامة
+     ثانية. الصفحة كلها مبنية على التوتر بين الاتنين - الشاشة
+     الغامقة والورقة اللي بتطلع منها.
+
+     الوضع الفاتح مش عكس الغامق: هو نفس الفكرة مقلوبة - الورقة بقت
+     الأرضية والحبر بقى النص.
+
+     الخط: Changa للعناوين (مضغوط وفيه شخصية)، Almarai للنص،
+     IBM Plex Mono للأرقام عشان تتراص زي ما بتتطبع على الرول.
+     ============================================================ */
+
+  :root {
+    --ground:      #F2EEE4;
+    --ground-deep: #E6E0D2;
+    --surface:     #FBF9F4;
+    --edge:        #D6CFBD;
+
+    --text:        #15130F;
+    --text-soft:   #5C5749;
+    --text-faint:  #8A8577;
+
+    --accent:      #5B3BD4;
+    --accent-soft: #EDE7FF;
+    --on-accent:   #FFFFFF;
+
+    --good:        #2E7D36;
+    --bad:         #B4342A;
+
+    --paper:       #FBF9F4;
+    --paper-ink:   #15130F;
+    --paper-edge:  #D6CFBD;
+
+    --measure: 34rem;
+  }
+
+  /* التداخل في CSS لسه مش مضمون في كل المتصفحات، فالميديا برّه
+     والمحدِّد جوّه - الصيغة اللي بتشتغل في كل حتة. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #07090F;
+      --ground-deep: #04060B;
+      --surface:     #10141F;
+      --edge:        #232838;
+
+      --text:        #EDEBF5;
+      --text-soft:   #9CA2B8;
+      --text-faint:  #6E7488;
+
+      --accent:      #9B7DFF;
+      --accent-soft: #1B1733;
+      --on-accent:   #0A0A12;
+
+      --good:        #57C463;
+      --bad:         #F0736A;
+
+      --paper:       #EFEADD;
+      --paper-ink:   #16140F;
+      --paper-edge:  #CFC7B4;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --on-accent:   #0A0A12;
+    --ground:      #07090F;
+    --ground-deep: #04060B;
+    --surface:     #10141F;
+    --edge:        #232838;
+
+    --text:        #EDEBF5;
+    --text-soft:   #9CA2B8;
+    --text-faint:  #6E7488;
+
+    --accent:      #9B7DFF;
+    --accent-soft: #1B1733;
+
+    --good:        #57C463;
+    --bad:         #F0736A;
+
+    --paper:       #EFEADD;
+    --paper-ink:   #16140F;
+    --paper-edge:  #CFC7B4;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--text);
+    font-family: "Almarai", "Segoe UI", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.75;
+    direction: rtl;
+    text-align: right;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: var(--measure);
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  h1, h2, h3 {
+    font-family: "Changa", "Almarai", sans-serif;
+    line-height: 1.25;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  h1 { font-size: clamp(2.1rem, 8vw, 3.1rem); font-weight: 800; letter-spacing: -0.01em; }
+  h2 { font-size: clamp(1.5rem, 5.5vw, 2rem);  font-weight: 700; }
+  h3 { font-size: 1.15rem; font-weight: 700; }
+
+  p { margin: 0; }
+
+  .eyebrow {
+    font-family: "Changa", sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: var(--text-faint);
+  }
+
+  .num { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  /* ---- خط القطع: الفاصل بين الأقسام هو خط تقطيع الرول ---- */
+  .tear {
+    height: 1px;
+    background-image: repeating-linear-gradient(
+      to left, var(--edge) 0 7px, transparent 7px 15px
+    );
+    margin-block: 3.5rem;
+  }
+
+  section { padding-block: 0; }
+
+  .stack   { display: flex; flex-direction: column; gap: 1.15rem; }
+  .stack-s { display: flex; flex-direction: column; gap: 0.6rem; }
+  .stack-l { display: flex; flex-direction: column; gap: 2.5rem; }
+
+  /* ============================================================
+     الورقة
+     ============================================================ */
+  .roll {
+    background: var(--paper);
+    color: var(--paper-ink);
+    padding: 1.6rem 1.4rem 2rem;
+    box-shadow: 0 18px 44px -28px rgba(0,0,0,.7);
+    position: relative;
+    padding-block: 1.9rem 2.3rem;
+  }
+
+  /* حافة الرول المقطوع: مثلثات متكررة فوق وتحت.
+     conic-gradient أضمن بكتير من حيل الـmask المركّبة، وبيرسم نفس
+     الشكل. */
+  .roll::before,
+  .roll::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    height: 9px;
+    background:
+      conic-gradient(from 135deg at 50% 0, var(--paper) 0 90deg, transparent 90deg)
+      0 0/16px 9px repeat-x;
+  }
+  .roll::before { top: -8px; }
+  .roll::after  { bottom: -8px; transform: scaleY(-1); }
+
+  .roll-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.95rem;
+    padding-block: 0.3rem;
+  }
+
+  .roll-rule {
+    border: 0;
+    border-top: 1px dashed var(--paper-edge);
+    margin-block: 0.9rem;
+  }
+
+  .roll-head {
+    font-family: "Changa", sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.14em;
+    color: #6B6558;
+    text-align: center;
+  }
+
+  .roll-total {
+    font-family: "Changa", sans-serif;
+    font-weight: 800;
+    font-size: 1.25rem;
+  }
+
+  /* السطر اللي البرامج التانية مابتقولوش */
+  .roll-missing {
+    color: var(--bad);
+    font-weight: 700;
+  }
+
+  .print-in { overflow: hidden; }
+  .print-in > span {
+    display: block;
+    animation: feed .55s cubic-bezier(.2,.7,.3,1) both;
+    animation-delay: var(--d, 0s);
+  }
+  @keyframes feed {
+    from { transform: translateY(-105%); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .print-in > span { animation: none; }
+  }
+
+  /* ============================================================
+     مكوّنات
+     ============================================================ */
+  .lede { font-size: 1.12rem; color: var(--text-soft); }
+
+  .claim {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 0.85rem;
+    align-items: start;
+  }
+  .claim-mark {
+    width: 0.55rem; height: 0.55rem;
+    margin-top: 0.62rem;
+    background: var(--accent);
+    border-radius: 50%;
+    flex: none;
+  }
+  .claim h3 { margin-bottom: 0.15rem; }
+  .claim p  { color: var(--text-soft); font-size: 0.97rem; }
+
+  .proof {
+    grid-column: 2;
+    margin-top: 0.55rem;
+    padding: 0.7rem 0.9rem;
+    background: var(--surface);
+    border-inline-start: 2px solid var(--accent);
+    font-size: 0.88rem;
+    color: var(--text-soft);
+  }
+  .proof b { color: var(--text); font-weight: 700; }
+
+  .price-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-block: 0.5rem;
+    border-bottom: 1px dashed var(--edge);
+    font-size: 0.97rem;
+  }
+  .price-row:last-child { border-bottom: 0; }
+  .price-row span:last-child { color: var(--text-soft); white-space: nowrap; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .chip {
+    font-size: 0.85rem;
+    padding: 0.28rem 0.7rem;
+    background: var(--surface);
+    border: 1px solid var(--edge);
+    border-radius: 999px;
+    color: var(--text-soft);
+  }
+
+  .missing li { color: var(--text-soft); font-size: 0.97rem; margin-bottom: 0.5rem; }
+  .missing b { color: var(--text); }
+
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-family: "Changa", sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    padding: 0.85rem 1.7rem;
+    border-radius: 4px;
+    text-decoration: none;
+  }
+  .cta:hover { filter: brightness(1.08); }
+  .cta:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+  footer {
+    color: var(--text-faint);
+    font-size: 0.85rem;
+    padding-block: 2.5rem 3.5rem;
+  }
+
+  a { color: var(--accent); }
+</style>
+
+<div class="wrap">
+
+  <!-- ============ الأطروحة ============ -->
+  <section style="padding-top:3.5rem">
+    <div class="stack">
+      <p class="eyebrow">برنامج محلات مصري</p>
+
+      <h1>الدرج بيقولك دخل كام.<br>مبيقولكش كلّفك كام.</h1>
+
+      <p class="lede">
+        كل برنامج كاشير بيسجّل المبيعات. الأخطبوط بيسجّل
+        <b style="color:var(--text)">اللي البيعة كلّفتك</b> وقت البيعة نفسها —
+        فرقم الربح اللي بتشوفه آخر اليوم حقيقي، مش تقدير.
+      </p>
+    </div>
+
+    <div class="roll print-in" style="margin-top:2.2rem">
+      <p class="roll-head">قفلة اليوم</p>
+      <hr class="roll-rule">
+
+      <span style="--d:.05s">
+        <div class="roll-line"><span>المبيعات</span> <span class="num">٤٬٢٥٠٫٠٠</span></div>
+      </span>
+      <span style="--d:.18s">
+        <div class="roll-line"><span>عدد الفواتير</span> <span class="num">٣٨</span></div>
+      </span>
+      <span style="--d:.31s">
+        <div class="roll-line"><span>المصروفات</span> <span class="num">٣٢٠٫٠٠</span></div>
+      </span>
+
+      <hr class="roll-rule">
+
+      <span style="--d:.5s">
+        <div class="roll-line">
+          <span>تكلفة البضاعة اللي خرجت</span>
+          <span class="num">٢٬١٨٠٫٠٠</span>
+        </div>
+      </span>
+      <span style="--d:.66s">
+        <div class="roll-line roll-total">
+          <span>الربح</span>
+          <span class="num">١٬٧٥٠٫٠٠</span>
+        </div>
+      </span>
+
+      <hr class="roll-rule">
+      <p style="font-size:.8rem;color:#6B6558;text-align:center;margin:0">
+        السطرين دول تحت الخط هما الفرق
+      </p>
+    </div>
+  </section>
+
+  <div class="tear"></div>
+
+  <!-- ============ الفرق ============ -->
+  <section class="stack-l">
+    <div class="stack-s">
+      <p class="eyebrow">تلات حاجات</p>
+      <h2>اللي بيفرّقنا مش قايمة فيتشرز</h2>
+      <p class="lede">تلات حاجات بس، وكلها بتتوري على الشاشة في تلات دقايق.</p>
+    </div>
+
+    <div class="claim">
+      <span class="claim-mark"></span>
+      <div>
+        <h3>الكاشير مايعرفش الصنف كلّفك كام</h3>
+        <p>
+          سعر الشرا مقفول على مستوى قاعدة البيانات نفسها — مش زرار متخفي في
+          الشاشة. الموظف اللي يحاول يقراه بأي طريقة بياخد رفض.
+        </p>
+      </div>
+      <div class="proof">
+        نفس صفحة الأصناف: عندك التكلفة بالأرقام، وعند الكاشير <b>شرطة</b>.
+      </div>
+    </div>
+
+    <div class="claim">
+      <span class="claim-mark"></span>
+      <div>
+        <h3>السعر مش بإيد الكاشير</h3>
+        <p>
+          وقت البيع، الكاشير بيقول «اتنين من ده» وبس. السعر بيتقرا من جدولك
+          إنت. والخصم محدود بالنسبة اللي إنت حاططها.
+        </p>
+      </div>
+      <div class="proof">
+        مفيش خانة يكتب فيها سعر. ولا في الشاشة، ولا ورا الشاشة.
+      </div>
+    </div>
+
+    <div class="claim">
+      <span class="claim-mark"></span>
+      <div>
+        <h3>العربية اللي اتفتحت وماخلصتش</h3>
+        <p>
+          البضاعة تتحط، الفلوس تتاخد، والفاتورة تتلغي قبل ما تتطبع. الدرج مظبوط
+          والرف ناقص. الأخطبوط بيسجّل كل حاجة اتحطت حتى لو الفاتورة ماتمّتش.
+        </p>
+      </div>
+      <div class="proof">
+        الرئيسية بتوريك <b>مين فتح فاتورة وماكمّلهاش، وإمتى</b>.
+      </div>
+    </div>
+  </section>
+
+  <div class="tear"></div>
+
+  <!-- ============ الوصفة ============ -->
+  <section class="stack">
+    <p class="eyebrow">للكافيهات والمطاعم</p>
+    <h2>تبيع كوباية، البن ينقص</h2>
+    <p class="lede">
+      تكتب إن الكوباية فيها ١٨ جرام بن مرة واحدة. بعد كده كل كوباية تتباع
+      بتخصم البن من المخزون، وتحسب تكلفتها من سعر شرا البن.
+    </p>
+
+    <div class="roll" style="margin-top:.6rem">
+      <p class="roll-head">اسبريسو — الوصفة</p>
+      <hr class="roll-rule">
+      <div class="roll-line"><span>بن محوّج</span> <span class="num">٠٫٠١٨ كجم</span></div>
+      <div class="roll-line"><span>سكر</span> <span class="num">٠٫٠٠٦ كجم</span></div>
+      <hr class="roll-rule">
+      <div class="roll-line roll-total"><span>تكلفة الكوباية</span> <span class="num">٧٫٩٢</span></div>
+      <div class="roll-line"><span>بتتباع بـ</span> <span class="num">٤٥٫٠٠</span></div>
+    </div>
+  </section>
+
+  <div class="tear"></div>
+
+  <!-- ============ الأنشطة ============ -->
+  <section class="stack">
+    <p class="eyebrow">٤٨ نشاط جاهز</p>
+    <h2>البرنامج بيتكلم بلغة محلك</h2>
+    <p class="lede">
+      الورشة بتقول «قطع ومصنعية»، والصيدلية بتقول «أدوية»، والكافيه بيقول
+      «مشروبات». تختار نشاطك مرة، والشاشات كلها بتتسمّى بكلامك.
+    </p>
+
+    <div class="chips">
+      <span class="chip">كافيه</span><span class="chip">مطعم</span>
+      <span class="chip">سوبر ماركت</span><span class="chip">صيدلية</span>
+      <span class="chip">جزارة</span><span class="chip">محمصة بن</span>
+      <span class="chip">ورشة</span><span class="chip">قطع غيار</span>
+      <span class="chip">مغسلة</span><span class="chip">محل ورد</span>
+      <span class="chip">عطارة</span><span class="chip">مكتبة</span>
+      <span class="chip">تاجر جملة</span><span class="chip">+ ٣٥ غيرهم</span>
+    </div>
+  </section>
+
+  <div class="tear"></div>
+
+  <!-- ============ الوعد ============ -->
+  <section class="stack">
+    <p class="eyebrow">وعد مكتوب</p>
+    <h2>لو وقفت الاشتراك، دفاترك مابتتقفلش في وشك</h2>
+    <p class="lede">
+      أكتر شكوى بتتكرر على برامج المحاسبة إن الاشتراك يخلص فالبيانات تتقفل.
+      هنا لأ: تفضل تقرا كل أصنافك وفواتيرك وتقاريرك. اللي بتدفع عليه هو إنك
+      <b style="color:var(--text)">تكمّل شغل</b> — مش إنك تشوف اللي فات.
+    </p>
+  </section>
+
+  <div class="tear"></div>
+
+  <!-- ============ السعر ============ -->
+  <section class="stack">
+    <p class="eyebrow">السعر</p>
+    <h2>بتدفع على اللي بتستعمله</h2>
+
+    <div style="margin-top:.4rem">
+      <div class="price-row">
+        <span>الأساس — بيع ومخزون وأصناف</span>
+        <span class="num">٦٠٠ ج/شهر</span>
+      </div>
+      <div class="price-row"><span>تقارير المبيعات</span> <span class="num">+١٥٠</span></div>
+      <div class="price-row"><span>الحساب المؤجل للزباين</span> <span class="num">+١٥٠</span></div>
+      <div class="price-row"><span>الشيفتات وقفلة اليوم</span> <span class="num">+١٠٠</span></div>
+      <div class="price-row"><span>موظف زيادة</span> <span class="num">+٥٠</span></div>
+      <div class="price-row"><span>فرع زيادة</span> <span class="num">+١٥٠</span></div>
+    </div>
+
+    <p style="font-size:.9rem;color:var(--text-faint)">
+      مفيش باقات. تقفل أي حاجة مش بتستعملها، السعر ينزل.
+    </p>
+  </section>
+
+  <div class="tear"></div>
+
+  <!-- ============ الصراحة ============ -->
+  <section class="stack">
+    <p class="eyebrow">قبل ما تسأل</p>
+    <h2>حاجات لسه مش موجودة</h2>
+    <p class="lede">
+      أحسن ما تكتشفها بعد ما تدفع.
+    </p>
+
+    <ul class="missing" style="margin:0;padding-inline-start:1.1rem">
+      <li>
+        <b>الربط بمنظومة الإيصال الإلكتروني</b> لسه مش متعمل. لو محلك في قرار
+        إلزام من مصلحة الضرائب، كلّمني قبل ما تشترك.
+      </li>
+      <li>
+        <b>الشغل من غير إنترنت</b> لسه مش متاح. البرنامج محتاج نت.
+      </li>
+      <li>
+        <b>التقسيط وطباعة الباركود</b> في الطريق ومش موجودين دلوقتي.
+      </li>
+    </ul>
+  </section>
+
+  <div class="tear"></div>
+
+  <!-- ============ CTA ============ -->
+  <section class="stack" style="align-items:flex-start">
+    <h2>تجربة على بياناتك إنت</h2>
+    <p class="lede">
+      نحطّ أصنافك من ملف إكسل، ونظبط الوصفات والصلاحيات معاك. لو مانفعش،
+      مادفعتش حاجة.
+    </p>
+    <a class="cta" href="https://octopus-fawn-three.vercel.app" target="_blank" rel="noopener">
+      ابدأ من هنا
+    </a>
+  </section>
+
+  <footer>
+    الأخطبوط — نظام تشغيل للمحلات المصرية.<br>
+    <span class="num" style="direction:ltr;display:inline-block">octopus-fawn-three.vercel.app</span>
+  </footer>
+
+</div>

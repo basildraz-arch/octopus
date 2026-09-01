@@ -9,6 +9,7 @@ import {
   type SaleWithItems,
 } from "@/repositories/sale.repository";
 import { useSession } from "@/hooks/useSession";
+import VoidSaleButton from "@/components/sales/VoidSaleButton";
 
 function todayString() {
   const now = new Date();
@@ -158,6 +159,16 @@ function SalesLogContent() {
                   </div>
                 ))}
               </div>
+
+              {/* الإلغاء جوه الفاتورة المفتوحة، مش زرار في السطر.
+                  الزرار اللي بيبان جنب كل فاتورة في القايمة بيتدوس
+                  بالغلط - وde آخر حاجة تحصل بالغلط. */}
+              <VoidSaleButton
+                saleId={sale.id}
+                total={sale.total}
+                createdAt={sale.created_at}
+                onVoided={loadSales}
+              />
             </details>
           ))}
         </div>

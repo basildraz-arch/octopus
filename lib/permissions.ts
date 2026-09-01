@@ -21,7 +21,8 @@ export type PermissionKey =
   | "receive_stock"
   | "manage_items"
   | "view_reports"
-  | "close_day";
+  | "close_day"
+  | "refund_sale";
 
 export const ROLE_BASE_PERMISSIONS: Record<StaffRole, PermissionKey[]> = {
   cashier: ["sell", "manage_expenses", "manage_customers", "give_discount"],
@@ -69,6 +70,11 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   manage_items: "يضيف ويعدّل الأصناف والأسعار",
   view_reports: "يشوف التقارير والأرباح",
   close_day: "يقفل اليوم",
+
+  // اتنفّذت في ميجريشن ٠٨٥. **مش في أي دور** عن قصد: اللي يقدر
+  // يبيع ويلغي ويشيل الفلوس مافيش حاجة بتمسكه. صاحب المحل يدّيها
+  // لموظف بعينه لو واثق فيه.
+  refund_sale: "يلغي فاتورة اتسجّلت غلط",
 };
 
 // Ticking one of these tops a person up without promoting them.
@@ -82,6 +88,7 @@ export const PERMISSION_ORDER: PermissionKey[] = [
   "manage_customers",
   "manage_expenses",
   "give_discount",
+  "refund_sale",
 ];
 
 export function permissionsOf(user: User | null | undefined): Set<PermissionKey> {

@@ -30,12 +30,55 @@ type Props = {
   customerPhone?: string | null;
 };
 
-// Printable width in millimetres. 58mm and 80mm rolls lose a few mm
-// to the printer's own margins, so the usable widths are 48 and 72.
-const PAPER: Record<string, { width: string; page: string }> = {
-  thermal_58: { width: "48mm", page: "58mm auto" },
-  thermal_80: { width: "72mm", page: "80mm auto" },
-  a4: { width: "180mm", page: "A4" },
+// ============================================================
+// مقاسات الورق — الأرقام دي متقاسة مش متخمّنة
+// ============================================================
+//
+// طابعة كيرو (XP-80C) بتقول في خصائصها بالحرف:
+//
+//     Paper available:  80(72.1) x 297 mm
+//     Maximum resolution: 203 dpi
+//
+// يعني الورق **٨٠ مم**، بس اللي بيتطبع فعلًا **٧٢.١ مم** — الفرق
+// (حوالي ٤ مم كل جنب) منطقة الطابعة مابتوصلهاش خالص. وde مش خاص
+// بالموديل ده؛ ده حال كل الطابعات الحرارية.
+//
+// ٢٠٣ dpi = ٨ نقط في المليمتر، فـ٧٢.١ مم = **٥٧٦ نقطة** — وde
+// الرقم القياسي لرول الـ٨٠ مم.
+//
+// ============================================================
+// ليه بقى فيه `margin` مستقل
+// ============================================================
+//
+// قبل كده كان `@page { size: 80mm auto; margin: 0 }` والمحتوى عرضه
+// ٧٢ مم. المتصفح بيبدأ يرسم من **حافة الصفحة**، فالـ٧٢ مم بتبتدي
+// من ٠ وبتنتهي عند ٧٢ — يعني داخلة ٤ مم في المنطقة اللي الطابعة
+// مابتطبعش فيها على الشمال، و٨ مم فاضيين على اليمين. النتيجة فاتورة
+// مزنوقة على جنب وطرفها مقصوص.
+//
+// الهامش هنا بيخلّي الصفحة تبتدي بعد المنطقة الميتة، والعرض بيملا
+// اللي فاضل بالظبط.
+const PAPER: Record<
+  string,
+  { width: string; page: string; margin: string; label: string }
+> = {
+  // رول ٥٨ مم: المطبوع ~٤٨ مم (٣٨٤ نقطة على ٢٠٣ dpi).
+  thermal_58: {
+    width: "48mm",
+    page: "58mm auto",
+    margin: "0 5mm",
+    label: "حراري ٥٨ مم",
+  },
+
+  // رول ٨٠ مم: المطبوع ٧٢.١ مم (٥٧٦ نقطة).
+  thermal_80: {
+    width: "72mm",
+    page: "80mm auto",
+    margin: "0 4mm",
+    label: "حراري ٨٠ مم",
+  },
+
+  a4: { width: "180mm", page: "A4", margin: "10mm", label: "A4" },
 };
 
 const TEXT = {
@@ -105,15 +148,28 @@ export default function Receipt({
           eject a mostly-blank sheet after every sale. */}
       <style>{`
         @media print {
-          @page { size: ${paper.page}; margin: 0; }
+          @page { size: ${paper.page}; margin: ${paper.margin}; }
           body { margin: 0; }
+
+          /* الطابعة الحرارية ٢٠٣ dpi — أقل بكتير من الشاشة. الخط
+             تحت ٩pt بيطلع مهزوز ومش مقري، والكاشير بيدّي الورقة
+             للزبون. بنفرض حد أدنى بدل ما نسيب Tailwind يصغّر. */
+          .octopus-receipt { font-size: 9pt; line-height: 1.35; }
+          .octopus-receipt .text-xs { font-size: 9pt; }
+          .octopus-receipt .text-sm { font-size: 11pt; }
+          .octopus-receipt .text-base { font-size: 13pt; }
+
+          /* الرمادي الفاتح بيختفي على الورق الحراري. كله أسود. */
+          .octopus-receipt * { color: #000 !important; }
         }
       `}</style>
 
       <div
         dir={english ? "ltr" : "rtl"}
         style={{ width: paper.width }}
-        className="max-h-full overflow-y-auto rounded-2xl bg-white p-4 text-gray-900 print:max-h-none print:overflow-visible print:rounded-none print:p-2 print:shadow-none print:translate-x-[3mm]"
+        /* print:p-0 مش p-2: الهامش بقى على `@page` نفسها. لو فضل
+           padding هنا كمان، بيتخصم تاني من عرض مالوش فاضل. */
+        className="octopus-receipt max-h-full overflow-y-auto rounded-2xl bg-white p-4 text-gray-900 print:max-h-none print:w-full print:overflow-visible print:rounded-none print:p-0 print:shadow-none"
       >
         {quote && (
           <p className="mb-2 rounded border border-gray-900 py-1 text-center text-xs font-bold">

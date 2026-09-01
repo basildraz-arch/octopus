@@ -19,11 +19,66 @@
 #
 # **فحص الأنواع بيفضل شغال** حتى مع السويتش ده - هو خط الدفاع
 # الحقيقي زي ما هو مكتوب في next.config.ts.
-param([switch]$SkipBuild)
+param([switch]$SkipBuild, [switch]$Clean)
 
 Set-Location -LiteralPath $PSScriptRoot
 
 $DOMAIN = "octopus-fawn-three.vercel.app"
+
+# -Clean: يمسح .next ويتأكد إنه اتمسح فعلًا.
+#
+# ليه ده محتاج دالة كاملة مش سطر:
+#
+# البناء على ويندوز وقع مرتين بـ"TypeError: a[d] is not a function"
+# جوه webpack-runtime، والفحص كشف السبب - **مجلد .next كان مخلوط من
+# بناءين**:
+#
+#   .next/server/chunks/*.js                    ← بناء قديم
+#   .next/server/app/**/…client-reference-manifest.js  ← بناء جديد (بعده بساعة ونص)
+#
+# الملفات الجديدة بتشاور على أرقام موديولات في ملفات قديمة مش
+# موجودة فيها، فالـrequire بيدوّر ومايلاقيش.
+#
+# والسبب إن `Remove-Item -Recurse -Force .next` **مانجحش** - ويندوز
+# مابيمسحش ملف حد ماسكه (سيرفر `npm run dev` شغال، أو المحرر، أو
+# مضاد الفيروسات، أو OneDrive وهو بيزامن). و`-Force` مابيكسرش القفل،
+# والأمر بيفشل من غير ما حد ياخد باله.
+#
+# فالدالة دي بتتأكد. ولو المسح فشل بتحاول تغيّر الاسم - إعادة
+# التسمية بتنجح مع أقفال كتير المسح بيفشل معاها.
+function Clear-NextCache {
+    if (-not (Test-Path .next)) {
+        Say "مفيش .next أصلًا - البناء هيبدأ نضيف." "Green"
+        return
+    }
+
+    Say "بيمسح .next..."
+    Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
+
+    if (-not (Test-Path .next)) {
+        Say "اتمسح." "Green"
+        return
+    }
+
+    Say "المسح مانجحش - فيه حاجة ماسكة الملفات. بيجرب يغيّر الاسم..." "Yellow"
+    $parked = ".next.old-" + (Get-Date -Format "HHmmss")
+    Rename-Item .next $parked -ErrorAction SilentlyContinue
+
+    if (-not (Test-Path .next)) {
+        Say "اتنقل لـ$parked - امسحه بنفسك بعدين." "Green"
+        return
+    }
+
+    Say "لا المسح ولا تغيير الاسم نجحوا." "Red"
+    Write-Host "  اقفل الحاجات دي وجرب تاني:"
+    Write-Host "    - أي 'npm run dev' شغال في تيرمنال تاني"
+    Write-Host "    - VS Code (بيمسك ملفات جوه .next)"
+    Write-Host "    - OneDrive لو بيزامن مجلد Desktop"
+    Write-Host ""
+    Write-Host "  ولو المشكلة بتتكرر، انقل المشروع برة Desktop -"
+    Write-Host "  مثلًا C:\dev\octopus - عشان OneDrive مايلمسوش."
+    exit 1
+}
 
 function Say($msg, $color = "Cyan") { Write-Host "`n>>> $msg" -ForegroundColor $color }
 
@@ -48,6 +103,8 @@ if ($SkipBuild) {
 }
 else {
 
+if ($Clean) { Clear-NextCache }
+
 Say "بيبني المشروع..."
 npm run build 2>&1 | Tee-Object build.log | Out-Host
 $buildExit = $LASTEXITCODE
@@ -62,8 +119,8 @@ $buildFailed = ($buildExit -ne 0) -or
 
 if ($buildFailed) {
     Say "الـbuild وقع (كود الخروج: $buildExit). الخطأ في build.log - ابعته للشات وما ترفعش." "Red"
-    Say "لو الخطأ فيه 'is not a function' جوه webpack-runtime، امسح .next وجرب تاني:" "Yellow"
-    Write-Host "    Remove-Item -Recurse -Force .next"
+    Say "لو الخطأ فيه 'is not a function' جوه webpack-runtime، يبقى .next مخلوط. جرب:" "Yellow"
+    Write-Host "    .\deploy.ps1 -Clean" 
     exit 1
 }
 Say "الـbuild عدّى." "Green"

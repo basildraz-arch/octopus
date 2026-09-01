@@ -12,6 +12,8 @@ import {
 } from "@/repositories/report.repository";
 import { useSession } from "@/hooks/useSession";
 import WarehousePulseDashboard from "@/components/reports/WarehousePulseDashboard";
+import ProfitByItem from "@/components/reports/ProfitByItem";
+import ExpensesReport from "@/components/reports/ExpensesReport";
 
 function toDateString(date: Date) {
   const year = date.getFullYear();
@@ -283,6 +285,22 @@ export default function ReportsPage() {
                 تفاصيل الفواتير اللي ماتنفذتش
               </Link>
             </div>
+          )}
+
+          {/* الربح لكل صنف. المركّب بيخفي نفسه لو اللي فاتح الشاشة
+              مالوش صلاحية التقارير - الدالة بترمي وهو بيرجع null. */}
+          <ProfitByItem from={startDate} to={endDate} />
+
+          {/* المصروفات بالتفصيل.
+              الرقم الإجمالي فوق كان لوحده من غير أي تفصيل، والمصروفات
+              كانت بتتقرا بالوردية بس - يعني بتختفي أول ما اليوم يتقفل.
+              دي بتقراها بالتاريخ زي أي تقرير. */}
+          {user && (
+            <ExpensesReport
+              businessId={user.business_id}
+              from={startDate}
+              to={endDate}
+            />
           )}
 
           <Link

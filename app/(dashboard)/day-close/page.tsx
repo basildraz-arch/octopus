@@ -22,6 +22,7 @@ import {
   type ShiftSummary,
 } from "@/repositories/shift.repository";
 import { useSession } from "@/hooks/useSession";
+import HandoverButton from "@/components/shift/HandoverButton";
 import { useToast } from "@/hooks/useToast";
 
 const PAYMENT_METHOD_INFO: Record<string, { label: string; icon: LucideIcon }> = {
@@ -284,6 +285,16 @@ export default function DayClosePage() {
                 </button>
               </div>
             </div>
+          )}
+
+          {/* تسليم لزميل: المحل لسه شغّال، اللي واقف على الكاشير
+              بس اتغيّر. الوردية بتتقفل بجرد ووردية جديدة بتتفتح
+              على طول عشان التاني يبدأ من درج معلوم. */}
+          {!confirming && (
+            <HandoverButton
+              expectedCash={summary.expectedCash}
+              onDone={load}
+            />
           )}
         </>
       ) : (

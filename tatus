@@ -1,0 +1,79 @@
+warning: in the working copy of 'components/Receipt.tsx', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/components/Receipt.tsx b/components/Receipt.tsx[m
+[1mindex d0f546ff..8eaa8a34 100644[m
+[1m--- a/components/Receipt.tsx[m
+[1m+++ b/components/Receipt.tsx[m
+[36m@@ -1,12 +1,13 @@[m
+ "use client";[m
+ [m
+ import { useEffect, useRef } from "react";[m
+[31m-import { Printer } from "lucide-react";[m
+[32m+[m[32mimport { Printer, MessageCircle } from "lucide-react";[m
+ [m
+ import type { CartItem } from "@/components/Cart";[m
+ import type { Business } from "@/types/business";[m
+ import { hasFeature } from "@/lib/features";[m
+ import type { PriceTier } from "@/lib/priceTier";[m
+[32m+[m[32mimport { buildReceiptText, whatsAppLink } from "@/lib/whatsappReceipt";[m
+ [m
+ type Props = {[m
+   cart: CartItem[];[m
+[36m@@ -22,6 +23,11 @@[m [mtype Props = {[m
+   // A price quote, not a sale. Marked loudly so it can never be[m
+   // mistaken for proof of payment.[m
+   quote?: boolean;[m
+[32m+[m
+[32m+[m[32m  // تليفون العميل لو البيعة على الحساب. لو مفيش، زرار واتساب بيفتح[m
+[32m+[m[32m  // "اختار جهة اتصال" بدل ما يختفي - الفاتورة نفسها هي الفايدة،[m
+[32m+[m[32m  // والرقم بيوفّر خطوة بس.[m
+[32m+[m[32m  customerPhone?: string | null;[m
+ };[m
+ [m
+ // Printable width in millimetres. 58mm and 80mm rolls lose a few mm[m
+[36m@@ -67,6 +73,7 @@[m [mexport default function Receipt({[m
+   priceTier = 1,[m
+   autoPrint = false,[m
+   quote = false,[m
+[32m+[m[32m  customerPhone,[m
+ }: Props) {[m
+   const subtotal = cart.reduce((sum, line) => sum + line.total, 0);[m
+   const printed = useRef(false);[m
+[36m@@ -106,7 +113,7 @@[m [mexport default function Receipt({[m
+       <div[m
+         dir={english ? "ltr" : "rtl"}[m
+         style={{ width: paper.width }}[m
+[31m-        className="max-h-full overflow-y-auto rounded-2xl bg-white p-4 text-gray-900 print:max-h-none print:overflow-visible print:rounded-none print:p-2 print:shadow-none"[m
+[32m+[m[32m        className="max-h-full overflow-y-auto rounded-2xl bg-white p-4 text-gray-900 print:max-h-none print:overflow-visible print:rounded-none print:p-2 print:shadow-none print:translate-x-[3mm]"[m
+       >[m
+         {quote && ([m
+           <p className="mb-2 rounded border border-gray-900 py-1 text-center text-xs font-bold">[m
+[36m@@ -181,6 +188,29 @@[m [mexport default function Receipt({[m
+         <p className="mt-3 text-center text-xs text-gray-500">{t.thanks}</p>[m
+ [m
+         <div className="mt-4 flex gap-2 print:hidden">[m
+[32m+[m[32m          {/* واتساب: رابط wa.me برسالة مكتوبة. مابيبعتش لوحده -[m
+[32m+[m[32m              بيفتح المحادثة وصاحب المحل بيدوس إرسال. مفيش API ولا[m
+[32m+[m[32m              حساب أعمال ولا تكلفة. */}[m
+[32m+[m[32m          <a[m
+[32m+[m[32m            href={whatsAppLink([m
+[32m+[m[32m              buildReceiptText({[m
+[32m+[m[32m                businessName: business?.name,[m
+[32m+[m[32m                lines: cart,[m
+[32m+[m[32m                total,[m
+[32m+[m[32m                discountAmount,[m
+[32m+[m[32m                createdAt,[m
+[32m+[m[32m                quote,[m
+[32m+[m[32m              }),[m
+[32m+[m[32m              customerPhone[m
+[32m+[m[32m            )}[m
+[32m+[m[32m            target="_blank"[m
+[32m+[m[32m            rel="noopener noreferrer"[m
+[32m+[m[32m            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 p-3 font-bold text-white hover:bg-green-700"[m
+[32m+[m[32m          >[m
+[32m+[m[32m            <MessageCircle size={18} />[m
+[32m+[m[32m            واتساب[m
+[32m+[m[32m          </a>[m
+[32m+[m
+           <button[m
+             onClick={() => window.print()}[m
+             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 p-3 font-bold text-white hover:bg-blue-700"[m
