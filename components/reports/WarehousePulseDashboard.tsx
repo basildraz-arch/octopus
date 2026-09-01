@@ -58,7 +58,7 @@ export default function WarehousePulseDashboard() {
     if (!user) return;
 
     getWarehouses(user.business_id).then(setWarehouses);
-    getItems().then(setItems);
+    getItems(user.business_id).then(setItems);
   }, [user]);
 
   useEffect(() => {

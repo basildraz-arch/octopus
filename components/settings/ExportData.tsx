@@ -47,7 +47,7 @@ export default function ExportData({
   }
 
   async function exportItems() {
-    const items = await attachCosts(await getItems());
+    const items = await attachCosts(await getItems(businessId));
 
     const csv = toCsv(
       ["الاسم", "سعر البيع", "سعر 2", "سعر 3", "التكلفة", "الكمية", "الوحدة"],

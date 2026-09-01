@@ -169,6 +169,10 @@ export default function Receipt({
         style={{ width: paper.width }}
         /* print:p-0 مش p-2: الهامش بقى على `@page` نفسها. لو فضل
            padding هنا كمان، بيتخصم تاني من عرض مالوش فاضل. */
+        /* الفاتورة هي منطقة الطباعة بتاعتها.
+           من غير العلامة دي، لو أي عنصر تاني في الصفحة كان معلّم،
+           الورقة كانت هتطلع فاضية. */
+        data-print-area
         className="octopus-receipt max-h-full overflow-y-auto rounded-2xl bg-white p-4 text-gray-900 print:max-h-none print:w-full print:overflow-visible print:rounded-none print:p-0 print:shadow-none"
       >
         {quote && (

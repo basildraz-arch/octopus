@@ -5,26 +5,43 @@ import { useEffect, useMemo, useState } from "react";
 import { Package, Warehouse, Tag, Plus, Search, FileSpreadsheet } from "lucide-react";
 
 import ProductTable from "@/components/items/ItemTable";
+import { getRecipeParentIds } from "@/repositories/itemComponent.repository";
 
 import { getItems, updateItem } from "@/repositories/item.repository";
 import { attachCosts } from "@/repositories/itemCost.repository";
+import { useSession } from "@/hooks/useSession";
 import type { Item } from "@/types/item";
 
 export default function ItemsPage() {
+  // الصفحة دي ماكانتش بتقرا الجلسة خالص - كانت بتسيب الـRLS تفلتر
+  // لوحدها. وde كان شغال لأي مستخدم عادي، بس **بيخلط المحلات لأدمن
+  // المنصة** (سياسة platform_admin_read كانت بتدّيه قراءة الكل).
+  const { user } = useSession();
+
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
+    if (!user) return;
+
     loadItems();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   async function loadItems() {
+    if (!user) return;
+
     setLoading(true);
 
     // الأصناف بتيجي من غير تكلفة (العمود ممنوع - ميجريشن 069)،
     // وattachCosts بتحطها لو اللي فاتح الصفحة معاه صلاحية.
-    const data = await attachCosts(await getItems());
+    const [data, recipeIds] = await Promise.all([
+      attachCosts(await getItems(user.business_id)),
+      getRecipeParentIds(),
+    ]);
+
+    setWithRecipe(recipeIds);
 
     setItems(data);
 
@@ -43,6 +60,10 @@ export default function ItemsPage() {
       return value.includes(search.toLowerCase());
     });
   }, [items, search]);
+
+  // أرقام الأصناف اللي ليها وصفة. بتتجاب مرة واحدة للصفحة كلها -
+  // استعلام لكل سطر كان هيبقى ٩٠ نداء.
+  const [withRecipe, setWithRecipe] = useState<Set<string>>(new Set());
 
   const ingredientCount = items.filter((item) => item.is_ingredient).length;
 
@@ -136,6 +157,7 @@ export default function ItemsPage() {
           <ProductTable
             products={filteredItems}
             onToggleActive={handleToggleActive}
+            withRecipe={withRecipe}
           />
         )}
       </div>

@@ -26,11 +26,29 @@ import type {
 const ITEM_COLUMNS =
   "id, business_id, category_id, name, barcode, item_type, sale_method, unit, sell_price, sell_price_2, sell_price_3, min_sell_price, stock, minimum_stock, has_stock, image, keywords, is_ingredient, active, created_at, updated_at";
 
-export async function getItems(): Promise<Item[]> {
-  const { data, error } = await supabase
-    .from("items")
-    .select(ITEM_COLUMNS)
-    .order("name", { ascending: true });
+// ============================================================
+// ليه فيه فلتر بالمحل رغم إن الـRLS موجودة
+// ============================================================
+//
+// `items_read` بتقول `business_id = get_my_business_id()` - كفاية
+// لأي مستخدم عادي. **بس فيه policy تانية:** `platform_admin_read`
+// بتدّي أدمن المنصة قراءة **كل الأصناف في كل المحلات**.
+//
+// الـpolicy دي موجودة عشان شاشة الماستر، بس هي بتنطبق على **كل**
+// استعلام - فشاشة الأصناف العادية كانت بتوري لباسل ١٩٣ صنف من
+// ٨ محلات مخلوطين مع بعض.
+//
+// وde مش تسريب (هو الأدمن فعلًا) - ده **خلط**. وخطورته إنه بيخلّيه
+// يفتح صنف من محل حد تاني ويحاول يعدّله، والتعديل بيترفض بصمت
+// (شوف `updateItem` فوق).
+//
+// **الفلتر هنا مش أمان - هو ترتيب.** الأمان في الـRLS.
+export async function getItems(businessId?: string): Promise<Item[]> {
+  let query = supabase.from("items").select(ITEM_COLUMNS);
+
+  if (businessId) query = query.eq("business_id", businessId);
+
+  const { data, error } = await query.order("name", { ascending: true });
 
   if (error) {
     console.error("Supabase Error:", error.message);
@@ -127,16 +145,41 @@ export async function createItem(
   return data;
 }
 
+// ============================================================
+// ليه بنتأكد إن فيه صف اتغيّر فعلًا
+// ============================================================
+//
+// `update()` من غير `select()` بترجّع **204 من غير أي خطأ** حتى لو
+// **مطابقتش ولا صف**. وde بالظبط اللي بيحصل لما الـRLS تمنع الصف:
+// مفيش رفض، مفيش رسالة - نجاح فاضي.
+//
+// حصل فعلًا (١ سبتمبر): باسل عدّل صنف اسمه "7up" وشاف رسالة نجاح،
+// والصنف مااتغيّرش. السبب إن الصنف من **محل كيرو** مش من محله -
+// و`items_update` بتقول `business_id = get_my_business_id()`، فصفر
+// صفوف اتطابقت والرد رجع 204.
+//
+// شاف "اتحفظ" تلات مرات على حاجة ماتحفظتش ولا مرة.
+//
+// **القاعدة: أي `update` أو `delete` لازم يتأكد إن فيه صف اتمس.**
+// النجاح الفاضي أسوأ من الخطأ - الخطأ بيتصلّح، والنجاح الفاضي
+// بيتصدّق.
 export async function updateItem(
   id: string,
   item: Partial<ItemFormData>
 ) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("items")
     .update(item)
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
 
   if (error) throw error;
+
+  if (!data || data.length === 0) {
+    throw new Error(
+      "الصنف ده مش من محلك - مااتغيّرش. لو انت أدمن، افتحه من حساب المحل نفسه."
+    );
+  }
 }
 
 export async function adjustItemStock(

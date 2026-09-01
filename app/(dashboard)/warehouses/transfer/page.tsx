@@ -42,7 +42,7 @@ export default function StockTransferPage() {
     setLoading(true);
 
     const [itemsData, warehousesData] = await Promise.all([
-      getItems(),
+      getItems(user.business_id),
       getWarehouses(user.business_id),
     ]);
 
@@ -74,6 +74,8 @@ export default function StockTransferPage() {
     const quantityValue = Number(quantity);
 
     if (!quantityValue || quantityValue <= 0) return;
+
+    if (!user) return;
 
     setSaving(true);
 

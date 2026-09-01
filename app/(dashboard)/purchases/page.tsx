@@ -26,16 +26,20 @@ export default function PurchasesPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
+
     load();
-  }, []);
+  }, [user]);
 
   async function load() {
+    if (!user) return;
+
     setLoading(true);
 
     // attachCosts عشان سطر "سعر الشراء الحالي" يوري رقم.
     // getItems مابترجّعش العمود (ميجريشن 070) فالسطر كان بيوري شرطة
     // دايمًا - حتى لصاحب المحل.
-    const data = await attachCosts(await getItems());
+    const data = await attachCosts(await getItems(user.business_id));
 
     setItems(data);
 
@@ -67,6 +71,10 @@ export default function PurchasesPage() {
 
     if (!quantityValue || quantityValue <= 0) return;
     if (!buyPriceValue || buyPriceValue < 0) return;
+
+    // الجلسة ممكن تكون لسه بتتحمّل. من غير الشرط ده الشاشة بتحاول
+    // تحفظ بمحل مش موجود.
+    if (!user) return;
 
     setSaving(true);
 

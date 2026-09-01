@@ -51,7 +51,7 @@ export default function RecipeEditor({ item, businessId }: Props) {
 
     const [components, allItems] = await Promise.all([
       getComponents(item.id),
-      getItems(),
+      getItems(businessId),
     ]);
 
     setRows(components);

@@ -60,7 +60,7 @@ export default function DashboardHomePage() {
 
     const [itemsData, openShift, report, auditEvents, invValue] =
       await Promise.all([
-        getItems(),
+        getItems(user.business_id),
         getOpenShift(user.business_id),
         getReportSummary(user.business_id, today, today),
         getCartAuditByDate(user.business_id, today),
