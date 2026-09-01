@@ -128,7 +128,7 @@ export const HOME_TILES: TileItem[] = [
   },
   {
     id: "day-close",
-    title: "إنهاء اليوم",
+    title: "تقفيل الدرج",
     href: "/day-close",
     icon: "🔒",
     features: ["shifts"],
@@ -267,9 +267,9 @@ export const POS_TILES: TileItem[] = [
   },
   {
     id: "pos-day-close",
-    title: "تسليم الوردية",
+    title: "تقفيل الدرج",
     href: "/day-close",
-    icon: "🤝",
+    icon: "🔒",
     features: ["shifts"],
     permission: "close_day",
     group: "daily",

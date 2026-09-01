@@ -8,6 +8,7 @@ import type { Business } from "@/types/business";
 import { hasFeature } from "@/lib/features";
 import type { PriceTier } from "@/lib/priceTier";
 import { buildReceiptText, whatsAppLink } from "@/lib/whatsappReceipt";
+import PrintPortal from "@/components/PrintPortal";
 
 type Props = {
   cart: CartItem[];
@@ -142,7 +143,10 @@ export default function Receipt({
 
   const paper = PAPER[business?.receipt_paper ?? "thermal_80"] ?? PAPER.thermal_80;
 
-  return (
+  // الفاتورة بتتعلّق في `<body>` مباشرة مش جوه شاشة البيع — عشان
+  // وقت الطباعة تبقى المحتوى الوحيد على الورقة. التفاصيل والسبب
+  // في `components/PrintPortal.tsx`.
+  const overlay = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 print:static print:block print:bg-white print:p-0">
       {/* Thermal rolls are continuous paper: a fixed page height would
           eject a mostly-blank sheet after every sale. */}
@@ -289,4 +293,6 @@ export default function Receipt({
       </div>
     </div>
   );
+
+  return <PrintPortal>{overlay}</PrintPortal>;
 }
