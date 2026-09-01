@@ -23,7 +23,6 @@ import { getStockByWarehouse } from "@/repositories/stockBatch.repository";
 import { getItemCost } from "@/repositories/itemCost.repository";
 import { useSession } from "@/hooks/useSession";
 import { getExampleHints } from "@/lib/examples";
-import { hasFeature } from "@/lib/features";
 import { useToast } from "@/hooks/useToast";
 
 import { itemSchema, ItemSchema } from "./validation";
@@ -44,12 +43,6 @@ export default function ItemForm({ item }: Props) {
   // Examples drawn from this shop's trade rather than generic ones.
   const hints = getExampleHints(business);
   const toast = useToast();
-  const tiersEnabled = hasFeature(business, "price_tiers");
-  const tierLabels = business?.price_tier_labels ?? [
-    "التسعيرة الأولى",
-    "التسعيرة الثانية",
-    "التسعيرة الثالثة",
-  ];
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [duplicateItem, setDuplicateItem] = useState<Item | null>(null);
@@ -110,11 +103,11 @@ export default function ItemForm({ item }: Props) {
           // اللي كان بيخلي الحفظ يمسح تكلفة الصنف.
           buy_price: 0,
           sell_price: item.sell_price,
-          sell_price_2: item.sell_price_2 ?? null,
-          sell_price_3: item.sell_price_3 ?? null,
 
           stock: item.stock,
           minimum_stock: item.minimum_stock,
+
+          is_ingredient: item.is_ingredient ?? false,
         }
       : {
           name: "",
@@ -127,15 +120,16 @@ export default function ItemForm({ item }: Props) {
 
           buy_price: 0,
           sell_price: 0,
-          sell_price_2: null,
-          sell_price_3: null,
 
           stock: 0,
           minimum_stock: 0,
+
+          is_ingredient: false,
         },
   });
 
   const itemType = watch("item_type");
+  const isIngredient = watch("is_ingredient");
   const name = watch("name");
 
   // التكلفة الحقيقية لصنف موجود.
@@ -313,6 +307,33 @@ export default function ItemForm({ item }: Props) {
           </select>
         </div>
 
+        {/* مكوّن — مش بيتباع.
+            الوصفات خلقت نوع جديد من الأصناف: البن والسكر والكوب
+            بيتضافوا عشان الوصفة تخصم منهم، ومحدش بيبيعهم بالحبة.
+            من غير العلامة دي كانوا هيظهروا للكاشير جنب القهوة. */}
+        {itemType === "product" && (
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-ink-600 bg-ink-900 p-4 sm:col-span-2">
+            <input
+              type="checkbox"
+              {...register("is_ingredient")}
+              className="mt-0.5 size-5 shrink-0"
+            />
+
+            <span>
+              <span className="block text-sm font-semibold text-paper">
+                ده مكوّن — مش بيتباع لوحده
+              </span>
+
+              <span className="mt-1 block text-xs text-mist">
+                زي البن والسكر والأكواب: بيتخصموا لما تبيع حاجة معمولة
+                منهم، بس <strong>مايظهروش في شاشة الكاشير</strong> عشان
+                محدش يبيعهم بالغلط. لسه هيبانوا في المخزون والمشتريات
+                والتقارير عادي.
+              </span>
+            </span>
+          </label>
+        )}
+
         <div>
           <label className="mb-2 block text-sm">
             طريقة البيع
@@ -388,67 +409,27 @@ export default function ItemForm({ item }: Props) {
           </div>
         )}
 
-        <div>
-          <label className="mb-2 block text-sm">
-            {tiersEnabled ? tierLabels[0] : "سعر البيع"}
-          </label>
+        {/* المكوّن مالوش سعر بيع - مابيتباعش. إخفاء الحقل أوضح من
+            تركه فاضي: حقل ظاهر ومطلوب بيخلّي صاحب المحل يكتب رقم
+            عشوائي عشان يعدّي الشاشة، والرقم ده هيبان في تقرير
+            يومًا ما. */}
+        {!isIngredient && (
+          <div>
+            <label className="mb-2 block text-sm">
+              سعر البيع
+            </label>
 
-          <Input
-            type="number"
-            step="0.01"
-            {...register("sell_price")}
-            className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
-          />
+            <Input
+              type="number"
+              step="0.01"
+              {...register("sell_price")}
+              className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
+            />
 
-          <p className="mt-1 text-sm text-red-500">
-            {errors.sell_price?.message}
-          </p>
-        </div>
-
-        {tiersEnabled && (
-          <>
-            <div>
-              <label className="mb-2 block text-sm">
-                {tierLabels[1]}
-              </label>
-
-              <Input
-                type="number"
-                step="0.01"
-                {...register("sell_price_2", {
-                  setValueAs: (value) =>
-                    value === "" ? null : Number(value),
-                })}
-                placeholder={`لو فاضية هتستخدم ${tierLabels[0]}`}
-                className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
-              />
-
-              <p className="mt-1 text-sm text-red-500">
-                {errors.sell_price_2?.message}
-              </p>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm">
-                {tierLabels[2]}
-              </label>
-
-              <Input
-                type="number"
-                step="0.01"
-                {...register("sell_price_3", {
-                  setValueAs: (value) =>
-                    value === "" ? null : Number(value),
-                })}
-                placeholder={`لو فاضية هتستخدم ${tierLabels[0]}`}
-                className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
-              />
-
-              <p className="mt-1 text-sm text-red-500">
-                {errors.sell_price_3?.message}
-              </p>
-            </div>
-          </>
+            <p className="mt-1 text-sm text-red-500">
+              {errors.sell_price?.message}
+            </p>
+          </div>
         )}
 
         {itemType === "product" && (

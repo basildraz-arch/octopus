@@ -44,6 +44,8 @@ export default function ItemsPage() {
     });
   }, [items, search]);
 
+  const ingredientCount = items.filter((item) => item.is_ingredient).length;
+
   const lowStockCount = useMemo(
     () => items.filter((i) => i.has_stock && i.stock <= i.minimum_stock).length,
     [items]
@@ -104,6 +106,15 @@ export default function ItemsPage() {
         <span>
           {items.length} صنف
         </span>
+
+        {/* المكوّنات بتتعدّ لوحدها.
+            صاحب المحل بيفتح الشاشة دي ويلاقي ١٠٠ صنف، وشاشة الكاشير
+            بتوري ٨٨. من غير السطر ده هيفتكر إن فيه ١٢ صنف ضاعوا. */}
+        {ingredientCount > 0 && (
+          <span>
+            منهم {ingredientCount} مكوّن (مش في شاشة الكاشير)
+          </span>
+        )}
 
         <span className="text-green-400">
           قيمة المخزون {totalStockValue.toFixed(0)} ج

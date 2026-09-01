@@ -72,6 +72,14 @@ export const PRIMARY_NAV: NavItem[] = [
     permission: "sell",
   },
   {
+    id: "expenses",
+    title: "مصروف",
+    href: "/expenses",
+    icon: "💸",
+    features: ["shifts"],
+    permission: "manage_expenses",
+  },
+  {
     id: "warehouses",
     title: "المخازن",
     href: "/warehouses",
@@ -250,6 +258,7 @@ export const ROUTE_RULES: RouteRule[] = [
   { prefix: "/master", ownerOnly: true },
   { prefix: "/day-close", feature: "shifts", permission: "close_day" },
   { prefix: "/sales-log", feature: "pos_sales", permission: "sell" },
+  { prefix: "/expenses", feature: "shifts", permission: "manage_expenses" },
   { prefix: "/items", permission: "manage_items" },
   { prefix: "/categories", permission: "manage_items" },
   { prefix: "/reports", permission: "view_reports" },

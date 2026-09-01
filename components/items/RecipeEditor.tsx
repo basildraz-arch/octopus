@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, EyeOff } from "lucide-react";
 
 import {
   addComponent,
@@ -9,7 +9,7 @@ import {
   removeComponent,
   type ItemComponentRow,
 } from "@/repositories/itemComponent.repository";
-import { getItems } from "@/repositories/item.repository";
+import { getItems, updateItem } from "@/repositories/item.repository";
 import { useToast } from "@/hooks/useToast";
 
 import type { Item } from "@/types/item";
@@ -34,6 +34,12 @@ export default function RecipeEditor({ item, businessId }: Props) {
   const [pickedId, setPickedId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [adding, setAdding] = useState(false);
+
+  // المكوّن اللي لسه اتضاف وهو **لسه ظاهر في شاشة الكاشير**.
+  // بنسأل بدل ما نقرر: محمصة بن بتبيع كيلو بن للزبون **وكمان**
+  // بتعمل منه قهوة - فالبرنامج مايقدرش يعرف.
+  const [suggest, setSuggest] = useState<Item | null>(null);
+  const [hiding, setHiding] = useState(false);
 
   useEffect(() => {
     load();
@@ -75,6 +81,8 @@ export default function RecipeEditor({ item, businessId }: Props) {
     setAdding(true);
 
     try {
+      const picked = candidates.find((c) => c.id === pickedId) ?? null;
+
       await addComponent(businessId, item.id, pickedId, value);
 
       setPickedId("");
@@ -82,11 +90,33 @@ export default function RecipeEditor({ item, businessId }: Props) {
 
       await load();
       toast.success("اتضاف للوصفة");
+
+      // لسه بيظهر للكاشير؟ نعرض الاقتراح مرة واحدة.
+      if (picked && !picked.is_ingredient) setSuggest(picked);
     } catch (err) {
       // رسالة القاعدة بالعربي وموجّهة للمستخدم، فبنعرضها زي ما هي
       toast.error(err instanceof Error ? err.message : "تعذر الإضافة");
     } finally {
       setAdding(false);
+    }
+  }
+
+  async function hideFromTill() {
+    if (!suggest) return;
+
+    setHiding(true);
+
+    try {
+      await updateItem(suggest.id, { is_ingredient: true });
+
+      toast.success(`${suggest.name} مابقاش يظهر في شاشة الكاشير`);
+
+      setSuggest(null);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "تعذر الإخفاء");
+    } finally {
+      setHiding(false);
     }
   }
 
@@ -206,6 +236,44 @@ export default function RecipeEditor({ item, businessId }: Props) {
                 أضف
               </button>
             </div>
+
+            {/* الاقتراح بيظهر مرة واحدة بعد إضافة مكوّن لسه ظاهر
+                للكاشير. مابنقررش بدل صاحب المحل: محمصة بن بتبيع
+                كيلو بن للزبون **وكمان** بتعمل منه قهوة - الاستعمالين
+                شرعيين والبرنامج مايقدرش يعرف أنهي واحد ده. */}
+            {suggest && (
+              <div className="rounded-xl border border-splash/40 bg-ink-900 p-4">
+                <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-paper">
+                  <EyeOff size={16} />
+                  «{suggest.name}» لسه بيظهر في شاشة الكاشير
+                </p>
+
+                <p className="mb-3 text-xs text-mist">
+                  دلوقتي بقى مكوّن في «{item.name}». لو مش بتبيعه لوحده
+                  للزبون، إخفاؤه بيمنع إن حد يبيعه بالغلط من دوسة.
+                </p>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={hideFromTill}
+                    disabled={hiding}
+                    className="rounded-lg bg-splash px-4 py-2.5 text-sm font-bold text-ink-950 transition hover:opacity-90 disabled:opacity-50"
+                  >
+                    {hiding ? "..." : "أيوة، اخفيه من شاشة البيع"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSuggest(null)}
+                    disabled={hiding}
+                    className="rounded-lg bg-ink-700 px-4 py-2.5 text-sm font-semibold text-paper transition hover:bg-ink-600 disabled:opacity-50"
+                  >
+                    لأ، بابيعه برضه
+                  </button>
+                </div>
+              </div>
+            )}
 
             {candidates.length === 0 && (
               <p className="text-sm text-mist">

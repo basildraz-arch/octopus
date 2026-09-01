@@ -190,11 +190,27 @@ export default function DashboardHomePage() {
         </div>
       )}
 
+      {/* الإدارة مطويّة افتراضيًا.
+          الشاشة دي بتتفتح كل يوم عشان **حاجتين**: تبيع، وتشوف بعت
+          بكام. والباقي — الموظفين والإعدادات والمخازن والفئات —
+          بيتفتح مرة في الأسبوع أو أقل.
+          تمانية مربعات ليهم نفس الوزن البصري بتخلّي المهم يضيع في
+          النادر. ونفس القاعدة اللي في الإعدادات (AGENTS.md §٥):
+          المجموعات كلها مقفولة افتراضيًا. */}
       {managementTiles.length > 0 && (
-        <div>
-          <p className="mb-2 px-1 text-xs text-mist">إدارة</p>
+        <details className="rounded-2xl border border-ink-600 bg-ink-800/40">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4">
+            <span className="flex items-center gap-2 text-sm font-semibold text-paper">
+              <span aria-hidden>🗄️</span>
+              إدارة المحل
+            </span>
 
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+            <span className="text-xs text-mist">
+              {managementTiles.length} شاشة
+            </span>
+          </summary>
+
+          <div className="grid grid-cols-3 gap-3 border-t border-ink-600 p-4 sm:grid-cols-4">
             {managementTiles.map((tile) => (
               <Link
                 key={tile.href}
@@ -209,7 +225,7 @@ export default function DashboardHomePage() {
               </Link>
             ))}
           </div>
-        </div>
+        </details>
       )}
     </main>
   );

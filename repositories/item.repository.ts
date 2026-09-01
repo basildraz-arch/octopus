@@ -24,7 +24,7 @@ import type {
 // يعرف شكل الصف الراجع. join بيطلّع string عادي، فالنوع الراجع بيبقى
 // مجهول - وده اللي وقّع الـbuild أول مرة.
 const ITEM_COLUMNS =
-  "id, business_id, category_id, name, barcode, item_type, sale_method, unit, sell_price, sell_price_2, sell_price_3, min_sell_price, stock, minimum_stock, has_stock, image, keywords, active, created_at, updated_at";
+  "id, business_id, category_id, name, barcode, item_type, sale_method, unit, sell_price, sell_price_2, sell_price_3, min_sell_price, stock, minimum_stock, has_stock, image, keywords, is_ingredient, active, created_at, updated_at";
 
 export async function getItems(): Promise<Item[]> {
   const { data, error } = await supabase
@@ -74,11 +74,21 @@ export async function findItemByName(
   return data as Item | null;
 }
 
+// أصناف شاشة الكاشير.
+//
+// **المكوّنات مستثناة هنا وهنا بس.** البن والسكر والكوب بيتضافوا
+// كأصناف عشان الوصفة تخصم منهم، بس محدش بيبيعهم بالحبة على الكاونتر.
+// من غير الاستثناء ده كانوا هيظهروا جنب القهوة وممكن يتباعوا بالغلط
+// من دوسة واحدة (ميجريشن ٠٩١).
+//
+// `getItems` فوق **مابتستثنيهمش** عن قصد: شاشة الأصناف والمشتريات
+// والمخزون كلهم محتاجين يشوفوهم.
 export async function getActiveItems(): Promise<Item[]> {
   const { data, error } = await supabase
     .from("items")
     .select(ITEM_COLUMNS)
     .eq("active", true)
+    .eq("is_ingredient", false)
     .order("name", { ascending: true });
 
   if (error) {
