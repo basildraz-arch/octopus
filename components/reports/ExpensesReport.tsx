@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Receipt, Printer } from "lucide-react";
+import { Receipt } from "lucide-react";
 
 import {
   getExpensesByDateRange,
@@ -120,24 +120,16 @@ export default function ExpensesReport({ businessId, from, to }: Props) {
   if (error) return null;
 
   return (
-    <div className="rounded-2xl border border-ink-600 bg-ink-800 p-5 print:border-0 print:bg-white print:p-0 print:text-black">
-      <div className="mb-1 flex items-start justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-lg font-bold">
-          <Receipt size={18} />
-          المصروفات بالتفصيل
-        </h2>
+    <div className="rounded-2xl border border-ink-600 bg-ink-800 p-5">
+      {/* زرار الطباعة كان هنا واتشال: بقى فيه زرار واحد فوق الصفحة
+          بيطبع التقرير كامل. زرار "طباعة" جوه قسم بيطبع الصفحة كلها
+          بيكدب على اللي بيدوسه. */}
+      <h2 className="mb-1 flex items-center gap-2 text-lg font-bold">
+        <Receipt size={18} />
+        المصروفات بالتفصيل
+      </h2>
 
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="flex shrink-0 items-center gap-2 rounded-lg bg-ink-700 px-3 py-2 text-xs font-semibold text-paper transition hover:bg-ink-600 print:hidden"
-        >
-          <Printer size={14} />
-          طباعة
-        </button>
-      </div>
-
-      <p className="mb-4 text-sm text-mist print:text-black">
+      <p className="mb-4 text-sm text-mist">
         من {from} إلى {to}
       </p>
 
@@ -147,17 +139,17 @@ export default function ExpensesReport({ businessId, from, to }: Props) {
         </p>
       ) : (
         <>
-          <div className="mb-4 rounded-xl bg-ink-900 p-4 print:bg-transparent print:p-0">
-            <span className="text-sm text-mist print:text-black">
+          <div className="mb-4 rounded-xl bg-ink-900 p-4">
+            <span className="text-sm text-mist">
               الإجمالي{" "}
-              <span className="text-lg font-bold text-red-400 print:text-black">
+              <span className="text-lg font-bold text-red-400">
                 {money(total)}
               </span>{" "}
               في {rows.length} حركة
             </span>
           </div>
 
-          <div className="mb-4 flex gap-2 print:hidden">
+          <div className="print-hide mb-4 flex gap-2">
             {(
               [
                 ["day", "باليوم"],
@@ -184,18 +176,18 @@ export default function ExpensesReport({ businessId, from, to }: Props) {
               {byKind.map((row) => (
                 <div
                   key={row.description}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-ink-600 bg-ink-900 p-3 print:border-b print:border-gray-300 print:bg-transparent print:p-2"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-ink-600 bg-ink-900 p-3"
                 >
-                  <span className="min-w-0 truncate font-semibold text-paper print:text-black">
+                  <span className="min-w-0 truncate font-semibold text-paper">
                     {row.description}
                     {row.count > 1 && (
-                      <span className="mr-2 text-xs font-normal text-mist print:text-black">
+                      <span className="mr-2 text-xs font-normal text-mist">
                         ×{row.count}
                       </span>
                     )}
                   </span>
 
-                  <span className="shrink-0 font-bold text-red-400 print:text-black">
+                  <span className="shrink-0 font-bold text-red-400">
                     {money(row.total)}
                   </span>
                 </div>
@@ -208,12 +200,12 @@ export default function ExpensesReport({ businessId, from, to }: Props) {
 
                 return (
                   <div key={day}>
-                    <div className="mb-2 flex items-baseline justify-between gap-3 border-b border-ink-600 pb-1 print:border-gray-400">
-                      <span className="text-sm font-semibold text-paper print:text-black">
+                    <div className="mb-2 flex items-baseline justify-between gap-3 border-b border-ink-600 pb-1">
+                      <span className="text-sm font-semibold text-paper">
                         {dayLabel(dayRows[0].created_at)}
                       </span>
 
-                      <span className="text-sm font-bold text-red-400 print:text-black">
+                      <span className="text-sm font-bold text-red-400">
                         {money(dayTotal)}
                       </span>
                     </div>
@@ -225,17 +217,17 @@ export default function ExpensesReport({ businessId, from, to }: Props) {
                           className="flex items-center justify-between gap-3 px-1 py-1 text-sm"
                         >
                           <span className="min-w-0">
-                            <span className="block truncate text-paper print:text-black">
+                            <span className="block truncate text-paper">
                               {row.description}
                             </span>
 
-                            <span className="block text-xs text-mist print:text-black">
+                            <span className="block text-xs text-mist">
                               {timeLabel(row.created_at)}
                               {row.created_by_name && ` · ${row.created_by_name}`}
                             </span>
                           </span>
 
-                          <span className="shrink-0 text-paper print:text-black">
+                          <span className="shrink-0 text-paper">
                             {money(row.amount)}
                           </span>
                         </div>

@@ -10,6 +10,8 @@ import {
 } from "@/repositories/sale.repository";
 import { useSession } from "@/hooks/useSession";
 import VoidSaleButton from "@/components/sales/VoidSaleButton";
+import ReturnSaleButton from "@/components/sales/ReturnSaleButton";
+import PrintReport from "@/components/reports/PrintReport";
 
 function todayString() {
   const now = new Date();
@@ -22,7 +24,7 @@ function todayString() {
 }
 
 function SalesLogContent() {
-  const { user } = useSession();
+  const { user, business } = useSession();
   const searchParams = useSearchParams();
 
   const [startDate, setStartDate] = useState(
@@ -61,8 +63,15 @@ function SalesLogContent() {
   }, [sales]);
 
   return (
-    <main className="space-y-6">
-      <div>
+    <main className="space-y-6" data-print-area>
+      <PrintReport
+        title="سجل المبيعات"
+        from={startDate}
+        to={endDate}
+        businessName={business?.name}
+      />
+
+      <div className="print-hide">
         <h1 className="flex items-center gap-2 text-3xl font-bold">
           <ClipboardList size={28} />
           سجل المبيعات
@@ -87,7 +96,7 @@ function SalesLogContent() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="print-hide grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1 block text-sm text-mist">
             من
@@ -163,12 +172,23 @@ function SalesLogContent() {
               {/* الإلغاء جوه الفاتورة المفتوحة، مش زرار في السطر.
                   الزرار اللي بيبان جنب كل فاتورة في القايمة بيتدوس
                   بالغلط - وde آخر حاجة تحصل بالغلط. */}
-              <VoidSaleButton
-                saleId={sale.id}
-                total={sale.total}
-                createdAt={sale.created_at}
-                onVoided={loadSales}
-              />
+              <div className="print-hide">
+                {/* المرتجع فوق الإلغاء عن قصد: المرتجع هو الحالة
+                    الشايعة (الزبون رجّع حاجة)، والإلغاء نادر
+                    (الفاتورة اتسجّلت غلط أصلًا). */}
+                <ReturnSaleButton
+                  saleId={sale.id}
+                  lines={sale.sale_items}
+                  onReturned={loadSales}
+                />
+
+                <VoidSaleButton
+                  saleId={sale.id}
+                  total={sale.total}
+                  createdAt={sale.created_at}
+                  onVoided={loadSales}
+                />
+              </div>
             </details>
           ))}
         </div>

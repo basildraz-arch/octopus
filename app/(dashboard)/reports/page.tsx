@@ -14,6 +14,7 @@ import { useSession } from "@/hooks/useSession";
 import WarehousePulseDashboard from "@/components/reports/WarehousePulseDashboard";
 import ProfitByItem from "@/components/reports/ProfitByItem";
 import ExpensesReport from "@/components/reports/ExpensesReport";
+import PrintReport from "@/components/reports/PrintReport";
 
 function toDateString(date: Date) {
   const year = date.getFullYear();
@@ -107,8 +108,19 @@ export default function ReportsPage() {
   }
 
   return (
-    <main className="space-y-6">
-      <div>
+    // `data-print-area` بتقول للطباعة "ده اللي يتطبع" - والباقي
+    // (القوايم، الشريط السفلي، حبر، المساعد) بيختفي تلقائيًا.
+    // الآلية كلها في `app/globals.css`.
+    <main className="space-y-6" data-print-area>
+      {/* ترويسة الورقة: اسم المحل والفترة. مخفية على الشاشة. */}
+      <PrintReport
+        title="تقرير الأداء"
+        from={startDate}
+        to={endDate}
+        businessName={business?.name}
+      />
+
+      <div className="print-hide">
         <h1 className="flex items-center gap-2 text-3xl font-bold">
           <BarChart3 size={28} />
           التقارير
@@ -119,7 +131,9 @@ export default function ReportsPage() {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      {/* أزرار الفترة وخانتين التاريخ مالهمش لازمة على الورق -
+          الفترة مكتوبة في الترويسة. */}
+      <div className="print-hide flex flex-wrap gap-2">
         {PRESETS.map((preset) => (
           <button
             key={preset.label}
@@ -131,7 +145,7 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="print-hide grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1 block text-sm text-mist">
             من
@@ -305,6 +319,7 @@ export default function ReportsPage() {
 
           <Link
             href={`/sales-log?from=${startDate}&to=${endDate}`}
+            data-print-hide
             className="flex items-center justify-center gap-2 rounded-xl bg-ink-700 p-4 text-center font-semibold text-paper transition hover:bg-ink-600"
           >
             <ClipboardList size={18} />

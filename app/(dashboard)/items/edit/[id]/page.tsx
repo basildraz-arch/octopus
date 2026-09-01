@@ -6,6 +6,7 @@ import { Pencil } from "lucide-react";
 
 import ItemForm from "@/components/items/form/ItemForm";
 import RecipeEditor from "@/components/items/RecipeEditor";
+import StockByWarehouse from "@/components/items/StockByWarehouse";
 import { getItemById } from "@/repositories/item.repository";
 import type { Item } from "@/types/item";
 
@@ -57,6 +58,9 @@ export default function EditItemPage() {
 
       {/* برّه النموذج عن قصد: نموذج جوه نموذج HTML غلط. والوصفة
           بتتحفظ فورًا مش مع حفظ الصنف. */}
+      {/* الكمية موزّعة على المخازن. بتختفي لو مخزن واحد. */}
+      <StockByWarehouse item={item} />
+
       <RecipeEditor item={item} businessId={item.business_id} />
     </main>
   );

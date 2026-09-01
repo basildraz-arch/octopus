@@ -23,6 +23,7 @@ import {
 } from "@/repositories/shift.repository";
 import { useSession } from "@/hooks/useSession";
 import HandoverButton from "@/components/shift/HandoverButton";
+import PrintReport from "@/components/reports/PrintReport";
 import { useToast } from "@/hooks/useToast";
 
 const PAYMENT_METHOD_INFO: Record<string, { label: string; icon: LucideIcon }> = {
@@ -35,7 +36,7 @@ const PAYMENT_METHOD_INFO: Record<string, { label: string; icon: LucideIcon }> =
 };
 
 export default function DayClosePage() {
-  const { user } = useSession();
+  const { user, business } = useSession();
   const toast = useToast();
 
   const [shift, setShift] = useState<Shift | null>(null);
@@ -142,9 +143,21 @@ export default function DayClosePage() {
       ? shift.counted_cash - summary.expectedCash
       : null;
 
+  // تاريخ الوردية بصيغة `<input type="date">` عشان الترويسة.
+  const shiftDay = (value: string) => value.slice(0, 10);
+
   return (
-    <main className="space-y-6">
-      <div>
+    <main className="space-y-6" data-print-area>
+      {/* تقرير الوردية بيتطبع وقت التسليم أو القفل - الورقة بتتحط
+          في الدرج مع الكاش. */}
+      <PrintReport
+        title="تقرير الوردية"
+        from={shiftDay(shift.opened_at)}
+        to={shiftDay(shift.closed_at ?? new Date().toISOString())}
+        businessName={business?.name}
+      />
+
+      <div className="print-hide">
         <h1 className="flex items-center gap-2 text-3xl font-bold">
           <Lock size={28} />
           إنهاء اليوم
@@ -239,7 +252,7 @@ export default function DayClosePage() {
       </div>
 
       {isOpen ? (
-        <>
+        <div className="print-hide">
           {!confirming ? (
             <button
               onClick={() => setConfirming(true)}
@@ -296,7 +309,7 @@ export default function DayClosePage() {
               onDone={load}
             />
           )}
-        </>
+        </div>
       ) : (
         <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
           <p className="text-sm text-mist">

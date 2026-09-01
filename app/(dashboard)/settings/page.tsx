@@ -25,6 +25,7 @@ import {
 import { runMasterAction } from "@/services/master.service";
 import { getMyReferralSummary } from "@/repositories/referral.repository";
 import ExportData from "@/components/settings/ExportData";
+import SplitStockroom from "@/components/settings/SplitStockroom";
 import {
   getFeaturePrices,
   getPricingSettings,
@@ -602,6 +603,14 @@ export default function SettingsPage() {
           في الشاشات. تغييره بيتراجع من الإدارة الأول.
         </p>
       </div>
+
+      {/* فصل المخزن عن المعروض. جوه مجموعة "محلك" مش كارت جديد في
+          الآخر - الإعدادات وصلت ١٠ أقسام قبل كده وباسل تاه فيها. */}
+      {user && (
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
+          <SplitStockroom businessId={user.business_id} />
+        </div>
+      )}
 
       <div className="rounded-xl border border-ink-600 bg-ink-800 p-5">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">

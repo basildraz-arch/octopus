@@ -15,6 +15,8 @@ export type SaleWithItems = {
   created_at: string;
   sale_items: {
     id: string;
+    // لازم للمرتجع: الدالة بتاخد `item_id` مش `id` بتاع السطر.
+    item_id: string;
     quantity: number;
     unit_price: number;
     total: number;
@@ -39,6 +41,7 @@ export async function getSalesByDateRange(
       created_at,
       sale_items (
         id,
+        item_id,
         quantity,
         unit_price,
         total,
@@ -158,4 +161,37 @@ export async function voidSale(
   });
 
   if (error) throw new Error(error.message);
+}
+
+
+// ============================================================
+// المرتجع الجزئي
+// ============================================================
+//
+// الزبون اشترى تلاتة ورجّع واحد. الفاتورة تفضل موجودة ناقصة السطر
+// ده - على عكس `voidSale` اللي بتشيل الفاتورة كلها (وdi للفاتورة
+// اللي **اتسجّلت غلط**، مش للبيعة اللي رجع منها حاجة).
+//
+// الشغل كله في `return_sale_lines` (ميجريشن ٠٩٠): التحقق من
+// الصلاحية، ومنع إرجاع أكتر من المباع، ورجوع البضاعة بتكلفتها،
+// وتقليص الخصم بالنسبة، وتحديث إجمالي الفاتورة - في عملية واحدة.
+//
+// بترجّع قيمة المرتجع بالجنيه عشان الشاشة تقول لصاحب المحل
+// "ترجّع كام".
+export async function returnSaleLines(
+  saleId: string,
+  lines: { itemId: string; quantity: number }[],
+  reason?: string,
+  warehouseId?: string | null
+): Promise<number> {
+  const { data, error } = await supabase.rpc("return_sale_lines", {
+    p_sale_id: saleId,
+    p_lines: lines.map((l) => ({ item_id: l.itemId, quantity: l.quantity })),
+    p_reason: reason ?? null,
+    p_warehouse_id: warehouseId ?? null,
+  });
+
+  if (error) throw new Error(error.message);
+
+  return Number(data ?? 0);
 }
