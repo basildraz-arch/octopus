@@ -236,6 +236,73 @@ export const HOME_TILES: TileItem[] = [
   },
 ];
 
+// ============================================================
+// شاشات الكاشير — قايمة لوحدها عن قصد
+// ============================================================
+//
+// أول محاولة كانت بتوري الكاشير **نفس مربعات صاحب المحل** مفلترة
+// بالصلاحيات. وباسل رفضها وهو محق:
+//
+//   "الموظف مش هيشوف بنفس شكل الاونر، هو محتاج يشوف اللي يفيده في
+//    شغله بس مش أكتر، تبع شيفته اليومي"
+//
+// والفلترة بالصلاحية **مش كفاية**: "سجل المبيعات" بيتفتح بصلاحية
+// `sell` اللي كل كاشير معاه، فكان بيظهر له - وهو شاشة مبنية لصاحب
+// المحل (فترة تواريخ مفتوحة، وأزرار إلغاء ومرتجع).
+//
+// الفرق مش في **مين مسموح له**، الفرق في **إيه اللي يفيده وهو واقف
+// على الكاونتر**. فالقايمة دي مكتوبة من ناحيته هو.
+//
+// (الـRLS بتحمي البيانات على أي حال: `sales_read` بتدّي الكاشير
+// بيعاته هو بس. دي مسألة **شكل** مش تسريب.)
+export const POS_TILES: TileItem[] = [
+  {
+    id: "pos-sales-log",
+    title: "فواتيري",
+    href: "/sales-log",
+    icon: "📒",
+    features: ["pos_sales"],
+    permission: "sell",
+    group: "daily",
+  },
+  {
+    id: "pos-day-close",
+    title: "تسليم الوردية",
+    href: "/day-close",
+    icon: "🤝",
+    features: ["shifts"],
+    permission: "close_day",
+    group: "daily",
+  },
+  {
+    id: "pos-purchases",
+    title: "تزويد {stock}",
+    href: "/purchases",
+    icon: "🚚",
+    features: ["inventory"],
+    permission: "receive_stock",
+    group: "daily",
+  },
+  {
+    id: "pos-customers",
+    title: "حسابات {customers}",
+    href: "/customers",
+    icon: "🧾",
+    features: ["credit_customers"],
+    permission: "manage_customers",
+    group: "daily",
+  },
+  {
+    id: "pos-warehouses",
+    title: "نقل بضاعة",
+    href: "/warehouses/transfer",
+    icon: "🏭",
+    features: ["multi_warehouse"],
+    permission: "transfer_stock",
+    group: "daily",
+  },
+];
+
 // The route guard, as data. The dashboard layout reads this instead
 // of keeping its own copy, so "what a cashier can open" has exactly
 // one answer.
@@ -370,6 +437,16 @@ export function visibleTiles(
   return HOME_TILES.filter(
     (tile) => tile.group === group && isVisible(tile, ctx)
   ).map((tile) => resolveTitle(tile, labels));
+}
+
+/** شاشات الكاشير - `POS_TILES` مش مربعات صاحب المحل. */
+export function visiblePosTiles(
+  ctx: UiContext,
+  labels: UiLabels
+): ResolvedItem<TileItem>[] {
+  return POS_TILES.filter((tile) => isVisible(tile, ctx)).map((tile) =>
+    resolveTitle(tile, labels)
+  );
 }
 
 // Convenience for components that already hold a session.

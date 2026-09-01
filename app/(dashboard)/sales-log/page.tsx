@@ -24,7 +24,7 @@ function todayString() {
 }
 
 function SalesLogContent() {
-  const { user, business } = useSession();
+  const { user, business, can } = useSession();
   const searchParams = useSearchParams();
 
   const [startDate, setStartDate] = useState(
@@ -172,6 +172,12 @@ function SalesLogContent() {
               {/* الإلغاء جوه الفاتورة المفتوحة، مش زرار في السطر.
                   الزرار اللي بيبان جنب كل فاتورة في القايمة بيتدوس
                   بالغلط - وde آخر حاجة تحصل بالغلط. */}
+              {/* الإلغاء والمرتجع لصاحب النشاط (أو اللي اداله
+                  `refund_sale`) بس.
+                  القاعدة بترفضهم على أي حال، بس زرار بيظهر وبيرفض
+                  أسوأ من زرار مش موجود: الكاشير بيدوس، بياخد رسالة
+                  "ممنوع"، ويفتكر إن البرنامج باظ. */}
+              {can("refund_sale") && (
               <div className="print-hide">
                 {/* المرتجع فوق الإلغاء عن قصد: المرتجع هو الحالة
                     الشايعة (الزبون رجّع حاجة)، والإلغاء نادر
@@ -189,6 +195,7 @@ function SalesLogContent() {
                   onVoided={loadSales}
                 />
               </div>
+              )}
             </details>
           ))}
         </div>

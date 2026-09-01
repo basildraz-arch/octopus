@@ -15,7 +15,7 @@ import {
   labelsFor,
   canOpen,
   visibleNavItems,
-  visibleTiles,
+  visiblePosTiles,
 } from "@/lib/navItems";
 
 // ============================================================
@@ -102,13 +102,17 @@ export default function PosLayout({ children }: { children: ReactNode }) {
     (item) => item.id === "sell" || item.id === "expenses"
   );
 
-  // كل حاجة تانية يقدر يفتحها. المربعات هي اللي بتوريها.
+  // شاشات الكاشير - `POS_TILES` مش مربعات صاحب المحل.
+  //
+  // أول محاولة كانت بتعيد استعمال مربعات الرئيسية مفلترة بالصلاحيات،
+  // وde كان بيوري الكاشير شاشات مبنية لصاحب المحل. الفلترة بالصلاحية
+  // مش كفاية: "سجل المبيعات" بيتفتح بصلاحية `sell` اللي كل كاشير
+  // معاه.
   const quickHrefs = new Set(quick.map((item) => item.href));
 
-  const more = [
-    ...visibleTiles(ctx, labels, "daily"),
-    ...visibleTiles(ctx, labels, "management"),
-  ].filter((tile) => !quickHrefs.has(tile.href));
+  const more = visiblePosTiles(ctx, labels).filter(
+    (tile) => !quickHrefs.has(tile.href)
+  );
 
   return (
     <div className="min-h-screen bg-ink-950 text-paper">

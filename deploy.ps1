@@ -167,11 +167,71 @@ if (-not $m.Success) {
 }
 $deployment = $m.Value -replace "^https://", ""
 
+# الربط بيفشل لو النسخة لسه بتتبني.
+#
+# حصل فعلًا في ١ سبتمبر: الـCLI فقد الاتصال وهو مستني البناء
+# (`Error: fetch failed`)، وأمر الربط اشتكى `The deployment is not
+# ready`. البناء كان شغّال عادي وخلص بعدها بشوية.
+#
+# فبنحاول أكتر من مرة بدل ما نستسلم من أول مرة.
 Say "بيربط $DOMAIN بالنسخة الجديدة..."
-npx vercel alias set $deployment $DOMAIN
+
+for ($try = 1; $try -le 6; $try++) {
+    npx vercel alias set $deployment $DOMAIN 2>&1 | Out-Host
+
+    # نجح؟ خلاص. والفحص اللي تحت هو اللي بيتأكد فعلًا - مش ده.
+    if ($LASTEXITCODE -eq 0) { break }
+
+    if ($try -lt 6) {
+        Say "النسخة لسه بتتبني - هجرب تاني بعد ٢٠ ثانية (محاولة $try من ٦)..." "Yellow"
+        Start-Sleep -Seconds 20
+    }
+}
 
 # ---------- 6. التأكد ----------
-Say "بيتأكد إن الدومين اتحرك فعلًا..."
-npx vercel inspect "https://$DOMAIN" 2>&1 | Select-String "created|url" | Out-Host
+#
+# ============================================================
+# بنقارن الهوية مش الوقت
+# ============================================================
+#
+# الفحص القديم كان بيطبع سطر `created` وبس، والواحد يبص يلاقي
+# "من دقيقتين" ويطمّن.
+#
+# وde كان بينجح غلط: Vercel بيبني نفس الكوميت **مرتين** - مرة من
+# `git push` ومرة من `vercel --prod`. الاتنين عمرهم دقيقتين،
+# فالدومين ممكن يكون على نسخة **تانية خالص** والفحص يعدّي.
+#
+# حصل فعلًا: رفعنا `ccew8yg13` والفحص طبع `6fykqhzok` وقال "خلاص".
+#
+# دلوقتي بنقارن **اسم النسخة** باللي رفعناه بالظبط.
 
-Say "خلاص. افتح https://$DOMAIN واعمل Ctrl+F5" "Green"
+Say "بيتأكد إن الدومين اتحرك فعلًا..."
+
+$inspect = npx vercel inspect "https://$DOMAIN" 2>&1 | Out-String
+Write-Host ($inspect -split "`n" | Select-String "created|url" | Out-String)
+
+$live = [regex]::Match($inspect, "octopus-[a-z0-9]+-octopus-team1\.vercel\.app")
+
+if (-not $live.Success) {
+    Say "ما عرفتش أقرا النسخة اللي الدومين عليها. ابعت الشاشة للشات." "Red"
+    exit 1
+}
+
+if ($live.Value -eq $deployment) {
+    Say "خلاص. افتح https://$DOMAIN واعمل Ctrl+F5" "Green"
+    exit 0
+}
+
+# مش نفس النسخة. ممكن تكون نسخة GitHub لنفس الكوميت (وساعتها الموقع
+# صح فعلًا)، وممكن تكون نسخة قديمة (وساعتها الموقع غلط). الفرق
+# مايتحددش من هنا - فبنقول الحقيقة بدل ما نطمّن.
+Say "" "Yellow"
+Say "تحذير: الدومين مش على النسخة اللي لسه رفعتها." "Yellow"
+Say "  رفعت:  $deployment" "Yellow"
+Say "  الدومين على: $($live.Value)" "Yellow"
+Say "" "Yellow"
+Say "ممكن تكون نسخة GitHub لنفس الكود (وساعتها تمام)، وممكن تكون قديمة." "Yellow"
+Say "افتح Vercel > Deployments وشوف الشارة الزرقاء Production على أنهي واحدة." "Yellow"
+Say "لو مش على الأحدث: دوس ... > Promote" "Yellow"
+
+exit 1
