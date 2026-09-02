@@ -62,6 +62,18 @@ export default function LoginPage() {
           </Link>
         </div>
 
+        {/* المسوقين بياخدوا اللينك المباشر مع بيانات دخولهم، فde
+            مش لازم يبقى زرار كبير جنب زراير أصحاب المحلات - بس
+            لازم يكون موجود عشان اللي ينسى اللينك يلاقي طريقه. */}
+        <div className="mt-3 flex justify-center text-xs">
+          <Link
+            href="/login/marketer"
+            className="text-mist/70 hover:text-paper"
+          >
+            دخول المسوّقين
+          </Link>
+        </div>
+
       </div>
 
     </main>

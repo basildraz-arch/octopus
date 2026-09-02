@@ -42,6 +42,7 @@ import { formatMoney } from "@/lib/billing";
 import type { FeaturePrice, PricingSettings } from "@/types/pricing";
 import ScreenPreview from "@/components/master/ScreenPreview";
 import ReferralPanel from "@/components/master/ReferralPanel";
+import Marketers from "@/components/master/Marketers";
 import { ALL_FEATURES, FEATURE_LABELS } from "@/lib/features";
 import {
   LABEL_FIELD_HINTS,
@@ -981,11 +982,34 @@ export default function MasterPage() {
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
           <span>
             <span className="block text-lg font-bold text-paper">
-              🔗 الإحالات
+              📣 المسوقين
             </span>
 
             <span className="mt-0.5 block text-xs text-mist">
-              الأكواد · مين جاب مين · المستحق الشهر ده
+              حساباتهم · محلاتهم · المستحق دلوقتي · الصرف
+            </span>
+          </span>
+
+          <span className="text-2xl text-mist">‹</span>
+        </summary>
+
+        <div className="space-y-6 p-5 pt-0">
+          <Marketers />
+        </div>
+      </details>
+
+      {/* الإحالات القديمة: أكواد أصحاب المحلات اللي بتاخد خصم على
+          فاتورتها. نظام تاني عن المسوقين (عمولة كاش لمرة واحدة)،
+          فمجموعة لوحدها. */}
+      <details className="rounded-xl border border-ink-600 bg-ink-900/40">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+          <span>
+            <span className="block text-lg font-bold text-paper">
+              🔗 أكواد أصحاب المحلات
+            </span>
+
+            <span className="mt-0.5 block text-xs text-mist">
+              محل يجيب محل · خصم على فاتورته
             </span>
           </span>
 

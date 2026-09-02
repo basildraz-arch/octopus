@@ -175,3 +175,83 @@ export async function runReferralAction(
 
   if (!res.ok) throw new Error(data?.error || "تعذر تنفيذ الإجراء");
 }
+
+// ============================================================
+// المسوقين
+// ============================================================
+//
+// كلهم بيمرّوا على `/api/master/marketer` اللي بيتأكد من هوية
+// الأدمن على السيرفر بـ`is_platform_admin()` - نفس الدالة اللي
+// الـRLS نفسها بتناديها. الشاشة مابتقررش حاجة.
+
+export type MarketerShop = {
+  name: string;
+  signedUp: string;
+  paid: boolean;
+  settled: boolean;
+  amount: number;
+};
+
+export type MarketerRow = {
+  id: string;
+  fullName: string;
+  phone: string | null;
+  active: boolean;
+  createdAt: string;
+  code: string;
+  codeActive: boolean;
+  rewardEach: number;
+  signedUpCount: number;
+  paidCount: number;
+  due: number;
+  settled: number;
+  shops: MarketerShop[];
+};
+
+export async function getMarketers(): Promise<MarketerRow[]> {
+  const accessToken = await getAccessTokenOrThrow();
+
+  const res = await fetch("/api/master/marketer", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) throw new Error(data?.error || "تعذر تحميل المسوقين");
+
+  return data.marketers as MarketerRow[];
+}
+
+export async function runMarketerAction(
+  body:
+    | {
+        action: "create";
+        fullName: string;
+        email: string;
+        password: string;
+        code: string;
+        phone?: string;
+        signupReward: number;
+        notes?: string;
+      }
+    | { action: "set_active"; marketerId: string; active: boolean }
+    | { action: "set_reward"; marketerId: string; signupReward: number }
+    | { action: "settle"; marketerId: string; note?: string }
+): Promise<{ ok: true; amount?: number; code?: string; email?: string }> {
+  const accessToken = await getAccessTokenOrThrow();
+
+  const res = await fetch("/api/master/marketer", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) throw new Error(data?.error || "تعذر تنفيذ العملية");
+
+  return data;
+}
