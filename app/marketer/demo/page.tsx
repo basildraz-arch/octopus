@@ -86,8 +86,10 @@ function formatQty(shop: DemoShop, quantity: number) {
 
 function ItemCard({ shop, item }: { shop: DemoShop; item: DemoItem }) {
   return (
-    <div className="rounded-xl border border-ink-600 bg-ink-800 p-3 text-center">
-      <p className="text-sm font-semibold text-paper">{item.name}</p>
+    <div className="min-w-0 rounded-xl border border-ink-600 bg-ink-800 p-3 text-center">
+      <p className="break-words text-sm font-semibold text-paper">
+        {item.name}
+      </p>
 
       <p className="mt-1 font-bold text-green-400">
         {item.price} ج
@@ -108,8 +110,8 @@ function ItemCard({ shop, item }: { shop: DemoShop; item: DemoItem }) {
           dir="ltr"
           className="mt-1 flex items-center justify-center gap-1 text-[11px] text-mist"
         >
-          <ScanLine size={11} />
-          {item.barcode}
+          <ScanLine size={11} className="shrink-0" />
+          <span className="truncate">{item.barcode}</span>
         </p>
       )}
     </div>
@@ -177,7 +179,7 @@ function PosPreview({ shop }: { shop: DemoShop }) {
   return (
     <div className="space-y-3">
       {/* شريط بيقول للراجل "الشاشة دي متظبطة على شغلك انت". */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 text-[11px] sm:text-xs">
         {shop.sellsBy === "weight" && (
           <span className="flex items-center gap-1.5 rounded-full bg-ink-800 px-3 py-1.5 text-xs text-amber-300">
             <Scale size={13} />
@@ -207,9 +209,31 @@ function PosPreview({ shop }: { shop: DemoShop }) {
         )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <div className="order-2 lg:order-1">
-          <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+      {/* ============================================================
+          `min-w-0` مش تزويق — من غيره الشاشة بتتوسّع
+          ============================================================
+
+          عنصر جوه `grid` (أو `flex`) عرضه الأدنى الافتراضي
+          `min-width: auto`، يعني **عرض محتواه**. فشريط الفئات اللي
+          تحت المفروض يتمرّر بالإصبع كان بيوسّع العمود اللي جواه،
+          والعمود بيوسّع الشبكة، والشبكة بتوسّع الصفحة.
+
+          والنتيجة على موبايل ٣٦٠ بكسل: التخطيط بعرض ٦٠٠ بكسل،
+          والـ`overflow-x-hidden` اللي على `<body>` بيقص اللي بره
+          بدل ما يخلّيه يتمرّر - فالشاشة بتبان مقصوصة ومزحلقة.
+
+          **وشاشة البيع الحقيقية سليمة من ده** لأنها مكتوبة
+          `md:grid` - يعني مابتبقاش شبكة على الموبايل أصلًا. أنا
+          كتبت `grid` من غير شرط، فوقعت في المصيدة اللي هما
+          عدّوها.
+
+          الإصلاح حاجتين مع بعض: عمود عادي على الموبايل
+          (`flex-col-reverse` عشان العربية تطلع فوق الأصناف)،
+          وشبكة على الكمبيوتر بس. و`min-w-0` حزام تاني لو حد رجّع
+          الشبكة على كل المقاسات. */}
+      <div className="flex flex-col-reverse gap-4 lg:grid lg:grid-cols-[2fr_1fr]">
+        <div className="min-w-0">
+          <div className="-mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1">
             {["الكل", ...shop.categories].map((name) => (
               <button
                 key={name}
@@ -232,16 +256,16 @@ function PosPreview({ shop }: { shop: DemoShop }) {
           </div>
         </div>
 
-        <div className="order-1 rounded-xl border border-ink-600 bg-ink-800 p-4 lg:order-2">
+        <div className="min-w-0 rounded-xl border border-ink-600 bg-ink-800 p-4">
           <p className="mb-3 font-bold text-paper">العربية</p>
 
           <div className="space-y-3">
             {shop.basket.map((line) => (
               <div key={line.name}>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-mist">{line.name}</span>
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate text-mist">{line.name}</span>
 
-                  <span className="font-semibold text-paper">
+                  <span className="shrink-0 font-semibold text-paper">
                     {(line.quantity * line.price).toFixed(2)}
                   </span>
                 </div>
