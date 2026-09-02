@@ -12,6 +12,7 @@ import {
 import {
   getCartAuditByDate,
   summarizeCartSessions,
+  abandonedCarts,
 } from "@/repositories/cartAudit.repository";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/hooks/useSession";
@@ -83,11 +84,12 @@ export default function DashboardHomePage() {
       invValue.error || invValue.data == null ? null : Number(invValue.data)
     );
 
-    setSuspiciousToday(
-      summarizeCartSessions(auditEvents).filter(
-        (s) => !s.completed && s.addedCount > 0
-      ).length
-    );
+    // العربية اللي الكاشير واقف بيجهّزها دلوقتي **مش** مشبوهة.
+    // قبل كده كان الشرط `!completed && addedCount > 0` بس، فأي
+    // عربية مفتوحة كانت بتتعدّ هنا - وبعد العربيات المتوازية
+    // كان ممكن يظهر "٤ فواتير اتفتحت وماتنفذتش" والمحل شغّال عادي.
+    // الشرح كامل في `cartAudit.repository.ts`.
+    setSuspiciousToday(abandonedCarts(summarizeCartSessions(auditEvents)).length);
 
     setLoading(false);
   }
@@ -159,11 +161,11 @@ export default function DashboardHomePage() {
 
             <span>
               <span className="block font-bold text-red-400">
-                {suspiciousToday} فاتورة اتفتحت وماتنفذتش
+                {suspiciousToday} فاتورة اتفتحت واتسابت
               </span>
 
               <span className="block text-xs text-mist">
-                دوس تشوف مين وإمتى بالظبط
+                فيها بضاعة وسكتت من نص ساعة — دوس تشوف مين وإمتى
               </span>
             </span>
           </span>
