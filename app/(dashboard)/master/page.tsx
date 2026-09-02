@@ -462,6 +462,43 @@ export default function MasterPage() {
           بتفتحه لما تحتاجه، ودي اللي بتتقري كل يوم. */}
       {!loading && <HealthBoard rows={rows} onOpen={focusShop} />}
 
+      {/* ============================================================
+          المسوقين — فوق، ومفتوح
+          ============================================================
+
+          كان خامس أكورديون مطوي في صفحة فيها ٦، وباسل مالقاهوش.
+          وde مش سوء حظ: **الصفحة اللي كلها أقسام مطوية بتخبّي
+          الجديد بالذات**، لأن العين اتعوّدت على ترتيب معيّن وبتعدّي
+          عليه من غير ما تقراه.
+
+          مكانه هنا لأن ده اللي بيتفتح كل يوم دلوقتي: مستحقات
+          المسوقين فلوس داخلة وخارجة، والمحلات الجديدة بتيجي منهم.
+          و`open` عن قصد — خالف قاعدة "كل المجموعات مقفولة"
+          (AGENTS §٥) لأن دي مش مجموعة مرجعية، دي شاشة شغل. */}
+      <details
+        className="rounded-xl border border-splash/40 bg-ink-900/40"
+        open
+      >
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+          <span>
+            <span className="block text-lg font-bold text-paper">
+              📣 المسوقين
+            </span>
+
+            <span className="mt-0.5 block text-xs text-mist">
+              حساباتهم · محلاتهم · المستحق دلوقتي · الصرف
+            </span>
+          </span>
+
+          <span className="text-2xl text-mist">‹</span>
+        </summary>
+
+        <div className="space-y-6 p-5 pt-0">
+          <Marketers />
+        </div>
+      </details>
+
+
       {/* Anything a business owner is not allowed to do to their own
           account lands here first. The database refuses those writes
           outright (migration 049) - this is the only door. */}
@@ -1005,26 +1042,6 @@ export default function MasterPage() {
         </div>
       )}
 
-        </div>
-      </details>
-
-      <details className="rounded-xl border border-ink-600 bg-ink-900/40">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
-          <span>
-            <span className="block text-lg font-bold text-paper">
-              📣 المسوقين
-            </span>
-
-            <span className="mt-0.5 block text-xs text-mist">
-              حساباتهم · محلاتهم · المستحق دلوقتي · الصرف
-            </span>
-          </span>
-
-          <span className="text-2xl text-mist">‹</span>
-        </summary>
-
-        <div className="space-y-6 p-5 pt-0">
-          <Marketers />
         </div>
       </details>
 
