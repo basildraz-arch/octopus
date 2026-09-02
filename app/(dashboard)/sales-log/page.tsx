@@ -12,6 +12,7 @@ import { useSession } from "@/hooks/useSession";
 import VoidSaleButton from "@/components/sales/VoidSaleButton";
 import ReturnSaleButton from "@/components/sales/ReturnSaleButton";
 import PrintReport from "@/components/reports/PrintReport";
+import VoidedAndReturns from "@/components/sales/VoidedAndReturns";
 
 function todayString() {
   const now = new Date();
@@ -123,6 +124,17 @@ function SalesLogContent() {
           />
         </div>
       </div>
+
+      {/* الملغي والمرتجع فوق القايمة مش تحتها: الفاتورة اللي
+          اتلغت مش موجودة في القايمة تحت أصلًا (الصف اتمسح)، فلو
+          السطر ده تحت مية فاتورة محدش هيوصله. */}
+      {user && can("view_reports") && (
+        <VoidedAndReturns
+          businessId={user.business_id}
+          from={startDate}
+          to={endDate}
+        />
+      )}
 
       {loading ? (
         <div className="p-8 text-center text-mist">

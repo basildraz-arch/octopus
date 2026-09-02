@@ -217,3 +217,93 @@ export async function returnSaleLines(
 
   return Number(data ?? 0);
 }
+
+// ============================================================
+// الفواتير الملغية والمرتجعات
+// ============================================================
+//
+// السجلين دول (`sale_voids` و`sale_returns`) موجودين من ميجريشن
+// ٠٨٥ و٠٩٠ بس **مكانش فيه شاشة بتقراهم** - يعني الأثر متسجّل
+// ومحدش يقدر يشوفه.
+//
+// وde بقى ناقص بعد ميجريشن ٠٩٣: الفواتير بقى ليها أرقام مسلسلة،
+// و`void_sale` بتمسح الصف - فإلغاء فاتورة رقم ٤٧ بيسيب **فجوة في
+// دفتر الفواتير**. الفجوة من غير سطر بيفسّرها أول حاجة بيتسأل
+// عنها في أي مراجعة.
+//
+// القراءة محمية بـpolicy: صاحب النشاط أو اللي معاه `view_reports`.
+// الكاشير مابيشوفش الشاشة دي أصلًا.
+
+export type VoidedSale = {
+  id: string;
+  sale_id: string;
+  invoice_number: number | null;
+  sale_total: number;
+  sale_created_at: string;
+  voided_at: string;
+  reason: string | null;
+  lines: { name: string; quantity: number; total: number }[];
+  users: { full_name: string } | null;
+};
+
+export type SaleReturn = {
+  id: string;
+  sale_id: string;
+  refund_amount: number;
+  returned_at: string;
+  reason: string | null;
+  lines: { name: string; quantity: number }[];
+  users: { full_name: string } | null;
+};
+
+export async function getVoidedSales(
+  businessId: string,
+  startDate: string,
+  endDate: string
+): Promise<VoidedSale[]> {
+  const start = new Date(`${startDate}T00:00:00`).toISOString();
+  const end = new Date(`${endDate}T23:59:59.999`).toISOString();
+
+  const { data, error } = await supabase
+    .from("sale_voids")
+    .select(
+      "id, sale_id, invoice_number, sale_total, sale_created_at, voided_at, reason, lines, users:voided_by ( full_name )"
+    )
+    .eq("business_id", businessId)
+    .gte("voided_at", start)
+    .lte("voided_at", end)
+    .order("voided_at", { ascending: false });
+
+  if (error) {
+    console.error("Supabase Error:", error.message);
+    return [];
+  }
+
+  return (data ?? []) as unknown as VoidedSale[];
+}
+
+export async function getSaleReturns(
+  businessId: string,
+  startDate: string,
+  endDate: string
+): Promise<SaleReturn[]> {
+  const start = new Date(`${startDate}T00:00:00`).toISOString();
+  const end = new Date(`${endDate}T23:59:59.999`).toISOString();
+
+  const { data, error } = await supabase
+    .from("sale_returns")
+    .select(
+      "id, sale_id, refund_amount, returned_at, reason, lines, users:returned_by ( full_name )"
+    )
+    .eq("business_id", businessId)
+    .gte("returned_at", start)
+    .lte("returned_at", end)
+    .order("returned_at", { ascending: false });
+
+  if (error) {
+    console.error("Supabase Error:", error.message);
+    return [];
+  }
+
+  return (data ?? []) as unknown as SaleReturn[];
+}
