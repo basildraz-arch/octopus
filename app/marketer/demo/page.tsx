@@ -2,32 +2,149 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Receipt, BarChart3, ShoppingCart } from "lucide-react";
+import {
+  ArrowRight,
+  Receipt,
+  BarChart3,
+  ShoppingCart,
+  Sparkles,
+  ChefHat,
+  Scale,
+  ScanLine,
+  Plus,
+  Minus,
+  AlertTriangle,
+  Check,
+} from "lucide-react";
 
-import { DEMO_SHOPS, type DemoShop } from "@/lib/demoShops";
+import { DEMO_SHOPS, type DemoShop, type DemoItem } from "@/lib/demoShops";
 
 // ============================================================
-// شاشة العرض — دي أداة بيع، مش صفحة معلومات
+// شاشة العرض — أداة بيع، مش صفحة معلومات
 // ============================================================
 //
-// المسوّق واقف قدام صاحب محل ومعاه موبايل. عنده تلاتين ثانية.
-// فالصفحة دي بتوري **تلات حاجات بالترتيب ده بالظبط**:
+// المسوّق واقف قدام صاحب محل ومعاه موبايل، وعنده تلاتين ثانية.
 //
-//   ١. شاشة البيع بأصناف مجاله هو → "ده محلك"
-//   ٢. الفاتورة المطبوعة          → "وde اللي هيدّيه لزبونه"
-//   ٣. أرقام آخر اليوم            → "وde اللي هيعرفه آخر اليوم"
+// ------------------------------------------------------------
+// اللي اتغيّر بعد أول نسخة
+// ------------------------------------------------------------
 //
-// وكل ده **صورة**: مفيش اتصال بقاعدة بيانات، ومفيش حساب حقيقي،
-// ومفيش حاجة تتكتب. المسوّق مايقدرش يبوّظ حاجة، والعرض شغّال حتى
-// لو النت ضعيف. التفصيل في `lib/demoShops.ts`.
+// أول نسخة كانت بتغيّر **أسماء الأصناف والأسعار وبس** - نفس التلات
+// شاشات لكل الأنشطة. وباسل شاف إنها مش كفاية، وهو محق:
+//
+//   صاحب الجزارة مش هيتبهر إنه شاف "لحمة كندوز" مكان "لاتيه".
+//   هو عايز يشوف **البيع بالكيلو**.
+//
+// دلوقتي كل نشاط بيغيّر **سلوك الشاشة** مش أسماءها:
+//
+//   بالوزن   → الكميات بالكيلو، والخطوة ربع، و«١.٥ كيلو» مكتوبة
+//   بالباركود → الرقم تحت الاسم وأيقونة ماسح
+//   بوصفة    → «له وصفة» على الصنف، ومكوّناته مكتوبة
+//   خدمات    → مفيش مخزون خالص، والكلام عن الوقت مش البضاعة
+//
+// وفيه تبويب رابع «ليه يهمك» - وهو **أهم واحد فيهم**. المسوّق مش
+// بيبيع برنامج، هو بيبيع حل لوجع الراجل اللي قدامه، ووجع الجزار
+// مش وجع الصيدلي.
+//
+// وكل ده **صورة**: مفيش قاعدة بيانات ولا حساب حقيقي ولا كتابة.
+// المسوّق مايقدرش يبوّظ حاجة، والعرض شغّال والنت ضعيف.
 
-type Tab = "pos" | "receipt" | "report";
+type Tab = "why" | "pos" | "receipt" | "report";
 
 const TABS: { id: Tab; label: string; icon: typeof Receipt }[] = [
+  { id: "why", label: "ليه يهمك", icon: Sparkles },
   { id: "pos", label: "شاشة البيع", icon: ShoppingCart },
   { id: "receipt", label: "الفاتورة", icon: Receipt },
   { id: "report", label: "آخر اليوم", icon: BarChart3 },
 ];
+
+// الكمية بتتكتب حسب طريقة البيع. «٢» للحبة و«١.٥ كيلو» للوزن -
+// والفرق ده هو اللي صاحب الجزارة بيدوّر عليه.
+function formatQty(shop: DemoShop, quantity: number) {
+  if (shop.sellsBy === "weight") {
+    const clean = Number.isInteger(quantity)
+      ? String(quantity)
+      : quantity.toFixed(2).replace(/0$/, "");
+
+    return `${clean} كيلو`;
+  }
+
+  return String(quantity);
+}
+
+function ItemCard({ shop, item }: { shop: DemoShop; item: DemoItem }) {
+  return (
+    <div className="rounded-xl border border-ink-600 bg-ink-800 p-3 text-center">
+      <p className="text-sm font-semibold text-paper">{item.name}</p>
+
+      <p className="mt-1 font-bold text-green-400">
+        {item.price} ج
+        {shop.sellsBy === "weight" && (
+          <span className="text-xs font-normal text-mist"> / كيلو</span>
+        )}
+      </p>
+
+      {item.recipe && (
+        <p className="mt-1 flex items-center justify-center gap-1 text-[11px] text-splash">
+          <ChefHat size={11} />
+          له وصفة
+        </p>
+      )}
+
+      {item.barcode && (
+        <p
+          dir="ltr"
+          className="mt-1 flex items-center justify-center gap-1 text-[11px] text-mist"
+        >
+          <ScanLine size={11} />
+          {item.barcode}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function WhyPreview({ shop }: { shop: DemoShop }) {
+  return (
+    <div className="space-y-4">
+      {/* الوجع الأول. لو الراجل مالقاش نفسه في السطور دي، باقي
+          العرض مالوش لازمة. */}
+      <div className="rounded-2xl border border-red-900/60 bg-red-950/20 p-5">
+        <p className="mb-3 flex items-center gap-2 text-sm font-bold text-red-300">
+          <AlertTriangle size={16} />
+          الحاجات دي بتحصل معاك؟
+        </p>
+
+        <ul className="space-y-2">
+          {shop.pitch.pains.map((pain) => (
+            <li key={pain} className="flex items-start gap-2 text-sm text-paper">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
+              {pain}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="space-y-3">
+        {shop.pitch.features.map((feature) => (
+          <div
+            key={feature.title}
+            className="rounded-2xl border border-ink-600 bg-ink-800 p-4"
+          >
+            <p className="flex items-center gap-2 font-bold text-paper">
+              <Check size={16} className="text-green-400" />
+              {feature.title}
+            </p>
+
+            <p className="mt-1.5 ps-6 text-sm leading-relaxed text-mist">
+              {feature.line}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function PosPreview({ shop }: { shop: DemoShop }) {
   const [category, setCategory] = useState<string>("الكل");
@@ -46,69 +163,134 @@ function PosPreview({ shop }: { shop: DemoShop }) {
   );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-      <div>
-        <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-          {["الكل", ...shop.categories].map((name) => (
-            <button
-              key={name}
-              onClick={() => setCategory(name)}
-              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                category === name
-                  ? "bg-splash text-ink-950"
-                  : "border border-ink-600 bg-ink-800 text-mist"
-              }`}
-            >
-              {name}
-            </button>
-          ))}
+    <div className="space-y-3">
+      {/* شريط بيقول للراجل "الشاشة دي متظبطة على شغلك انت". */}
+      <div className="flex flex-wrap gap-2">
+        {shop.sellsBy === "weight" && (
+          <span className="flex items-center gap-1.5 rounded-full bg-ink-800 px-3 py-1.5 text-xs text-amber-300">
+            <Scale size={13} />
+            البيع بالوزن — الخطوة ربع كيلو
+          </span>
+        )}
+
+        {shop.sellsBy === "service" && (
+          <span className="flex items-center gap-1.5 rounded-full bg-ink-800 px-3 py-1.5 text-xs text-amber-300">
+            <Sparkles size={13} />
+            خدمات — من غير مخزون
+          </span>
+        )}
+
+        {shop.items.some((i) => i.barcode) && (
+          <span className="flex items-center gap-1.5 rounded-full bg-ink-800 px-3 py-1.5 text-xs text-mist">
+            <ScanLine size={13} />
+            بيقرا الباركود
+          </span>
+        )}
+
+        {shop.items.some((i) => i.recipe) && (
+          <span className="flex items-center gap-1.5 rounded-full bg-ink-800 px-3 py-1.5 text-xs text-splash">
+            <ChefHat size={13} />
+            أصناف ليها وصفة
+          </span>
+        )}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <div>
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+            {["الكل", ...shop.categories].map((name) => (
+              <button
+                key={name}
+                onClick={() => setCategory(name)}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  category === name
+                    ? "bg-splash text-ink-950"
+                    : "border border-ink-600 bg-ink-800 text-mist"
+                }`}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {items.map((item) => (
+              <ItemCard key={item.name} shop={shop} item={item} />
+            ))}
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {items.map((item) => (
-            <div
-              key={item.name}
-              className="rounded-xl border border-ink-600 bg-ink-800 p-3 text-center"
-            >
-              <p className="text-sm font-semibold text-paper">{item.name}</p>
-              <p className="mt-1 font-bold text-green-400">{item.price} ج</p>
-            </div>
-          ))}
+        <div className="rounded-xl border border-ink-600 bg-ink-800 p-4">
+          <p className="mb-3 font-bold text-paper">العربية</p>
+
+          <div className="space-y-3">
+            {shop.basket.map((line) => (
+              <div key={line.name}>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-mist">{line.name}</span>
+
+                  <span className="font-semibold text-paper">
+                    {(line.quantity * line.price).toFixed(2)}
+                  </span>
+                </div>
+
+                {/* أزرار + و− بالشكل اللي الكاشير بيشوفه، والخطوة
+                    بتتقال بالكلام: حبة ولا ربع كيلو. */}
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded bg-ink-700 text-mist">
+                    <Minus size={12} />
+                  </span>
+
+                  <span className="min-w-16 text-center text-xs font-semibold text-paper">
+                    {formatQty(shop, line.quantity)}
+                  </span>
+
+                  <span className="flex h-6 w-6 items-center justify-center rounded bg-ink-700 text-mist">
+                    <Plus size={12} />
+                  </span>
+
+                  {shop.sellsBy === "weight" && (
+                    <span className="text-[11px] text-mist">± ربع</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 border-t border-ink-600 pt-3">
+            <p className="text-xs text-mist">الإجمالي</p>
+            <p className="text-3xl font-bold text-green-400">
+              {total.toFixed(2)} ج
+            </p>
+          </div>
+
+          <div className="mt-4 rounded-xl bg-green-600 p-3 text-center font-bold text-white">
+            تمام
+          </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-ink-600 bg-ink-800 p-4">
-        <p className="mb-3 font-bold text-paper">العربية</p>
-
-        <div className="space-y-2">
-          {shop.basket.map((line) => (
-            <div
-              key={line.name}
-              className="flex items-center justify-between text-sm"
-            >
-              <span className="text-mist">
-                {line.name}{" "}
-                <span className="text-xs">× {line.quantity}</span>
-              </span>
-
-              <span className="font-semibold text-paper">
-                {(line.quantity * line.price).toFixed(2)}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-4 border-t border-ink-600 pt-3">
-          <p className="text-xs text-mist">الإجمالي</p>
-          <p className="text-3xl font-bold text-green-400">
-            {total.toFixed(2)} ج
+      {/* الوصفة مكتوبة بالتفصيل تحت الشاشة: ده اللي بيخلّي صاحب
+          الكافيه يقول "استنى، يعني بيخصم البن لوحده؟" */}
+      {shop.items.some((i) => i.recipe) && (
+        <div className="rounded-xl border border-splash/30 bg-ink-800 p-4">
+          <p className="mb-2 flex items-center gap-2 text-sm font-bold text-splash">
+            <ChefHat size={14} />
+            الطبخة — بتتخصم لوحدها مع كل بيعة
           </p>
-        </div>
 
-        <div className="mt-4 rounded-xl bg-green-600 p-3 text-center font-bold text-white">
-          تمام
+          <div className="space-y-1">
+            {shop.items
+              .filter((i) => i.recipe)
+              .map((i) => (
+                <p key={i.name} className="text-xs text-mist">
+                  <span className="font-semibold text-paper">{i.name}</span> ←{" "}
+                  {i.recipe}
+                </p>
+              ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -128,17 +310,17 @@ function ReceiptPreview({ shop }: { shop: DemoShop }) {
       >
         <div className="text-center">
           <h3 className="text-base font-bold">{shop.shopName}</h3>
+          <p className="text-xs font-semibold text-gray-700">فاتورة رقم 128</p>
           <p className="mt-1 text-xs text-gray-500">
             {new Date().toLocaleString("ar-EG")}
           </p>
-          <p className="text-xs font-semibold text-gray-700">فاتورة رقم 128</p>
         </div>
 
         <div className="my-2 space-y-1 border-y border-dashed border-gray-400 py-2">
           {shop.basket.map((line) => (
             <div key={line.name} className="flex justify-between text-xs">
               <span className="pe-2">
-                {line.name} × {line.quantity}
+                {line.name} × {formatQty(shop, line.quantity)}
               </span>
               <span>{(line.quantity * line.price).toFixed(2)}</span>
             </div>
@@ -164,9 +346,7 @@ function ReportPreview({ shop }: { shop: DemoShop }) {
         <p className="mt-1 text-4xl font-bold text-green-400">
           {shop.day.sales.toLocaleString("ar-EG")} ج
         </p>
-        <p className="mt-1 text-sm text-mist">
-          من {shop.day.invoices} فاتورة
-        </p>
+        <p className="mt-1 text-sm text-mist">من {shop.day.invoices} فاتورة</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -191,7 +371,7 @@ function ReportPreview({ shop }: { shop: DemoShop }) {
       </div>
 
       <p className="rounded-xl bg-ink-900 p-3 text-xs leading-relaxed text-mist">
-        وكل ده بيتحسب لوحده من البيع - صاحب المحل مابيدخّلش ولا رقم.
+        وكل ده بيتحسب لوحده من البيع — صاحب المحل مابيدخّلش ولا رقم.
       </p>
     </div>
   );
@@ -199,7 +379,7 @@ function ReportPreview({ shop }: { shop: DemoShop }) {
 
 export default function MarketerDemoPage() {
   const [shop, setShop] = useState<DemoShop>(DEMO_SHOPS[0]);
-  const [tab, setTab] = useState<Tab>("pos");
+  const [tab, setTab] = useState<Tab>("why");
 
   return (
     <main className="mx-auto max-w-4xl space-y-5 p-4 pb-16">
@@ -223,7 +403,12 @@ export default function MarketerDemoPage() {
           {DEMO_SHOPS.map((option) => (
             <button
               key={option.businessType}
-              onClick={() => setShop(option)}
+              onClick={() => {
+                setShop(option);
+                // الرجوع لأول تبويب مع كل تغيير: العرض بيبدأ من
+                // الوجع، مش من نص شاشة الزبون اللي فات.
+                setTab("why");
+              }}
               className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
                 shop.businessType === option.businessType
                   ? "bg-splash text-ink-950"
@@ -241,12 +426,12 @@ export default function MarketerDemoPage() {
         <p className="font-bold text-paper">{shop.shopName}</p>
       </div>
 
-      <div className="flex gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl p-3 text-sm font-bold transition ${
+            className={`flex flex-col items-center justify-center gap-1 rounded-xl p-3 text-xs font-bold transition sm:flex-row sm:text-sm ${
               tab === id
                 ? "bg-splash text-ink-950"
                 : "border border-ink-600 bg-ink-800 text-mist"
@@ -258,12 +443,13 @@ export default function MarketerDemoPage() {
         ))}
       </div>
 
+      {tab === "why" && <WhyPreview shop={shop} />}
       {tab === "pos" && <PosPreview shop={shop} />}
       {tab === "receipt" && <ReceiptPreview shop={shop} />}
       {tab === "report" && <ReportPreview shop={shop} />}
 
       <p className="rounded-xl border border-ink-600 bg-ink-800/60 p-3 text-center text-xs text-mist">
-        دي شاشة عرض بأرقام تجريبية - مش محل حقيقي.
+        دي شاشة عرض بأرقام تجريبية — مش محل حقيقي.
       </p>
     </main>
   );

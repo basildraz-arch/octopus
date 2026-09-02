@@ -35,14 +35,46 @@ export type DemoItem = {
   name: string;
   price: number;
   category: string;
+
+  // باركود للأصناف اللي بتتقرا بالماسح. بيظهر تحت الاسم في العرض -
+  // صاحب السوبر ماركت بيدوّر عليه بعينه قبل أي حاجة تانية.
+  barcode?: string;
+
+  // «له وصفة»: الصنف ده بيخصم مكوّناته لما يتباع.
+  recipe?: string;
+};
+
+// إزاي المحل ده بيبيع. ده بيغيّر شكل شاشة البيع نفسها، مش كلام
+// مكتوب جنبها.
+//
+//   piece   → بالحبة. زرار + و− بيزوّد واحد.
+//   weight  → بالوزن. الخطوة **ربع كيلو** (المصري بيشتري البن
+//             والجبنة بالربع)، والكمية بتتكتب ١.٥ مش ٢.
+//   service → خدمة. مفيش مخزون أصلًا، والسعر وقت.
+export type SellsBy = "piece" | "weight" | "service";
+
+// السطر اللي بيخلّي صاحب المحل يقول "أيوة، دي مشكلتي".
+//
+// **ده أهم جزء في الملف كله.** المسوّق مش بيبيع برنامج، هو بيبيع
+// حل لوجع الراجل اللي قدامه. و**وجع الجزار مش وجع الصيدلي**:
+// الجزار بيخاف من الميزان والفرق آخر اليوم، والصيدلي بيخاف من
+// الصنف اللي خلص وهو مش واخد باله.
+export type DemoPitch = {
+  // ٣-٤ حاجات في البرنامج **تخص المجال ده بالذات**.
+  features: { title: string; line: string }[];
+
+  // ٢-٣ أوجاع حقيقية بالكلام اللي صاحب المحل بيقوله هو.
+  pains: string[];
 };
 
 export type DemoShop = {
   businessType: string;
   label: string;
   shopName: string;
+  sellsBy: SellsBy;
   categories: string[];
   items: DemoItem[];
+  pitch: DemoPitch;
 
   // سلّة نموذجية للفاتورة المطبوعة.
   basket: { name: string; quantity: number; price: number }[];
@@ -61,12 +93,13 @@ export const DEMO_SHOPS: DemoShop[] = [
     businessType: "coffee",
     label: "كافيه / كوفي شوب",
     shopName: "كافيه النيل",
+    sellsBy: "piece",
     categories: ["مشروبات ساقعة", "مشروبات سخنة", "حلويات", "سناكس"],
     items: [
       { name: "قهوة تركي", price: 25, category: "مشروبات سخنة" },
-      { name: "إسبريسو", price: 30, category: "مشروبات سخنة" },
-      { name: "كابتشينو", price: 55, category: "مشروبات سخنة" },
-      { name: "لاتيه", price: 60, category: "مشروبات سخنة" },
+      { name: "إسبريسو", price: 30, category: "مشروبات سخنة", recipe: "١٨ جم بن + كوب" },
+      { name: "كابتشينو", price: 55, category: "مشروبات سخنة", recipe: "١٨ جم بن + ١٥٠ مل لبن + كوب" },
+      { name: "لاتيه", price: 60, category: "مشروبات سخنة", recipe: "١٨ جم بن + ٢٠٠ مل لبن + كوب" },
       { name: "شاي", price: 15, category: "مشروبات سخنة" },
       { name: "آيس كوفي", price: 65, category: "مشروبات ساقعة" },
       { name: "ميلك شيك", price: 70, category: "مشروبات ساقعة" },
@@ -76,6 +109,28 @@ export const DEMO_SHOPS: DemoShop[] = [
       { name: "كرواسون", price: 40, category: "سناكس" },
       { name: "سندوتش تونة", price: 65, category: "سناكس" },
     ],
+    pitch: {
+      features: [
+        {
+          title: "الطبخة",
+          line: "كوباية اللاتيه بتخصم بنّها ولبنها وكوبها من المخزن لوحدها. تعرف البن خلص إمتى **قبل** ما يخلص.",
+        },
+        {
+          title: "أكتر من عربية مفتوحة",
+          line: "زبون قاعد وبيزوّد على حسابه، وانت بتخدم اللي واقف. لحد ٤ فواتير مفتوحة مع بعض ومابتضيعش.",
+        },
+        {
+          title: "تسليم الوردية",
+          line: "شيفتين بيبدّلوا؟ الدرج بيتعدّ عند التسليم، فأي فرق بيبان وانت عارف من نوبة مين.",
+        },
+      ],
+      pains: [
+        "البن بيخلص فجأة ومحدش واخد باله",
+        "الكاشير بيتغيّر والدرج بيطلع ناقص ومش عارف من مين",
+        "مش عارف الكوباية بتكلفني كام بالظبط",
+      ],
+    },
+
     basket: [
       { name: "لاتيه", quantity: 2, price: 60 },
       { name: "تشيز كيك", quantity: 1, price: 75 },
@@ -88,21 +143,48 @@ export const DEMO_SHOPS: DemoShop[] = [
     businessType: "supermarket",
     label: "سوبر ماركت / بقالة",
     shopName: "ماركت الأمانة",
+    sellsBy: "piece",
     categories: ["بقالة", "ألبان", "منظفات", "مشروبات", "مجمدات"],
     items: [
-      { name: "أرز ١ كيلو", price: 42, category: "بقالة" },
-      { name: "زيت ١ لتر", price: 78, category: "بقالة" },
+      { name: "أرز ١ كيلو", price: 42, category: "بقالة", barcode: "6221031492013" },
+      { name: "زيت ١ لتر", price: 78, category: "بقالة", barcode: "6221048001157" },
       { name: "سكر ١ كيلو", price: 38, category: "بقالة" },
       { name: "مكرونة", price: 22, category: "بقالة" },
-      { name: "لبن ١ لتر", price: 45, category: "ألبان" },
+      { name: "لبن ١ لتر", price: 45, category: "ألبان", barcode: "6223000512094" },
       { name: "جبنة بيضا ربع", price: 35, category: "ألبان" },
       { name: "زبادي", price: 12, category: "ألبان" },
       { name: "صابون غسيل", price: 65, category: "منظفات" },
       { name: "شامبو", price: 95, category: "منظفات" },
-      { name: "مياه ١.٥ لتر", price: 10, category: "مشروبات" },
-      { name: "بيبسي", price: 15, category: "مشروبات" },
+      { name: "مياه ١.٥ لتر", price: 10, category: "مشروبات", barcode: "6221024000117" },
+      { name: "بيبسي", price: 15, category: "مشروبات", barcode: "6221033000318" },
       { name: "بطاطس مجمدة", price: 55, category: "مجمدات" },
     ],
+    pitch: {
+      features: [
+        {
+          title: "الباركود",
+          line: "الماسح بيقرا والصنف بيدخل العربية على طول. مفيش كتابة ولا دوران.",
+        },
+        {
+          title: "حساب الزباين",
+          line: "اللي بياخد على الحساب، دفتره في البرنامج. تعرف مين عليه كام من غير كشكول.",
+        },
+        {
+          title: "تلات تسعيرات",
+          line: "قطاعي، نص جملة، جملة — لنفس الصنف. الكاشير بيختار وقت البيع.",
+        },
+        {
+          title: "الحد الأدنى",
+          line: "الصنف اللي قرّب يخلص بيبان أحمر قبل ما الرف يفضى.",
+        },
+      ],
+      pains: [
+        "الجرد آخر الشهر بياخد يومين",
+        "دفتر الحساب بيضيع والزبون بينكر",
+        "أصناف بتخلص من على الرف ومحدش واخد باله",
+      ],
+    },
+
     basket: [
       { name: "أرز ١ كيلو", quantity: 2, price: 42 },
       { name: "زيت ١ لتر", quantity: 1, price: 78 },
@@ -116,6 +198,7 @@ export const DEMO_SHOPS: DemoShop[] = [
     businessType: "pharmacy",
     label: "صيدلية",
     shopName: "صيدلية الشفاء",
+    sellsBy: "piece",
     categories: ["أدوية", "مستحضرات تجميل", "مستلزمات طبية", "ألبان أطفال"],
     items: [
       { name: "بنادول ٢٤ قرص", price: 48, category: "أدوية" },
@@ -131,6 +214,31 @@ export const DEMO_SHOPS: DemoShop[] = [
       { name: "لبن أطفال ٤٠٠ جم", price: 240, category: "ألبان أطفال" },
       { name: "ببرونة", price: 130, category: "ألبان أطفال" },
     ],
+    pitch: {
+      features: [
+        {
+          title: "بحث بالاسم",
+          line: "آلاف الأصناف، وبتلاقي الدوا وانت بتكتب أول تلات حروف.",
+        },
+        {
+          title: "الحد الأدنى لكل صنف",
+          line: "الدوا اللي بيمشي بسرعة بيبان قبل ما يخلص، مش بعد ما الزبون يمشي.",
+        },
+        {
+          title: "ربح كل صنف",
+          line: "تعرف أنهي صنف بيجيب فلوس فعلًا وأنهي واحد بس واخد مساحة.",
+        },
+        {
+          title: "المرتجع",
+          line: "الزبون رجّع علبة؟ سطر واحد والمخزون والحساب بيتظبطوا مع بعض.",
+        },
+      ],
+      pains: [
+        "الزبون بيسأل على دوا ومش عارف عندي منه ولا لأ",
+        "بشتري كميات غلط لأني مش عارف اللي بيمشي",
+      ],
+    },
+
     basket: [
       { name: "بنادول ٢٤ قرص", quantity: 1, price: 48 },
       { name: "شراب كحة", quantity: 1, price: 55 },
@@ -143,10 +251,11 @@ export const DEMO_SHOPS: DemoShop[] = [
     businessType: "restaurant",
     label: "مطعم",
     shopName: "مطعم البيت",
+    sellsBy: "piece",
     categories: ["أطباق رئيسية", "مقبلات", "مشروبات", "حلويات"],
     items: [
-      { name: "فراخ مشوية نص", price: 180, category: "أطباق رئيسية" },
-      { name: "كفتة", price: 220, category: "أطباق رئيسية" },
+      { name: "فراخ مشوية نص", price: 180, category: "أطباق رئيسية", recipe: "نص فرخة + توابل + فحم" },
+      { name: "كفتة", price: 220, category: "أطباق رئيسية", recipe: "٣٠٠ جم مفروم + بقدونس + بصل" },
       { name: "كبدة إسكندراني", price: 150, category: "أطباق رئيسية" },
       { name: "وجبة رز بلبن", price: 95, category: "أطباق رئيسية" },
       { name: "طحينة", price: 25, category: "مقبلات" },
@@ -158,6 +267,27 @@ export const DEMO_SHOPS: DemoShop[] = [
       { name: "أرز بلبن", price: 45, category: "حلويات" },
       { name: "أم علي", price: 60, category: "حلويات" },
     ],
+    pitch: {
+      features: [
+        {
+          title: "ترابيزات في نفس الوقت",
+          line: "كل ترابيزة فاتورة مفتوحة لوحدها، وبتزوّد عليها لحد ما يطلبوا الحساب.",
+        },
+        {
+          title: "الطبخة",
+          line: "الوجبة بتخصم مكوّناتها من المخزن. تعرف الفراخ بتكفي كام وجبة كمان.",
+        },
+        {
+          title: "تقرير كل عامل",
+          line: "مين باع بكام، وكام فاتورة اتفتحت وماتنفذتش.",
+        },
+      ],
+      pains: [
+        "الطلبات بتتلخبط أول ما الزحمة تزيد",
+        "مش عارف الوجبة بتكلفني كام فبسعّر بالتخمين",
+      ],
+    },
+
     basket: [
       { name: "فراخ مشوية نص", quantity: 1, price: 180 },
       { name: "سلطة", quantity: 1, price: 30 },
@@ -171,6 +301,7 @@ export const DEMO_SHOPS: DemoShop[] = [
     businessType: "clothing",
     label: "محل ملابس",
     shopName: "بوتيك ستايل",
+    sellsBy: "piece",
     categories: ["رجالي", "حريمي", "أطفال", "أحذية"],
     items: [
       { name: "تيشيرت رجالي", price: 320, category: "رجالي" },
@@ -184,6 +315,27 @@ export const DEMO_SHOPS: DemoShop[] = [
       { name: "كوتشي", price: 950, category: "أحذية" },
       { name: "شبشب", price: 220, category: "أحذية" },
     ],
+    pitch: {
+      features: [
+        {
+          title: "المرتجع والاستبدال",
+          line: "الزبون رجّع قطعة بعد أسبوع؟ بتلاقي فاتورتها برقمها وبتسترجعها في ثانية.",
+        },
+        {
+          title: "ربح كل قطعة",
+          line: "تعرف أنهي موديل بيكسّب فعلًا، مش اللي بيتباع كتير بس.",
+        },
+        {
+          title: "تقرير البياعين",
+          line: "مين باع بكام — والعمولة آخر الشهر بتبقى رقم مش خناقة.",
+        },
+      ],
+      pains: [
+        "الزبون بيرجّع القطعة وبقالها أسبوع ومش فاكر باعها بكام",
+        "مش عارف أنهي موديل يستاهل أجيب منه تاني",
+      ],
+    },
+
     basket: [
       { name: "بنطلون جينز", quantity: 1, price: 650 },
       { name: "تيشيرت رجالي", quantity: 2, price: 320 },
@@ -195,29 +347,52 @@ export const DEMO_SHOPS: DemoShop[] = [
     businessType: "butcher",
     label: "جزارة",
     shopName: "جزارة الإخلاص",
+    sellsBy: "weight",
     categories: ["لحوم", "دواجن", "مصنّعات"],
     items: [
-      { name: "لحمة بتلو (كيلو)", price: 480, category: "لحوم" },
-      { name: "لحمة كندوز (كيلو)", price: 420, category: "لحوم" },
-      { name: "مفروم (كيلو)", price: 440, category: "لحوم" },
-      { name: "كبدة (كيلو)", price: 350, category: "لحوم" },
-      { name: "فراخ بلدي (كيلو)", price: 190, category: "دواجن" },
-      { name: "بانيه (كيلو)", price: 280, category: "دواجن" },
-      { name: "وراك (كيلو)", price: 175, category: "دواجن" },
-      { name: "سجق (كيلو)", price: 300, category: "مصنّعات" },
+      { name: "لحمة بتلو", price: 480, category: "لحوم" },
+      { name: "لحمة كندوز", price: 420, category: "لحوم" },
+      { name: "مفروم", price: 440, category: "لحوم" },
+      { name: "كبدة", price: 350, category: "لحوم" },
+      { name: "فراخ بلدي", price: 190, category: "دواجن" },
+      { name: "بانيه", price: 280, category: "دواجن" },
+      { name: "وراك", price: 175, category: "دواجن" },
+      { name: "سجق", price: 300, category: "مصنّعات" },
       { name: "برجر (علبة)", price: 130, category: "مصنّعات" },
     ],
+    pitch: {
+      features: [
+        {
+          title: "البيع بالوزن",
+          line: "تكتب ١.٥ كيلو والسعر بيتحسب لوحده. والزيادة والنقصان بالربع كيلو بدوسة.",
+        },
+        {
+          title: "تسعيرة قطاعي وجملة",
+          line: "نفس اللحمة بسعرين — للزبون العادي وللمطعم اللي بياخد كميات.",
+        },
+        {
+          title: "جرد الدرج",
+          line: "آخر اليوم بتعدّ الفلوس وتكتب الرقم، والبرنامج بيقولك في فرق ولا لأ.",
+        },
+      ],
+      pains: [
+        "الميزان حاجة والدرج آخر اليوم حاجة تانية",
+        "بشتري ذبيحة وبعدها مش عارف كسبت منها كام",
+      ],
+    },
+
     basket: [
-      { name: "لحمة كندوز (كيلو)", quantity: 1.5, price: 420 },
-      { name: "فراخ بلدي (كيلو)", quantity: 2, price: 190 },
+      { name: "لحمة كندوز", quantity: 1.5, price: 420 },
+      { name: "فراخ بلدي", quantity: 2, price: 190 },
     ],
-    day: { sales: 14200, invoices: 47, expenses: 900, topItem: "فراخ بلدي (كيلو)" },
+    day: { sales: 14200, invoices: 47, expenses: 900, topItem: "فراخ بلدي" },
   },
 
   {
     businessType: "bakery",
     label: "مخبز / فرن",
     shopName: "فرن الحاج",
+    sellsBy: "piece",
     categories: ["عيش", "مخبوزات", "فطاير"],
     items: [
       { name: "عيش فينو", price: 3, category: "عيش" },
@@ -229,6 +404,27 @@ export const DEMO_SHOPS: DemoShop[] = [
       { name: "فطير مشلتت", price: 90, category: "فطاير" },
       { name: "فطير بالجبنة", price: 120, category: "فطاير" },
     ],
+    pitch: {
+      features: [
+        {
+          title: "فواتير كتير وسريعة",
+          line: "٢٠٠ فاتورة في اليوم بجنيهات؟ الشاشة متظبطة على السرعة مش على التفاصيل.",
+        },
+        {
+          title: "البيع بالوزن",
+          line: "البسكوت والبيتي فور بالكيلو والنص والربع.",
+        },
+        {
+          title: "المصروفات اليومية",
+          line: "الدقيق والغاز والعمالة بتتسجّل، فالربح اللي بتشوفه هو الربح الحقيقي.",
+        },
+      ],
+      pains: [
+        "بنبيع طول اليوم وآخر اليوم مش عارف كسبت ولا لأ",
+        "الدقيق بيروح فين؟ مش عارف",
+      ],
+    },
+
     basket: [
       { name: "عيش فينو", quantity: 10, price: 3 },
       { name: "فطير مشلتت", quantity: 1, price: 90 },
@@ -241,6 +437,7 @@ export const DEMO_SHOPS: DemoShop[] = [
     businessType: "barber",
     label: "كوافير / حلاق",
     shopName: "صالون الفن",
+    sellsBy: "service",
     categories: ["خدمات", "منتجات شعر", "منتجات بشرة"],
     items: [
       { name: "قص شعر", price: 120, category: "خدمات" },
@@ -252,6 +449,27 @@ export const DEMO_SHOPS: DemoShop[] = [
       { name: "واكس شعر", price: 190, category: "منتجات شعر" },
       { name: "كريم حلاقة", price: 110, category: "منتجات بشرة" },
     ],
+    pitch: {
+      features: [
+        {
+          title: "خدمات من غير مخزون",
+          line: "القص والصبغة خدمات — مالهاش مخزون ومالهاش جرد. البرنامج فاهم الفرق.",
+        },
+        {
+          title: "تقرير كل حلّاق",
+          line: "مين عمل كام خدمة وبكام. العمولة آخر الشهر بتبقى رقم من الشاشة.",
+        },
+        {
+          title: "المنتجات كمان",
+          line: "الشامبو والواكس بيتباعوا بمخزون عادي جنب الخدمات في نفس الفاتورة.",
+        },
+      ],
+      pains: [
+        "كل واحد بيقول عمل كام وأنا مش عارف الصح",
+        "العمولة آخر الشهر حسبة على ورق وبتاخد سهرة",
+      ],
+    },
+
     basket: [
       { name: "قص شعر", quantity: 1, price: 120 },
       { name: "حلاقة دقن", quantity: 1, price: 80 },
@@ -263,12 +481,13 @@ export const DEMO_SHOPS: DemoShop[] = [
     businessType: "electronics",
     label: "محل إلكترونيات",
     shopName: "عالم التكنولوجيا",
+    sellsBy: "piece",
     categories: ["موبايلات", "إكسسوارات", "أجهزة منزلية", "قطع غيار"],
     items: [
-      { name: "موبايل متوسط", price: 8500, category: "موبايلات" },
+      { name: "موبايل متوسط", price: 8500, category: "موبايلات", barcode: "8801643012345" },
       { name: "موبايل اقتصادي", price: 4200, category: "موبايلات" },
       { name: "سماعة بلوتوث", price: 750, category: "إكسسوارات" },
-      { name: "شاحن سريع", price: 320, category: "إكسسوارات" },
+      { name: "شاحن سريع", price: 320, category: "إكسسوارات", barcode: "6941059612345" },
       { name: "جراب", price: 150, category: "إكسسوارات" },
       { name: "اسكرين", price: 90, category: "إكسسوارات" },
       { name: "مروحة", price: 1900, category: "أجهزة منزلية" },
@@ -276,6 +495,31 @@ export const DEMO_SHOPS: DemoShop[] = [
       { name: "شاشة موبايل", price: 1100, category: "قطع غيار" },
       { name: "بطارية", price: 480, category: "قطع غيار" },
     ],
+    pitch: {
+      features: [
+        {
+          title: "الباركود",
+          line: "الجهاز بيتقرا بالماسح، ومفيش غلط في الموديل ولا في السعر.",
+        },
+        {
+          title: "ربح كل جهاز",
+          line: "بيعة واحدة بألوف — تعرف بالظبط كسبت منها كام، مش تقريبًا.",
+        },
+        {
+          title: "حساب الزباين",
+          line: "اللي بياخد بالتقسيط، حسابه مسجّل وبتعرف عليه كام وفاضل كام.",
+        },
+        {
+          title: "المرتجع",
+          line: "جهاز رجع في الضمان؟ بترجّعه بفاتورته وبتكلفته الأصلية.",
+        },
+      ],
+      pains: [
+        "غلطة واحدة في السعر بتاكل ربح يوم",
+        "مش عارف فلوسي فين — بضاعة ولا كاش ولا عند الناس",
+      ],
+    },
+
     basket: [
       { name: "موبايل اقتصادي", quantity: 1, price: 4200 },
       { name: "جراب", quantity: 1, price: 150 },
@@ -288,6 +532,7 @@ export const DEMO_SHOPS: DemoShop[] = [
     businessType: "pet_shop",
     label: "محل حيوانات أليفة",
     shopName: "بيت الحيوانات",
+    sellsBy: "piece",
     categories: ["أكل", "إكسسوارات", "أدوية", "ألعاب"],
     items: [
       { name: "أكل قطط ١ كيلو", price: 280, category: "أكل" },
@@ -300,6 +545,27 @@ export const DEMO_SHOPS: DemoShop[] = [
       { name: "علاج برغوث", price: 320, category: "أدوية" },
       { name: "لعبة فأر", price: 70, category: "ألعاب" },
     ],
+    pitch: {
+      features: [
+        {
+          title: "بالحبة وبالوزن",
+          line: "الأكل المعلّب بالحبة، والسايب بالكيلو والنص — الاتنين في نفس الشاشة.",
+        },
+        {
+          title: "الحد الأدنى",
+          line: "أكل القطط اللي بيمشي بسرعة بيبان قبل ما يخلص.",
+        },
+        {
+          title: "حساب الزباين",
+          line: "الزبون الدايم اللي بياخد كل شهر، حسابه مفتوح عندك.",
+        },
+      ],
+      pains: [
+        "الأكل بيخلص والزبون بيمشي لمحل تاني",
+        "مش عارف أنهي صنف بيكسّب فعلًا",
+      ],
+    },
+
     basket: [
       { name: "أكل قطط ١ كيلو", quantity: 2, price: 280 },
       { name: "رملة قطط", quantity: 1, price: 220 },

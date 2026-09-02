@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Megaphone,
   Plus,
@@ -11,6 +12,8 @@ import {
   Play,
   Copy,
   Check,
+  MonitorPlay,
+  ExternalLink,
 } from "lucide-react";
 
 import {
@@ -234,6 +237,57 @@ export default function Marketers() {
           </button>
         </div>
       )}
+
+      {/* ============================================================
+          معاينة من غير تسجيل خروج
+          ============================================================
+
+          باسل: "عايز أجرّب من غير ما أضطر أقفل الأكونت."
+
+          شاشة العرض بتاعة المسوّق **مالهاش حارس دخول أصلًا** - هي
+          بيانات ثابتة في `lib/demoShops.ts`، مفيش فيها ولا استعلام
+          ولا صف من أي محل. فبتتفتح وانت داخل بحسابك عادي.
+
+          أما شاشة المسوّق نفسها (فلوسه ومحلاته) فهي بتقرا
+          `marketer_dashboard()` اللي بتشوف مين انت من الجلسة -
+          ودي **مش هنعملها معاينة**. المعاينة معناها إن الكود يثق
+          في حاجة جاية من الشاشة بدل الجلسة، وde بالظبط الباب اللي
+          كل الحوار بتاع الصلاحيات قافله. النافذة الخاصة في
+          المتصفح بتحل الموضوع في ثانية من غير ما نفتحه. */}
+      <div className="rounded-xl border border-ink-600 bg-ink-800/60 p-4">
+        <p className="mb-3 flex items-center gap-2 text-sm font-bold text-paper">
+          <MonitorPlay size={16} className="text-splash" />
+          جرّب من غير ما تقفل حسابك
+        </p>
+
+        <Link
+          href="/marketer/demo"
+          target="_blank"
+          className="flex items-center justify-between gap-2 rounded-lg border border-ink-600 bg-ink-900 p-3 transition hover:border-splash"
+        >
+          <span>
+            <span className="block text-sm font-semibold text-paper">
+              شاشة العرض بتاعة المسوّق
+            </span>
+
+            <span className="block text-xs text-mist">
+              ١٠ أنواع نشاط — بتفتح في تاب جديد وانت داخل بحسابك
+            </span>
+          </span>
+
+          <ExternalLink size={15} className="shrink-0 text-mist" />
+        </Link>
+
+        <p className="mt-2 text-xs leading-relaxed text-mist">
+          وعشان تشوف شاشة المسوّق نفسها (فلوسه ومحلاته)، افتح{" "}
+          <span className="font-semibold text-paper">نافذة خاصة</span> في
+          المتصفح وادخل بحسابه من{" "}
+          <span dir="ltr" className="font-semibold text-paper">
+            /login/marketer
+          </span>
+          . كده حسابك هنا يفضل مفتوح.
+        </p>
+      </div>
 
       {!adding ? (
         <div className="flex gap-2">

@@ -43,6 +43,7 @@ import type { FeaturePrice, PricingSettings } from "@/types/pricing";
 import ScreenPreview from "@/components/master/ScreenPreview";
 import ReferralPanel from "@/components/master/ReferralPanel";
 import Marketers from "@/components/master/Marketers";
+import HealthBoard from "@/components/master/HealthBoard";
 import { ALL_FEATURES, FEATURE_LABELS } from "@/lib/features";
 import {
   LABEL_FIELD_HINTS,
@@ -122,6 +123,11 @@ export default function MasterPage() {
   // The per-business "شكل البرنامج" panel: preview, wording, and the
   // two template moves.
   const [shapeFor, setShapeFor] = useState<string | null>(null);
+
+  // المحل اللي اتدوس عليه من لوحة الصحة. بيتعلّم بإطار عشان العين
+  // تلاقيه وسط باقي المحلات، وبيتشال بعد شوية عشان الشاشة ما تفضلش
+  // موشومة.
+  const [focusId, setFocusId] = useState<string | null>(null);
   const [labelDraft, setLabelDraft] = useState<Record<string, string>>({});
   const [templateChoice, setTemplateChoice] = useState("");
   const [newTemplateCode, setNewTemplateCode] = useState("");
@@ -379,6 +385,23 @@ export default function MasterPage() {
     });
   }
 
+  // اللوحة بتنقّل، مش بتفتح شاشة تانية: نفس الكارت اللي تحت هو
+  // اللي فيه كل الأزرار، ففتح شاشة منفصلة كان هيبقى نسخة تانية من
+  // نفس الحاجة لازم تتحدّث معاها.
+  function focusShop(businessId: string) {
+    setFocusId(businessId);
+
+    // frame واحد بعد ما الحالة تتحدث، عشان العنصر يكون اتعلّم قبل
+    // ما نلف عليه.
+    window.setTimeout(() => {
+      document
+        .getElementById(`shop-${businessId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+
+    window.setTimeout(() => setFocusId(null), 4000);
+  }
+
   function toggleFeature(row: MasterBusinessRow, feature: FeatureKey) {
     const next = row.enabledFeatures.includes(feature)
       ? row.enabledFeatures.filter((f) => f !== feature)
@@ -434,6 +457,10 @@ export default function MasterPage() {
           <div className="mt-1 text-xs text-mist">إجمالي مبيعاتهم</div>
         </div>
       </div>
+
+      {/* أول حاجة تحت الأرقام: مين محتاجك. باقي الشاشة مرجع
+          بتفتحه لما تحتاجه، ودي اللي بتتقري كل يوم. */}
+      {!loading && <HealthBoard rows={rows} onOpen={focusShop} />}
 
       {/* Anything a business owner is not allowed to do to their own
           account lands here first. The database refuses those writes
@@ -517,8 +544,11 @@ export default function MasterPage() {
             return (
               <div
                 key={row.id}
-                className={`rounded-xl border p-4 ${
-                  row.active
+                id={`shop-${row.id}`}
+                className={`rounded-xl border p-4 transition ${
+                  focusId === row.id
+                    ? "border-splash ring-2 ring-splash/40"
+                    : row.active
                     ? "border-ink-600 bg-ink-800"
                     : "border-red-800 bg-red-950/20"
                 }`}

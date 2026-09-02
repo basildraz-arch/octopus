@@ -198,14 +198,31 @@ export function isCartStale(
   return now - last >= CART_STALE_MINUTES * 60_000;
 }
 
-// اتفتحت، اتحطّ فيها بضاعة، وسكتت. دي اللي تستاهل نظرة.
+// اتفتحت، اتحطّ فيها بضاعة، وسكتت **من غير ما تنتهي لحاجة**.
+// دي اللي تستاهل نظرة.
+//
+// وعرض السعر **نهاية شرعية** زي الفاتورة بالظبط: الكاشير طبع للزبون
+// ورقة بالسعر والزبون مشي يفكّر. العربية دي مااتسابتش، هي خلصت
+// شغلها.
+//
+// الرقم ده مش نظري: أول ما اتحسب على بيانات كيرو الحقيقية طلع
+// **٢٨ عربية مسابة في أسبوع**. لما اتشالت اللي فيها عرض سعر بقى
+// **٨** - والعشرين الباقيين كانوا كيرو نفسه بيتعلّم على البرنامج
+// ويطبع عروض أسعار يوم ٢٧ و٢٨ أغسطس.
+//
+// **ونفس القاعدة مكتوبة في `master_shop_stats()` (ميجريشن ٠٩٨).**
+// اللغتين مختلفتين فمينفعش ملف مشترك، فلو اتغيّرت هنا لازم تتغيّر
+// هناك - والعكس.
 export function abandonedCarts(
   sessions: CartSessionSummary[],
   now: number = Date.now()
 ): CartSessionSummary[] {
   return sessions.filter(
     (session) =>
-      !session.completed && session.addedCount > 0 && isCartStale(session, now)
+      !session.completed &&
+      session.quoteCount === 0 &&
+      session.addedCount > 0 &&
+      isCartStale(session, now)
   );
 }
 
@@ -220,6 +237,9 @@ export function liveCarts(
 ): CartSessionSummary[] {
   return sessions.filter(
     (session) =>
-      !session.completed && session.addedCount > 0 && !isCartStale(session, now)
+      !session.completed &&
+      session.quoteCount === 0 &&
+      session.addedCount > 0 &&
+      !isCartStale(session, now)
   );
 }
