@@ -15,9 +15,19 @@ import {
   Minus,
   AlertTriangle,
   Check,
+  Calculator,
+  Clock,
 } from "lucide-react";
 
-import { DEMO_SHOPS, type DemoShop, type DemoItem } from "@/lib/demoShops";
+import {
+  DEMO_SHOPS,
+  COMING_SOON,
+  type DemoShop,
+  type DemoItem,
+  type ComingSoonVertical,
+} from "@/lib/demoShops";
+import YourShop from "@/components/marketer/YourShop";
+import ComingSoonPitch from "@/components/marketer/ComingSoonPitch";
 
 // ============================================================
 // شاشة العرض — أداة بيع، مش صفحة معلومات
@@ -49,9 +59,11 @@ import { DEMO_SHOPS, type DemoShop, type DemoItem } from "@/lib/demoShops";
 // وكل ده **صورة**: مفيش قاعدة بيانات ولا حساب حقيقي ولا كتابة.
 // المسوّق مايقدرش يبوّظ حاجة، والعرض شغّال والنت ضعيف.
 
-type Tab = "why" | "pos" | "receipt" | "report";
+type Tab = "mine" | "why" | "pos" | "receipt" | "report";
 
+// «محلك» الأول عن قصد: العرض بيبدأ بأرقامه هو، مش بمميزاتنا.
 const TABS: { id: Tab; label: string; icon: typeof Receipt }[] = [
+  { id: "mine", label: "محلك", icon: Calculator },
   { id: "why", label: "ليه يهمك", icon: Sparkles },
   { id: "pos", label: "شاشة البيع", icon: ShoppingCart },
   { id: "receipt", label: "الفاتورة", icon: Receipt },
@@ -196,7 +208,7 @@ function PosPreview({ shop }: { shop: DemoShop }) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <div>
+        <div className="order-2 lg:order-1">
           <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
             {["الكل", ...shop.categories].map((name) => (
               <button
@@ -220,7 +232,7 @@ function PosPreview({ shop }: { shop: DemoShop }) {
           </div>
         </div>
 
-        <div className="rounded-xl border border-ink-600 bg-ink-800 p-4">
+        <div className="order-1 rounded-xl border border-ink-600 bg-ink-800 p-4 lg:order-2">
           <p className="mb-3 font-bold text-paper">العربية</p>
 
           <div className="space-y-3">
@@ -379,7 +391,13 @@ function ReportPreview({ shop }: { shop: DemoShop }) {
 
 export default function MarketerDemoPage() {
   const [shop, setShop] = useState<DemoShop>(DEMO_SHOPS[0]);
-  const [tab, setTab] = useState<Tab>("why");
+  const [tab, setTab] = useState<Tab>("mine");
+
+  // المجالات اللي البرنامج مابيخدمهاش ليها شاشة لوحدها، مش تبويب
+  // جوه العرض العادي: العرض هناك بيقول "شوف"، وهنا بيقول "قف".
+  const [comingSoon, setComingSoon] = useState<ComingSoonVertical | null>(
+    null
+  );
 
   return (
     <main className="mx-auto max-w-4xl space-y-5 p-4 pb-16">
@@ -399,18 +417,19 @@ export default function MarketerDemoPage() {
       <div>
         <p className="mb-2 text-sm text-mist">الزبون بتاعك بيشتغل إيه؟</p>
 
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
           {DEMO_SHOPS.map((option) => (
             <button
               key={option.businessType}
               onClick={() => {
                 setShop(option);
+                setComingSoon(null);
                 // الرجوع لأول تبويب مع كل تغيير: العرض بيبدأ من
-                // الوجع، مش من نص شاشة الزبون اللي فات.
-                setTab("why");
+                // أرقامه هو، مش من نص شاشة الزبون اللي فات.
+                setTab("mine");
               }}
               className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                shop.businessType === option.businessType
+                !comingSoon && shop.businessType === option.businessType
                   ? "bg-splash text-ink-950"
                   : "border border-ink-600 bg-ink-800 text-mist"
               }`}
@@ -418,20 +437,45 @@ export default function MarketerDemoPage() {
               {option.label}
             </button>
           ))}
+
+          {/* «قريبًا» في نفس الصف عن قصد: المسوّق بيدوّر على مجال
+              زبونه، ولو ملقهوش هيفترض إنه موجود ويوعد. هنا بيلاقيه
+              ومكتوب عليه إنه لسه. */}
+          {COMING_SOON.map((option) => (
+            <button
+              key={option.key}
+              onClick={() => setComingSoon(option)}
+              className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                comingSoon?.key === option.key
+                  ? "bg-amber-500 text-ink-950"
+                  : "border border-dashed border-amber-900/70 bg-ink-800 text-amber-200/70"
+              }`}
+            >
+              <Clock size={13} />
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="rounded-xl border border-ink-600 bg-ink-900/60 p-3 text-center">
-        <p className="text-xs text-mist">بتعرض دلوقتي</p>
-        <p className="font-bold text-paper">{shop.shopName}</p>
-      </div>
+      {!comingSoon && (
+        <div className="rounded-xl border border-ink-600 bg-ink-900/60 p-3 text-center">
+          <p className="text-xs text-mist">بتعرض دلوقتي</p>
+          <p className="font-bold text-paper">{shop.shopName}</p>
+        </div>
+      )}
 
-      <div className="grid grid-cols-4 gap-2">
+      {comingSoon && <ComingSoonPitch vertical={comingSoon} />}
+
+      {/* شريط بيتمرّر بالإصبع مش شبكة ثابتة: خمس تبويبات عربية
+          على شاشة ٣٦٠ بكسل بتتزنق وبتتقطّع. */}
+      {!comingSoon && (
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`flex flex-col items-center justify-center gap-1 rounded-xl p-3 text-xs font-bold transition sm:flex-row sm:text-sm ${
+            className={`flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-3 text-sm font-bold transition ${
               tab === id
                 ? "bg-splash text-ink-950"
                 : "border border-ink-600 bg-ink-800 text-mist"
@@ -442,15 +486,22 @@ export default function MarketerDemoPage() {
           </button>
         ))}
       </div>
+      )}
 
-      {tab === "why" && <WhyPreview shop={shop} />}
-      {tab === "pos" && <PosPreview shop={shop} />}
-      {tab === "receipt" && <ReceiptPreview shop={shop} />}
-      {tab === "report" && <ReportPreview shop={shop} />}
+      {!comingSoon && (
+        <>
+          {tab === "mine" && <YourShop shop={shop} />}
+          {tab === "why" && <WhyPreview shop={shop} />}
+          {tab === "pos" && <PosPreview shop={shop} />}
+          {tab === "receipt" && <ReceiptPreview shop={shop} />}
+          {tab === "report" && <ReportPreview shop={shop} />}
 
-      <p className="rounded-xl border border-ink-600 bg-ink-800/60 p-3 text-center text-xs text-mist">
-        دي شاشة عرض بأرقام تجريبية — مش محل حقيقي.
-      </p>
+          <p className="rounded-xl border border-ink-600 bg-ink-800/60 p-3 text-center text-xs text-mist">
+            شاشة البيع والفاتورة وآخر اليوم بأرقام تجريبية — مش محل
+            حقيقي. وتبويب «محلك» بأرقامه هو.
+          </p>
+        </>
+      )}
     </main>
   );
 }

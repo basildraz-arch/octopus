@@ -208,7 +208,22 @@ export type MarketerRow = {
   shops: MarketerShop[];
 };
 
-export async function getMarketers(): Promise<MarketerRow[]> {
+// طلب على مجال البرنامج لسه مابيخدمهوش. بيتسجّل من شاشة العرض
+// بتاعة المسوّق (ميجريشن ٠٩٩).
+export type VerticalInterestRow = {
+  id: string;
+  vertical: string;
+  shop_name: string;
+  phone: string | null;
+  note: string | null;
+  created_at: string;
+  marketer_id: string | null;
+};
+
+export async function getMarketers(): Promise<{
+  marketers: MarketerRow[];
+  interest: VerticalInterestRow[];
+}> {
   const accessToken = await getAccessTokenOrThrow();
 
   const res = await fetch("/api/master/marketer", {
@@ -219,7 +234,10 @@ export async function getMarketers(): Promise<MarketerRow[]> {
 
   if (!res.ok) throw new Error(data?.error || "تعذر تحميل المسوقين");
 
-  return data.marketers as MarketerRow[];
+  return {
+    marketers: (data.marketers ?? []) as MarketerRow[],
+    interest: (data.interest ?? []) as VerticalInterestRow[],
+  };
 }
 
 export async function runMarketerAction(

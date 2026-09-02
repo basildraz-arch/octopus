@@ -14,13 +14,16 @@ import {
   Check,
   MonitorPlay,
   ExternalLink,
+  Clock,
 } from "lucide-react";
 
 import {
   getMarketers,
   runMarketerAction,
   type MarketerRow,
+  type VerticalInterestRow,
 } from "@/services/master.service";
+import { COMING_SOON } from "@/lib/demoShops";
 import { useToast } from "@/hooks/useToast";
 
 // حروف وأرقام من غير O و0 و I و1: الكود بيتقال في التليفون، وكود
@@ -78,6 +81,7 @@ export default function Marketers() {
   const toast = useToast();
 
   const [rows, setRows] = useState<MarketerRow[]>([]);
+  const [interest, setInterest] = useState<VerticalInterestRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [openRow, setOpenRow] = useState<string | null>(null);
@@ -108,7 +112,10 @@ export default function Marketers() {
     setLoading(true);
 
     try {
-      setRows(await getMarketers());
+      const data = await getMarketers();
+
+      setRows(data.marketers);
+      setInterest(data.interest);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "تعذر التحميل");
     } finally {
@@ -195,6 +202,15 @@ export default function Marketers() {
   }
 
   const totalDue = rows.reduce((sum, row) => sum + row.due, 0);
+
+  // الطلبات متجمّعة بالمجال: عشرين طلب على الجيمات رقم يتبنى
+  // عليه قرار، وعشرين سطر متفرقين مجرد قايمة.
+  const byVertical = COMING_SOON.map((v) => ({
+    ...v,
+    rows: interest.filter((row) => row.vertical === v.key),
+  }))
+    .filter((v) => v.rows.length > 0)
+    .sort((a, b) => b.rows.length - a.rows.length);
 
   return (
     <div className="space-y-4">
@@ -522,6 +538,73 @@ export default function Marketers() {
               </div>
             );
           })}
+        </div>
+      )}
+      {/* ============================================================
+          طلبات المجالات اللي لسه مابنخدمهاش
+          ============================================================
+
+          المسوّق بيسجّلها من شاشة العرض لما يقابل جيم أو عيادة
+          (ميجريشن ٠٩٩). والعدد هنا هو اللي بيقرر نبني إيه بعد كده
+          - **رقم من السوق، مش تخمين من على المكتب**. */}
+      {byVertical.length > 0 && (
+        <div className="rounded-xl border border-amber-900/60 bg-amber-950/10 p-5">
+          <p className="mb-1 flex items-center gap-2 font-bold text-amber-200">
+            <Clock size={16} />
+            مجالات الناس بتطلبها
+          </p>
+
+          <p className="mb-4 text-xs text-mist">
+            سجّلها المسوقين وهم برّه. المجال اللي رقمه بيكبر هو اللي
+            يستاهل يتبني.
+          </p>
+
+          <div className="space-y-3">
+            {byVertical.map((group) => (
+              <details
+                key={group.key}
+                className="rounded-lg border border-ink-600 bg-ink-900"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between p-3">
+                  <span className="font-semibold text-paper">
+                    {group.label}
+                  </span>
+
+                  <span className="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-bold text-ink-950">
+                    {group.rows.length}
+                  </span>
+                </summary>
+
+                <div className="space-y-2 border-t border-ink-600 p-3">
+                  <p className="text-[11px] text-mist">
+                    محتاج: {group.missing}
+                  </p>
+
+                  {group.rows.map((row) => (
+                    <div key={row.id} className="text-xs">
+                      <span className="font-semibold text-paper">
+                        {row.shop_name}
+                      </span>
+
+                      {row.phone && (
+                        <span dir="ltr" className="ms-2 text-mist">
+                          {row.phone}
+                        </span>
+                      )}
+
+                      <span className="ms-2 text-mist">
+                        {formatDate(row.created_at)}
+                      </span>
+
+                      {row.note && (
+                        <p className="mt-0.5 text-mist">{row.note}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            ))}
+          </div>
         </div>
       )}
     </div>

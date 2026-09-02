@@ -45,7 +45,8 @@ export async function GET(request: NextRequest) {
 
   const { adminClient } = auth.context;
 
-  const [marketersResult, codesResult, referralsResult] = await Promise.all([
+  const [marketersResult, codesResult, referralsResult, interestResult] =
+    await Promise.all([
     adminClient
       .from("marketers")
       .select("id, full_name, phone, active, created_at, referral_code_id")
@@ -56,7 +57,16 @@ export async function GET(request: NextRequest) {
       .select(
         "referral_code_id, referred_business_id, created_at, qualified_at, signup_reward, signup_paid_at, businesses ( name )"
       ),
-  ]);
+
+    // طلبات المجالات اللي البرنامج لسه مابيخدمهاش (ميجريشن ٠٩٩).
+    // بتترجع مع المسوقين لأنها بتتسجّل منهم في الغالب، والعدد هو
+    // اللي بيقرر نبني إيه بعد كده.
+    adminClient
+      .from("vertical_interest")
+      .select("id, vertical, shop_name, phone, note, created_at, marketer_id")
+      .order("created_at", { ascending: false })
+      .limit(100),
+    ]);
 
   if (marketersResult.error) {
     console.error("marketer: list failed", marketersResult.error);
@@ -130,7 +140,10 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  return NextResponse.json({ marketers });
+  return NextResponse.json({
+    marketers,
+    interest: interestResult.data ?? [],
+  });
 }
 
 export async function POST(request: NextRequest) {

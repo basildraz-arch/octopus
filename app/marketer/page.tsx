@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Megaphone,
@@ -10,7 +9,6 @@ import {
   Copy,
   Check,
   MessageCircle,
-  LogOut,
   MonitorPlay,
   Clock,
 } from "lucide-react";
@@ -19,7 +17,6 @@ import {
   getMarketerDashboard,
   type MarketerDashboard,
 } from "@/repositories/marketer.repository";
-import { signOut } from "@/repositories/auth.repository";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("ar-EG", {
@@ -29,8 +26,6 @@ function formatDate(iso: string) {
 }
 
 export default function MarketerHomePage() {
-  const router = useRouter();
-
   const [data, setData] = useState<MarketerDashboard | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -42,11 +37,6 @@ export default function MarketerHomePage() {
       .catch((err) => setError(err instanceof Error ? err.message : "خطأ"))
       .finally(() => setLoading(false));
   }, []);
-
-  async function handleLogout() {
-    await signOut();
-    router.push("/login/marketer");
-  }
 
   if (loading) {
     return (
@@ -83,20 +73,10 @@ ${siteUrl}/signup
 
   return (
     <main className="mx-auto max-w-3xl space-y-5 p-4 pb-16">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-paper">
-          <Megaphone size={24} className="text-splash" />
-          أهلاً {data.name}
-        </h1>
-
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-1.5 rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-sm text-mist transition hover:border-splash"
-        >
-          <LogOut size={14} />
-          خروج
-        </button>
-      </header>
+      <h1 className="flex items-center gap-2 text-xl font-bold text-paper sm:text-2xl">
+        <Megaphone size={22} className="text-splash" />
+        أهلاً {data.name}
+      </h1>
 
       {/* الرقم اللي المسوّق فاتح الشاشة عشانه. */}
       <div className="rounded-2xl border border-ink-600 bg-ink-800 p-6">
