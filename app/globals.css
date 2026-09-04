@@ -326,9 +326,45 @@
     visibility: visible !important;
   }
 
+  /* ============================================================
+     الغلاف لازم يتفك، مش الفاتورة بس
+     ============================================================
+
+     ده كان السبب التالت. الفاتورة نفسها بقت `static`، بس **أبوها**
+     لسه `fixed inset-0 flex items-center justify-center`. يعني
+     وقت الطباعة التخطيط لسه بيتحسب بعرض الشاشة (١٢٨٠ بكسل)،
+     وكروم بيقيس الصفحة ويلاقيها ٨٠ مم، فبيصغّر الدنيا كلها عشان
+     تتحشر جوه ٨٠ مم. النتيجة: فاتورة سليمة بس بحجم النملة ومزنوقة
+     في نص الورقة. ودي بالظبط الصور اللي باسل بعتها.
+
+     الكلاسات `print:static print:block` كانت مفروض تعمل ده -
+     ومااشتغلتش. مش مهم ليه (ترتيب طبقات، أو الـvariant اتلغى في
+     البناء). المهم إن **الاعتماد على variant بيتحسب وقت البناء
+     لحاجة بتتطبع في محل حقيقي غلط**. القاعدة دي بالـid وبـ
+     `!important` - ماتقدرش تتكسر من كلاس ناقص.
+
+     `width: auto` مهمة زي `position` بالظبط: غلاف عرضه `100vw`
+     بيخلي الورقة تتقاس بعرض الشاشة حتى وهو `static`. */
+  #octopus-print-root > * {
+    position: static !important;
+    display: block !important;
+    inset: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+
   /* ودي هي السطر المهم: الفاتورة بترجع للتدفق الطبيعي. */
   #octopus-print-root [data-print-area] {
     position: static !important;
+    margin: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   @page {
