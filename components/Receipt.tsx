@@ -75,6 +75,8 @@ const PAPER: Record<
     margin: string;
     /** عرض الفاتورة على الورق. `100%` = املا اللي الدرايفر دّاه. */
     printWidth: string;
+    /** حافة صغيرة جوه الورقة نفسها عشان الكلام ما يلزقش في الطرف. */
+    printPad: string;
     label: string;
   }
 > = {
@@ -104,6 +106,7 @@ const PAPER: Record<
     page: "auto",
     margin: "0",
     printWidth: "100%",
+    printPad: "0 1.5mm",
     label: "حراري ٥٨ مم",
   },
 
@@ -112,6 +115,7 @@ const PAPER: Record<
     page: "auto",
     margin: "0",
     printWidth: "100%",
+    printPad: "0 2mm",
     label: "حراري ٨٠ مم",
   },
 
@@ -120,6 +124,7 @@ const PAPER: Record<
     page: "A4",
     margin: "10mm",
     printWidth: "100%",
+    printPad: "0",
     label: "A4",
   },
 };
@@ -241,6 +246,12 @@ export default function Receipt({
             width: ${paper.printWidth} !important;
             max-width: none !important;
             margin: 0 !important;
+
+            /* حافة رفيعة جوه الورقة. من غيرها الكلام بيبدأ من
+               حافة المنطقة المطبوعة بالظبط، وأول حرف أو آخر رقم
+               بيتقص لو الرول اتحرك مليمتر - وده بيحصل. */
+            padding: ${paper.printPad} !important;
+            box-sizing: border-box !important;
           }
 
           /* الطابعة الحرارية ٢٠٣ dpi — أقل بكتير من الشاشة. الخط
