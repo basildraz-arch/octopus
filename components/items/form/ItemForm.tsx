@@ -23,6 +23,8 @@ import { getStockByWarehouse } from "@/repositories/stockBatch.repository";
 import { getItemCost } from "@/repositories/itemCost.repository";
 import { useSession } from "@/hooks/useSession";
 import { getExampleHints } from "@/lib/examples";
+import { hasFeature } from "@/lib/features";
+import { tierLabel } from "@/lib/priceTier";
 import { useToast } from "@/hooks/useToast";
 
 import { itemSchema, ItemSchema } from "./validation";
@@ -43,6 +45,12 @@ export default function ItemForm({ item }: Props) {
   // Examples drawn from this shop's trade rather than generic ones.
   const hints = getExampleHints(business);
   const toast = useToast();
+
+  // التسعيرات التلاتة ميزة اختيارية. المحل اللي مافعّلهاش بيشوف
+  // خانة سعر واحدة زي ما هو - مش تلاتة فاضيين بيسألوا عن حاجة
+  // مالهاش لازمة عنده.
+  const tiersEnabled = hasFeature(business, "price_tiers");
+  const tierLabels = business?.price_tier_labels;
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [duplicateItem, setDuplicateItem] = useState<Item | null>(null);
@@ -104,6 +112,11 @@ export default function ItemForm({ item }: Props) {
           buy_price: 0,
           sell_price: item.sell_price,
 
+          // صفر = مش متسعّر. القاعدة بتخزّن null، والنموذج بيعرض
+          // خانة فاضية بصفر عشان النوع يفضل رقم.
+          sell_price_2: item.sell_price_2 ?? 0,
+          sell_price_3: item.sell_price_3 ?? 0,
+
           stock: item.stock,
           minimum_stock: item.minimum_stock,
 
@@ -120,6 +133,9 @@ export default function ItemForm({ item }: Props) {
 
           buy_price: 0,
           sell_price: 0,
+
+          sell_price_2: 0,
+          sell_price_3: 0,
 
           stock: 0,
           minimum_stock: 0,
@@ -166,6 +182,24 @@ export default function ItemForm({ item }: Props) {
       }
     }
 
+    // ============================================================
+    // صفر في التسعيرة التانية/التالتة معناه «مش متسعّر»
+    // ============================================================
+    //
+    // بيتحوّل لـ`null` عشان `priceForTier` ترجع لسعر البيع العادي.
+    // لو اتبعت صفر زي ما هو، الكاشير اللي واقف على التسعيرة دي
+    // كان هيبيع الصنف **ببلاش** والفاتورة تتسجّل من غير أي شكوى.
+    //
+    // ولو الميزة مقفولة للمحل، الحقلين مابيظهروش في الشاشة أصلًا -
+    // فبيتحفظوا `null`. ده مقصود: محل مالوش تسعيرات مالوش أسعار
+    // تانية، والصفر اللي كان جاي من النموذج المخفي أخطر من الفراغ.
+    const tierPrices = {
+      sell_price_2:
+        tiersEnabled && values.sell_price_2 > 0 ? values.sell_price_2 : null,
+      sell_price_3:
+        tiersEnabled && values.sell_price_3 > 0 ? values.sell_price_3 : null,
+    };
+
     try {
       if (item) {
         // buy_price بيتشال من التعديل عن قصد.
@@ -173,12 +207,21 @@ export default function ItemForm({ item }: Props) {
         // تكلفة صنف موجود بتتحسب من دفعات المخزون (نفس قاعدة stock)،
         // والقاعدة بترفض أي رقم جاي من هنا أصلًا بعد ميجريشن 072.
         // بعتُه هنا ماكانش بيعمل غير إنه يوهم إن الحقل شغال.
-        const { stock: newStock, buy_price: _cost, ...rest } = values;
+        const {
+          stock: newStock,
+          buy_price: _cost,
+          sell_price_2: _t2,
+          sell_price_3: _t3,
+          ...rest
+        } = values;
 
         void _cost;
+        void _t2;
+        void _t3;
 
         await updateItem(item.id, {
           ...rest,
+          ...tierPrices,
           has_stock: values.item_type === "product",
         });
 
@@ -194,6 +237,9 @@ export default function ItemForm({ item }: Props) {
 
         await createItem({
           ...values,
+
+          // بيغطّوا على الصفر الجاي من النموذج - شوف التعليق فوق.
+          ...tierPrices,
 
           has_stock: values.item_type === "product",
           active: true,
@@ -430,6 +476,45 @@ export default function ItemForm({ item }: Props) {
               {errors.sell_price?.message}
             </p>
           </div>
+        )}
+
+        {/* ============================================================
+            التسعيرة التانية والتالتة
+            ============================================================
+
+            الخانتين دول كانوا موجودين وضاعوا وقت ما النموذج
+            اتقسّم لملفات. كيرو عنده ٨٨ صنف بسعرين إضافيين اتحطّوا
+            بالاستيراد، وشاشة البيع بتوري الأزرار التلاتة - بس مافيش
+            مكان يعدّل منه سعر واحد. اشتكى بإن «التلات تسعيرات
+            اختفوا» وكان محق.
+
+            الأسماء بتيجي من المحل نفسه (سياح / نوبي / مصري عند
+            كيرو)، مش "تسعيرة ٢" و"تسعيرة ٣" - صاحب المحل بيفكّر
+            بأسماء زباينه. */}
+        {!isIngredient && tiersEnabled && (
+          <>
+            {([2, 3] as const).map((tier) => (
+              <div key={tier}>
+                <label className="mb-2 block text-sm">
+                  سعر {tierLabel(tierLabels, tier)}
+                </label>
+
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="سيبها فاضية = نفس السعر العادي"
+                  {...register(tier === 2 ? "sell_price_2" : "sell_price_3")}
+                  className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
+                />
+
+                <p className="mt-1 text-sm text-red-500">
+                  {tier === 2
+                    ? errors.sell_price_2?.message
+                    : errors.sell_price_3?.message}
+                </p>
+              </div>
+            ))}
+          </>
         )}
 
         {itemType === "product" && (
