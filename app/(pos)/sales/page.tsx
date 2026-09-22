@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ShoppingCart, X } from "lucide-react";
+import { ShoppingCart, X, ScanBarcode } from "lucide-react";
 
 import ItemList from "@/components/ItemList";
 import Cart, { type CartItem } from "@/components/Cart";
@@ -11,6 +11,7 @@ import Receipt from "@/components/Receipt";
 import ShiftAgeWarning from "@/components/ShiftAgeWarning";
 import CartTabs from "@/components/pos/CartTabs";
 import MyShiftSummary from "@/components/pos/MyShiftSummary";
+import BarcodeScanner from "@/components/pos/BarcodeScanner";
 import { useCarts } from "@/hooks/useCarts";
 
 import { getActiveItems } from "@/repositories/item.repository";
@@ -63,6 +64,11 @@ export default function SalesPage() {
 
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // الكاميرا مفتوحة ولا لأ. المركّب نفسه مابيتحمّلش غير وقت الفتح
+  // (`import()` جواه)، فالكاشير اللي مابيستعملش الماسح مابيدفعش
+  // تمنه في حجم الصفحة.
+  const [scanning, setScanning] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
 
   // العربية محفوظة، وممكن تكون أكتر من واحدة.
@@ -251,8 +257,20 @@ export default function SalesPage() {
   function addToCart(quantity: number, total: number) {
     if (!selectedItem) return;
 
-    const addedItem = selectedItem;
+    addItemToCart(selectedItem, quantity, total);
 
+    setSelectedItem(null);
+    setShowPopup(false);
+  }
+
+  // نفس منطق `addToCart` بالظبط، بس الصنف بيتبعت صراحةً بدل ما
+  // يتقرا من `selectedItem`.
+  //
+  // اتفصلت عشان الماسح: القراءة من الكاميرا بتيجي بصنف في إيدها،
+  // ومالهاش علاقة بالنافذة المفتوحة. ولو سبناها معتمدة على الحالة،
+  // كان لازم نفتح النافذة مع كل مسح - يعني دوسة زيادة على كل صنف،
+  // والماسح بيبقى أبطأ من الكتابة باليد.
+  function addItemToCart(addedItem: Item, quantity: number, total: number) {
     setCart((oldCart) => {
       const index = oldCart.findIndex(
         (line) => line.item.id === addedItem.id
@@ -295,9 +313,37 @@ export default function SalesPage() {
         lineTotal: total,
       });
     }
+  }
 
-    setSelectedItem(null);
-    setShowPopup(false);
+  // ============================================================
+  // قراءة من الكاميرا
+  // ============================================================
+  //
+  // **مافيش استعلام هنا.** الأصناف محمّلة في `items` من أول ما
+  // الشاشة فتحت، والبحث بيتم فيها. يعني المسح شغّال والنت ضعيف،
+  // ومفيش انتظار والكاشير واقف، ومفيش سطح جديد للصلاحيات.
+  //
+  // والسعر اللي بيتحط هنا **للعرض بس** - `record_sale` بتقرا السعر
+  // من القاعدة وقت الدفع على أي حال (ميجريشن ٠٧٥).
+  function handleScan(code: string) {
+    const hit = items.find(
+      (item) => (item.barcode ?? "").trim() === code.trim()
+    );
+
+    if (!hit) return { ok: false, label: code };
+
+    // الصنف اللي بالوزن أو بالمبلغ محتاج رقم من الكاشير، فالمسح
+    // بيوقف عنده ويفتح النافذة بدل ما يخمّن كمية.
+    if (hit.sale_method !== "piece") {
+      setScanning(false);
+      selectItem(hit);
+
+      return { ok: true, label: hit.name };
+    }
+
+    addItemToCart(hit, 1, priceForTier(hit, priceTier));
+
+    return { ok: true, label: hit.name };
   }
 
   function deleteLine(id: string) {
@@ -506,6 +552,27 @@ export default function SalesPage() {
               />
             )}
           </div>
+        )}
+
+        {/* زرار المسح.
+
+            مكانه فوق قايمة الأصناف مش جوه البحث عن قصد: على
+            الموبايل الكاشير ماسك التليفون بإيد والبضاعة بالتانية،
+            وزرار عريض أسهل من أيقونة صغيرة جنب خانة كتابة. */}
+        <button
+          type="button"
+          onClick={() => setScanning(true)}
+          className="mb-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-ink-600 bg-ink-800 font-semibold text-paper transition hover:bg-ink-700 md:mb-6 md:w-auto md:px-5"
+        >
+          <ScanBarcode size={18} />
+          امسح باركود
+        </button>
+
+        {scanning && (
+          <BarcodeScanner
+            onScan={handleScan}
+            onClose={() => setScanning(false)}
+          />
         )}
 
         {loading ? (
