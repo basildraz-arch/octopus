@@ -114,7 +114,7 @@ export default function ItemList({
 
             <input
               type="text"
-              placeholder="ابحث عن صنف..."
+              placeholder="ابحث بالاسم أو الكود..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="min-h-12 w-full rounded-xl border border-ink-600 bg-ink-800 p-4 pr-11 text-paper outline-none"
