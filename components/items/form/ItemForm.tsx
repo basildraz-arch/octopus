@@ -5,13 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, Save } from "lucide-react";
+import { AlertTriangle, Save, ScanBarcode, Sparkles } from "lucide-react";
 
 import {
   createItem,
   updateItem,
   adjustItemStock,
   findItemByName,
+  getItems,
 } from "@/repositories/item.repository";
 import { logActivity } from "@/repositories/activity.repository";
 import {
@@ -25,6 +26,8 @@ import { useSession } from "@/hooks/useSession";
 import { getExampleHints } from "@/lib/examples";
 import { hasFeature } from "@/lib/features";
 import { tierLabel } from "@/lib/priceTier";
+import BarcodeScanner from "@/components/pos/BarcodeScanner";
+import { makeInStoreBarcode } from "@/lib/barcode";
 import { useToast } from "@/hooks/useToast";
 
 import { itemSchema, ItemSchema } from "./validation";
@@ -50,6 +53,10 @@ export default function ItemForm({ item }: Props) {
   // خانة سعر واحدة زي ما هو - مش تلاتة فاضيين بيسألوا عن حاجة
   // مالهاش لازمة عنده.
   const tiersEnabled = hasFeature(business, "price_tiers");
+
+  // الكاميرا مفتوحة عشان تقرا باركود الصنف.
+  const [scanningBarcode, setScanningBarcode] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const tierLabels = business?.price_tier_labels;
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -171,6 +178,39 @@ export default function ItemForm({ item }: Props) {
       setValue("sale_method", "piece");
     }
   }, [itemType, setValue]);
+
+  // ============================================================
+  // توليد كود داخلي
+  // ============================================================
+  //
+  // بيقرا أكواد المحل الحالية الأول عشان مايكررش. والقاعدة عندها
+  // فهرس فريد على (المحل، الباركود) كحزام تاني - فحتى لو اتنين
+  // اتولدوا في نفس اللحظة من جهازين، التاني بيترفض عند الحفظ.
+  //
+  // الكود بيبدأ بـ٢ - النطاق المحجوز عالميًا للاستعمال الداخلي،
+  // فمستحيل يتعارض مع باركود منتج حقيقي. التفاصيل في `lib/barcode.ts`.
+  async function generateBarcode() {
+    if (!user || generating) return;
+
+    setGenerating(true);
+
+    try {
+      const existing = await getItems(user.business_id);
+
+      const code = makeInStoreBarcode(
+        existing
+          .filter((row) => row.id !== item?.id)
+          .map((row) => row.barcode ?? "")
+      );
+
+      setValue("barcode", code, { shouldDirty: true });
+      toast.success("اتولّد كود. احفظ الصنف عشان يتسجّل.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "تعذر التوليد");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   async function onSubmit(values: ItemSchema) {
     if (!item) {
@@ -310,11 +350,59 @@ export default function ItemForm({ item }: Props) {
             الباركود (اختياري)
           </label>
 
-          <Input
-            {...register("barcode")}
-            placeholder="الباركود"
-            className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
-          />
+          {/* الكتابة باليد ممكنة، بس باركود المنتج ١٣ رقم — والكتابة
+              اليدوية معناها رقم غلط كل كام صنف، والرقم الغلط
+              مابيبانش غير يوم ما الكاشير يمسح ومايلاقيش. الكاميرا
+              بتشيل المصدر ده خالص. */}
+          <div className="flex gap-2">
+            <Input
+              {...register("barcode")}
+              placeholder="امسحه بالكاميرا أو اكتبه"
+              inputMode="numeric"
+              className="border-ink-600 bg-ink-900 text-paper placeholder:text-mist"
+            />
+
+            <button
+              type="button"
+              onClick={() => setScanningBarcode(true)}
+              aria-label="امسح الباركود بالكاميرا"
+              className="flex shrink-0 items-center gap-2 rounded-xl border border-ink-600 bg-ink-900 px-4 text-paper transition hover:bg-ink-700"
+            >
+              <ScanBarcode size={18} />
+              <span className="hidden sm:inline">امسح</span>
+            </button>
+
+            {/* للبضاعة اللي المحل بيعبّيها بنفسه ومالهاش ملصق من
+                مصنع: كيس مكسرات، علبة بهارات، دراي فود. */}
+            <button
+              type="button"
+              onClick={generateBarcode}
+              disabled={generating}
+              aria-label="ولّد كود داخلي"
+              className="flex shrink-0 items-center gap-2 rounded-xl border border-ink-600 bg-ink-900 px-4 text-paper transition hover:bg-ink-700 disabled:opacity-50"
+            >
+              <Sparkles size={18} />
+              <span className="hidden sm:inline">ولّد</span>
+            </button>
+          </div>
+
+          <p className="mt-1 text-xs text-mist">
+            البضاعة الجاهزة امسح باركودها. اللي بتعبّيه بنفسك، ولّدله
+            كود واطبعه من شاشة الملصقات.
+          </p>
+
+          {scanningBarcode && (
+            <BarcodeScanner
+              onScan={(code) => {
+                // `shouldDirty` عشان زرار الحفظ يعرف إن فيه تغيير.
+                setValue("barcode", code, { shouldDirty: true });
+                setScanningBarcode(false);
+
+                return { ok: true, label: code };
+              }}
+              onClose={() => setScanningBarcode(false)}
+            />
+          )}
         </div>
 
         <div>

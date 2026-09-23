@@ -198,6 +198,17 @@ export const HOME_TILES: TileItem[] = [
     permission: "manage_items",
     group: "management",
   },
+  // طباعة ملصقات الباركود. تبع الأصناف، فمكانها مع الإدارة مش في
+  // الشريط الجانبي - مش شاشة يومية.
+  {
+    id: "labels",
+    title: "ملصقات الباركود",
+    href: "/labels",
+    icon: "🏷️",
+    features: ["inventory"],
+    permission: "manage_items",
+    group: "management",
+  },
   {
     id: "employees",
     title: "الموظفين",
@@ -328,6 +339,7 @@ export const ROUTE_RULES: RouteRule[] = [
   { prefix: "/expenses", feature: "shifts", permission: "manage_expenses" },
   { prefix: "/items", permission: "manage_items" },
   { prefix: "/categories", permission: "manage_items" },
+  { prefix: "/labels", feature: "inventory", permission: "manage_items" },
   { prefix: "/reports", permission: "view_reports" },
   { prefix: "/purchases", permission: "receive_stock" },
   { prefix: "/warehouses", feature: "multi_warehouse", permission: "transfer_stock" },
