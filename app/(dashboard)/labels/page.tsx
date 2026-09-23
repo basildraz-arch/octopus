@@ -8,6 +8,8 @@ import { getBusiness } from "@/repositories/business.repository";
 import { useSession } from "@/hooks/useSession";
 import PrintPortal from "@/components/PrintPortal";
 import { ean13Svg, isValidEan13 } from "@/lib/barcode";
+import { priceForTier, tierLabel, type PriceTier } from "@/lib/priceTier";
+import { hasFeature } from "@/lib/features";
 
 import type { Item } from "@/types/item";
 import type { Business } from "@/types/business";
@@ -55,6 +57,28 @@ export default function LabelsPage() {
   /** كام ملصق لكل صنف. */
   const [counts, setCounts] = useState<Record<string, number>>({});
 
+  // ============================================================
+  // السعر على الملصق: اختيار، مش حاجة ثابتة
+  // ============================================================
+  //
+  // المحل اللي بيبيع بسعر واحد، السعر على الملصق مفيد — الزبون
+  // بيشوفه والكاشير بيتأكد منه.
+  //
+  // **بس المحل اللي بتلات تسعيرات، السعر المطبوع بيبقى غلط لثلتين
+  // زباينه.** كيرو بيبيع لسياح ونوبي ومصري بأسعار مختلفة، ومينفعش
+  // يلزق ملصق واحد مكتوب عليه سعر واحد على نفس الكوباية.
+  //
+  // فالاختيار هنا: من غير سعر، أو سعر تسعيرة واحدة بالاسم بتاعها.
+  // والافتراضي بيختلف حسب المحل — التسعيرات مقفولة يبقى السعر
+  // معاه، مفتوحة يبقى من غيره.
+  //
+  // وفيه سبب تاني للاختيار «من غير سعر» حتى للمحل العادي: السعر
+  // المطبوع بيقدم أول ما الأسعار تتغيّر، والباركود مابيقدمش. محل
+  // بيغيّر أسعاره كل شهر أحسنله ملصق من غير سعر.
+  const [priceTierOnLabel, setPriceTierOnLabel] = useState<PriceTier | null>(
+    null
+  );
+
   useEffect(() => {
     if (!user) return;
 
@@ -62,6 +86,10 @@ export default function LabelsPage() {
       .then(([rows, biz]) => {
         setItems(rows);
         setBusiness(biz);
+
+        // التسعيرات مقفولة = سعر واحد للكل = اطبعه.
+        // مفتوحة = مفيش سعر واحد صح = ما تطبعش، والمحل يقرر.
+        setPriceTierOnLabel(hasFeature(biz, "price_tiers") ? null : 1);
       })
       .finally(() => setLoading(false));
   }, [user]);
@@ -101,6 +129,8 @@ export default function LabelsPage() {
       [id]: Math.max(0, Math.min(200, Math.floor(value) || 0)),
     }));
   }
+
+  const tiersEnabled = hasFeature(business, "price_tiers");
 
   if (loading) {
     return <main className="p-8 text-center text-mist">جارِ التحميل...</main>;
@@ -160,6 +190,31 @@ export default function LabelsPage() {
               {Math.ceil(labels.length / PER_SHEET) || 0} فرخ
             </span>
 
+            <select
+              value={priceTierOnLabel ?? ""}
+              onChange={(e) =>
+                setPriceTierOnLabel(
+                  e.target.value === ""
+                    ? null
+                    : (Number(e.target.value) as PriceTier)
+                )
+              }
+              aria-label="السعر على الملصق"
+              className="rounded-xl border border-ink-600 bg-ink-900 px-3 py-2.5 text-sm text-paper outline-none"
+            >
+              <option value="">من غير سعر</option>
+
+              {tiersEnabled ? (
+                ([1, 2, 3] as const).map((tier) => (
+                  <option key={tier} value={tier}>
+                    سعر {tierLabel(business?.price_tier_labels, tier)}
+                  </option>
+                ))
+              ) : (
+                <option value={1}>مع السعر</option>
+              )}
+            </select>
+
             <button
               type="button"
               onClick={() => window.print()}
@@ -197,6 +252,17 @@ export default function LabelsPage() {
             ))}
           </ul>
 
+          {tiersEnabled && priceTierOnLabel !== null && (
+            <p className="rounded-xl border border-amber-900/70 bg-amber-950/20 p-3 text-sm leading-relaxed text-amber-200">
+              الملصق هيتطبع بسعر «
+              {tierLabel(business?.price_tier_labels, priceTierOnLabel)}» بس.
+              الزبون اللي على تسعيرة تانية هيشوف سعر مش بتاعه على
+              البضاعة. الباركود نفسه بيشتغل مع كل التسعيرات عادي —
+              السعر اللي في الفاتورة بيتحسب من التسعيرة المختارة في
+              شاشة البيع، مش من الملصق.
+            </p>
+          )}
+
           {withoutCode.length > 0 && (
             <p className="text-sm text-mist">
               فيه {withoutCode.length} صنف من غير كود. افتحهم من شاشة
@@ -232,7 +298,11 @@ export default function LabelsPage() {
         <>
           <div className="print-hide">
             <p className="mb-2 text-sm text-mist">معاينة الفرخ</p>
-            <Sheet labels={labels} businessName={business?.name} />
+            <Sheet
+              labels={labels}
+              businessName={business?.name}
+              priceTier={priceTierOnLabel}
+            />
           </div>
 
           <PrintPortal>
@@ -243,7 +313,11 @@ export default function LabelsPage() {
                 }
               `}</style>
 
-              <Sheet labels={labels} businessName={business?.name} />
+              <Sheet
+              labels={labels}
+              businessName={business?.name}
+              priceTier={priceTierOnLabel}
+            />
             </div>
           </PrintPortal>
         </>
@@ -261,9 +335,12 @@ export default function LabelsPage() {
 function Sheet({
   labels,
   businessName,
+  priceTier,
 }: {
   labels: Item[];
   businessName?: string;
+  /** `null` = الملصق من غير سعر. */
+  priceTier: PriceTier | null;
 }) {
   return (
     <div>
@@ -287,9 +364,11 @@ function Sheet({
                   {item.name}
                 </span>
 
-                <span className="text-[3.4mm] font-bold">
-                  {item.sell_price.toFixed(2)} ج
-                </span>
+                {priceTier !== null && (
+                  <span className="text-[3.4mm] font-bold">
+                    {priceForTier(item, priceTier).toFixed(2)} ج
+                  </span>
+                )}
 
                 {/* الـSVG جاي من `lib/barcode.ts` - نص مولّد من
                     أرقام، مفيش فيه أي حاجة من إدخال المستخدم. */}
