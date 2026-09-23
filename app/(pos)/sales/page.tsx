@@ -26,7 +26,7 @@ import {
 } from "@/repositories/customer.repository";
 import { useSession } from "@/hooks/useSession";
 import { hasFeature } from "@/lib/features";
-import { priceForTier, type PriceTier } from "@/lib/priceTier";
+import { priceForTier, tierLabel, type PriceTier } from "@/lib/priceTier";
 import { nextQuantity } from "@/lib/cartStep";
 import { useWarehouseSelection } from "@/hooks/useWarehouseSelection";
 import { useToast } from "@/hooks/useToast";
@@ -341,9 +341,14 @@ export default function SalesPage() {
       return { ok: true, label: hit.name };
     }
 
-    addItemToCart(hit, 1, priceForTier(hit, priceTier));
+    const price = priceForTier(hit, priceTier);
 
-    return { ok: true, label: hit.name };
+    addItemToCart(hit, 1, price);
+
+    // السعر في السطر مش رفاهية: المحل اللي عنده تسعيرات، نفس
+    // الصنف بيتباع بأكتر من سعر. الكاشير لازم يشوف السعر اللي
+    // دخل فعلًا وهو بيمسح، مش يكتشفه في الإجمالي.
+    return { ok: true, label: `${hit.name} — ${price.toFixed(2)}` };
   }
 
   function deleteLine(id: string) {
@@ -572,6 +577,11 @@ export default function SalesPage() {
           <BarcodeScanner
             onScan={handleScan}
             onClose={() => setScanning(false)}
+            hint={
+              tiersEnabled && business
+                ? `التسعيرة: ${tierLabel(business.price_tier_labels, priceTier)}`
+                : undefined
+            }
           />
         )}
 
