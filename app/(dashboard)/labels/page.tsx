@@ -6,6 +6,7 @@ import { Printer, Tag, AlertTriangle } from "lucide-react";
 import { getItems } from "@/repositories/item.repository";
 import { getBusiness } from "@/repositories/business.repository";
 import { useSession } from "@/hooks/useSession";
+import PrintPortal from "@/components/PrintPortal";
 import { ean13Svg, isValidEan13 } from "@/lib/barcode";
 
 import type { Item } from "@/types/item";
@@ -206,15 +207,68 @@ export default function LabelsPage() {
       )}
 
       {/* ============================================================
-          الفرخ نفسه
+          الفرخ — نسختين، وde مقصود
           ============================================================
 
-          بيتعرض على الشاشة كمعاينة كمان - عشان صاحب المحل يشوف
-          الشكل قبل ما يحرق ورق استيكر. */}
+          واحدة على الشاشة للمعاينة، وواحدة مخفية جوه بوابة الطباعة
+          هي اللي بتتطبع فعلًا.
+
+          ليه مش نسخة واحدة: نظام الطباعة في `globals.css` بيدّي
+          `[data-print-area]` وضع `position: absolute` عشان تاخد
+          أول الورقة، وبيخفي الباقي بـ`visibility: hidden` — والـ
+          hidden **بيفضل واخد مساحته**. يعني الفرخ لو قعد مكانه في
+          الصفحة، بيتزق لتحت ورا كل اللي اتخفى، والطابعة بتطلّع
+          ورقة بيضا أو اتنين قبل ما يبان.
+
+          ودي بالظبط اللي حصلت مع فاتورة كيرو مرتين. الحل المجرّب
+          هو `PrintPortal`: العنصر بيتعلّق في `<body>` مباشرة،
+          وإخواته بيتخبّوا بـ`display: none`، فهو بيبدأ من أول
+          الورقة فعلًا.
+
+          و`hidden` على الشاشة بيتشال وقت الطباعة بقاعدة
+          `#octopus-print-root > * { display: block !important }`
+          الموجودة في `globals.css`. */}
       {labels.length > 0 && (
-        <div data-print-area>
+        <>
+          <div className="print-hide">
+            <p className="mb-2 text-sm text-mist">معاينة الفرخ</p>
+            <Sheet labels={labels} businessName={business?.name} />
+          </div>
+
+          <PrintPortal>
+            <div className="hidden" data-print-area>
+              <style>{`
+                @media print {
+                  @page { size: A4; margin: 8mm; }
+                }
+              `}</style>
+
+              <Sheet labels={labels} businessName={business?.name} />
+            </div>
+          </PrintPortal>
+        </>
+      )}
+    </main>
+  );
+}
+
+// ============================================================
+// الفرخ
+// ============================================================
+//
+// مركّب لوحده عشان النسختين (المعاينة والطباعة) يفضلوا متطابقين.
+// لو اتكتب مرتين، هيفترقوا أول ما حد يعدّل في واحدة.
+function Sheet({
+  labels,
+  businessName,
+}: {
+  labels: Item[];
+  businessName?: string;
+}) {
+  return (
+    <div>
           <div
-            className="grid gap-[2mm] rounded-2xl bg-white p-[2mm] text-black"
+            className="grid gap-[2mm] bg-white p-[2mm] text-black"
             style={{ gridTemplateColumns: `repeat(${PER_ROW}, 1fr)` }}
           >
             {labels.map((item, index) => (
@@ -223,9 +277,9 @@ export default function LabelsPage() {
                 className="flex flex-col items-center justify-center gap-[1mm] overflow-hidden rounded border border-gray-300 p-[1.5mm] text-center"
                 style={{ height: "33mm", breakInside: "avoid" }}
               >
-                {business?.name && (
+                {businessName && (
                   <span className="max-w-full truncate text-[2.4mm] text-gray-600">
-                    {business.name}
+                    {businessName}
                   </span>
                 )}
 
@@ -247,8 +301,6 @@ export default function LabelsPage() {
               </div>
             ))}
           </div>
-        </div>
-      )}
-    </main>
+    </div>
   );
 }

@@ -82,6 +82,15 @@ type Props = {
    */
   onScan: (code: string) => ScanOutcome;
   onClose: () => void;
+
+  /**
+   * سطر صغير تحت العنوان، بيقول للكاشير هو بيبيع على أنهي تسعيرة.
+   *
+   * الكاميرا بتغطي الشاشة، فمختار التسعيرة اللي فوق بيختفي. ومن
+   * غير السطر ده الكاشير ممكن يمسح عشرين صنف وهو فاكر إنه على
+   * تسعيرة تانية - والفاتورة تتحسب صح بس بالسعر الغلط.
+   */
+  hint?: string;
 };
 
 const REGION_ID = "octopus-barcode-region";
@@ -147,7 +156,7 @@ function arabicCameraError(err: unknown): string {
   return "الكاميرا مافتحتش. اقفل وافتح تاني، ولو فضلت، اقفل أي تطبيق تاني بيستعملها.";
 }
 
-export default function BarcodeScanner({ onScan, onClose }: Props) {
+export default function BarcodeScanner({ onScan, onClose, hint }: Props) {
   const [starting, setStarting] = useState(true);
   const [error, setError] = useState("");
 
@@ -264,9 +273,17 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 md:items-center">
       <div className="w-full max-w-md rounded-t-2xl border border-ink-600 bg-ink-800 md:rounded-2xl">
         <div className="flex items-center justify-between gap-3 border-b border-ink-600 p-4">
-          <p className="flex items-center gap-2 font-bold text-paper">
-            <ScanBarcode size={18} />
-            صوّب على الباركود
+          <p className="min-w-0">
+            <span className="flex items-center gap-2 font-bold text-paper">
+              <ScanBarcode size={18} />
+              صوّب على الباركود
+            </span>
+
+            {hint && (
+              <span className="mt-0.5 block truncate text-xs text-splash">
+                {hint}
+              </span>
+            )}
           </p>
 
           <button
