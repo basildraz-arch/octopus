@@ -128,24 +128,40 @@ export default function RecipeEditor({ item, businessId }: Props) {
   // مبني على سعر شرا مكتوب بالتخمين - وكيرو فعلًا كتب ٥ و١٠ و٣٠
   // و١٠٠ لمشروباته، وكل حسابات ربحه مبنية عليهم.
   //
-  // `null` معناها فيه مكوّن مانعرفش تكلفته (مالوش مشتريات، أو اللي
-  // فاتح الشاشة مالوش صلاحية) - فبنسكت بدل ما نجمع صفر ونطلّع ربح
-  // أعلى من الحقيقة.
-  const recipeCost = useMemo(() => {
-    if (rows.length === 0) return null;
-
+  // ============================================================
+  // والمكوّن اللي مالوش سعر شرا مسجّل
+  // ============================================================
+  //
+  // `item_costs` بترجّع صف **لكل** صنف في المحل، وسعر الشرا فيه بيبقى
+  // **صفر** للصنف اللي لسه مادخلش عليه أي شرا. يعني لو جمعنا زي ما
+  // هو، وصفة فيها بن مالوش مشتريات هتقول «التكلفة ٠.٠٠ والمكسب ٥٠» -
+  // رقم واثق وكداب، وde بالظبط اللي بنحاول نشيله من البرنامج.
+  //
+  // فالصفر هنا معناه **"مش معروف"** مش "ببلاش": صاحب محل مابيجيبش
+  // خامة ببلاش. بنحسب اللي معروف، وبنقول صريح مين الناقص - عشان
+  // يعرف يعمل إيه (يسجّل شرا) بدل ما يتفرج على رقم غلط.
+  const { recipeCost, missingCost } = useMemo(() => {
     let total = 0;
+    const missing: string[] = [];
 
     for (const row of rows) {
-      const unitCost = costs.get(row.component_item_id);
+      const unitCost = costs.get(row.component_item_id) ?? 0;
 
-      if (unitCost === undefined) return null;
+      if (unitCost <= 0) {
+        missing.push(row.component?.name ?? "—");
+        continue;
+      }
 
       total += unitCost * Number(row.quantity);
     }
 
-    return total;
+    return { recipeCost: total, missingCost: missing };
   }, [rows, costs]);
+
+  // `costs` فاضية = اللي فاتح الشاشة مالوش صلاحية يشوف التكلفة
+  // أصلًا. ساعتها مانعرضش أي رقم ولا أي تحذير - غياب الصلاحية مش
+  // نقص في البيانات، وخلطهم بيخلّي الواحد يدوّر على مشكلة مش موجودة.
+  const canSeeCost = costs.size > 0;
 
   async function handleAdd() {
     const typed = Number(quantity);
@@ -269,7 +285,7 @@ export default function RecipeEditor({ item, businessId }: Props) {
             ============================================================
 
             الرقم اللي بيخلّي حد يقعد يدخّل وصفة ٤٥ مشروب. */}
-        {recipeCost !== null && (
+        {rows.length > 0 && canSeeCost && missingCost.length === 0 && (
           <div className="grid gap-3 rounded-xl border border-ink-600 bg-ink-900 p-4 sm:grid-cols-3">
             <div>
               <span className="block text-xs text-mist">
@@ -306,6 +322,26 @@ export default function RecipeEditor({ item, businessId }: Props) {
                 {(item.sell_price - recipeCost).toFixed(2)} ج
               </span>
             </div>
+          </div>
+        )}
+
+        {/* مكوّن أو أكتر مالوش سعر شرا مسجّل.
+            بنقول الاسم والخطوة الجاية، ومابنعرضش رقم ربح - رقم ربح
+            ناقص أسوأ من مفيش رقم، لأنه بيتصدّق. */}
+        {rows.length > 0 && canSeeCost && missingCost.length > 0 && (
+          <div className="rounded-xl border border-amber-700 bg-amber-950/30 p-4 text-sm text-amber-300">
+            <p className="font-semibold">
+              التكلفة لسه مش كاملة
+            </p>
+
+            <p className="mt-1">
+              {missingCost.join(" و")}{" "}
+              {missingCost.length > 1 ? "مالهمش" : "مالوش"} سعر شرا
+              مسجّل. سجّل عملية شرا من شاشة المشتريات، وأول ما ترجع
+              هنا هتلاقي تكلفة{" "}
+              <strong className="text-paper">{item.name}</strong>{" "}
+              وربحها الحقيقي.
+            </p>
           </div>
         )}
 

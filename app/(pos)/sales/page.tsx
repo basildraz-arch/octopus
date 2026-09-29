@@ -109,6 +109,24 @@ export default function SalesPage() {
   const [showPopup, setShowPopup] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
+
+  // ============================================================
+  // قفل البيعة - `useRef` مش `useState` عن قصد
+  // ============================================================
+  //
+  // `checkingOut` بيقفل الزرار في الشاشة، بس هو **حالة**: التغيير
+  // بيتفعّل في الرسمة الجاية، والكود اللي شغال دلوقتي بيفضل شايف
+  // القيمة القديمة.
+  //
+  // وقبل كده ماكانش فارق، لأن `setCheckingOut(true)` كانت أول سطر
+  // قبل أي `await`. دلوقتي فيه نداء للقاعدة (فحص الخامات الناقصة)
+  // قبل الحفظ - يعني شباك من نص ثانية لثانية الزرار فيه لسه شغال.
+  // دوستين سريعتين في الزحمة = **فاتورتين** لنفس الزبون والمخزون
+  // بينزل مرتين.
+  //
+  // الـref قيمته بتتغيّر **في نفس اللحظة**، فالدوسة التانية بتلاقيه
+  // مقفول وترجع. والحالة فاضلة عشان الشكل بس.
+  const saleLock = useRef(false);
   const [lastSale, setLastSale] = useState<LastSale | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [maxDiscountPercent, setMaxDiscountPercent] = useState<number | null>(null);
@@ -406,7 +424,8 @@ export default function SalesPage() {
   }
 
   async function checkout() {
-    if (!user || cart.length === 0 || checkingOut || !selectedWarehouseId) return;
+    if (!user || cart.length === 0 || !selectedWarehouseId) return;
+    if (saleLock.current) return;
 
     const subtotal = cart.reduce(
       (sum, line) => sum + line.total,
@@ -443,28 +462,60 @@ export default function SalesPage() {
     // ولو السؤال نفسه فشل (نت أو صلاحية)، **بنكمّل عادي** بـ`false`
     // والقاعدة ترفض لو لازم. الفحص ده للعرض، فمافيش سبب يوقف بيعة
     // لأنه مانجحش - ودرس §١: دالة ترجّع "لأ" عند خطأ اتصال بتكدب.
-    try {
-      const found = await getStockShortages(cart, selectedWarehouseId);
+    //
+    // **القفل بيتاخد قبل النداء مش بعده.** النداء ده أول `await` في
+    // المسار، ومن غير القفل الزرار بيفضل شغال طوله.
+    saleLock.current = true;
+    setCheckingOut(true);
 
-      if (found.length > 0) {
-        setShortages(found);
-        return;
-      }
+    let found: StockShortage[] = [];
+
+    try {
+      found = await getStockShortages(cart, selectedWarehouseId);
     } catch (err) {
       console.error(err);
     }
 
-    await completeCheckout(false);
+    if (found.length > 0) {
+      // بنسيب القفل: الكاشير بقى قدامه سؤال، والبيعة مابتكملش غير
+      // من زرار التأكيد.
+      saleLock.current = false;
+      setCheckingOut(false);
+      setShortages(found);
+      return;
+    }
+
+    await runSale(false);
   }
 
-  // جسم البيعة. `allowShort` بييجي `true` من زرار التأكيد بس.
-  async function completeCheckout(allowShort: boolean) {
-    if (!user || cart.length === 0 || checkingOut || !selectedWarehouseId) return;
+  // من زرار «أكمّل البيعة» في صندوق النواقص.
+  function checkoutAnyway() {
+    if (saleLock.current) return;
+
+    saleLock.current = true;
+    setCheckingOut(true);
+    setShortages(null);
+
+    void runSale(true);
+  }
+
+  // ============================================================
+  // جسم البيعة
+  // ============================================================
+  //
+  // **بيفترض إن القفل مأخوذ خلاص، وهو اللي بيسيبه.** المنادي هو اللي
+  // بياخده - عشان الشباك بين الفحص والحفظ مايفضلش مفتوح.
+  //
+  // `allowShort` بييجي `true` من زرار التأكيد بس.
+  async function runSale(allowShort: boolean) {
+    if (!user || cart.length === 0 || !selectedWarehouseId) {
+      saleLock.current = false;
+      setCheckingOut(false);
+      return;
+    }
 
     const subtotal = cart.reduce((sum, line) => sum + line.total, 0);
     const discountValue = discountAmount === "" ? 0 : Number(discountAmount);
-
-    setCheckingOut(true);
 
     try {
       const sale = await createSale(
@@ -530,6 +581,7 @@ export default function SalesPage() {
       toast.error(message);
       setMascotMood("surprised", 1800);
     } finally {
+      saleLock.current = false;
       setCheckingOut(false);
     }
   }
@@ -669,10 +721,7 @@ export default function SalesPage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShortages(null);
-                    void completeCheckout(true);
-                  }}
+                  onClick={checkoutAnyway}
                   disabled={checkingOut}
                   className="min-h-12 flex-1 rounded-xl bg-splash px-4 font-bold text-ink-950 transition hover:bg-splash-deep disabled:opacity-50"
                 >
