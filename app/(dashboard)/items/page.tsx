@@ -72,6 +72,29 @@ export default function ItemsPage() {
     [items]
   );
 
+  // ============================================================
+  // الأصناف اللي بتتعمل في المحل ولسه مالهاش وصفة
+  // ============================================================
+  //
+  // الوصفة كانت مخفية في قسم مطوي في آخر شاشة تعديل الصنف، والنتيجة
+  // إن أول عميل حقيقي بنى ٤٥ مشروب وعمل **صفر وصفة** - مش رفض
+  // الميزة، هو مادخلهاش أصلًا.
+  //
+  // السطر ده بيخلّي الشغل الناقص **باين في مكان بيفتحه كل يوم**،
+  // وبينقص لوحده وهو بيكمّل. حاجة زي دي بتتعمل على مراحل، ولازم
+  // يشوف إنها بتتحرك.
+  const madeHereNoRecipe = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          item.item_type === "product" &&
+          !item.has_stock &&
+          !item.is_ingredient &&
+          !withRecipe.has(item.id)
+      ).length,
+    [items, withRecipe]
+  );
+
   const totalStockValue = useMemo(() => {
     return items.reduce((sum, item) => {
       if (!item.has_stock) return sum;
@@ -144,6 +167,12 @@ export default function ItemsPage() {
         {lowStockCount > 0 && (
           <span className="text-red-400">
             {lowStockCount} قليل
+          </span>
+        )}
+
+        {madeHereNoRecipe > 0 && (
+          <span className="text-amber-400">
+            {madeHereNoRecipe} بيتعمل عندك ولسه مالوش وصفة
           </span>
         )}
       </div>

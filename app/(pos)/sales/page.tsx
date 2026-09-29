@@ -15,7 +15,11 @@ import BarcodeScanner from "@/components/pos/BarcodeScanner";
 import { useCarts } from "@/hooks/useCarts";
 
 import { getActiveItems } from "@/repositories/item.repository";
-import { createSale } from "@/repositories/sale.repository";
+import {
+  createSale,
+  getStockShortages,
+  type StockShortage,
+} from "@/repositories/sale.repository";
 import { setMascotMood } from "@/lib/mascotMood";
 import { getBusiness } from "@/repositories/business.repository";
 import { getCategories, type Category } from "@/repositories/category.repository";
@@ -26,7 +30,7 @@ import {
 } from "@/repositories/customer.repository";
 import { useSession } from "@/hooks/useSession";
 import { hasFeature } from "@/lib/features";
-import { priceForTier, tierLabel, type PriceTier } from "@/lib/priceTier";
+import { priceForTier, type PriceTier } from "@/lib/priceTier";
 import { nextQuantity } from "@/lib/cartStep";
 import { useWarehouseSelection } from "@/hooks/useWarehouseSelection";
 import { useToast } from "@/hooks/useToast";
@@ -70,6 +74,14 @@ export default function SalesPage() {
   // تمنه في حجم الصفحة.
   const [scanning, setScanning] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+
+  // الخامات اللي المسجّل منها أقل من المطلوب في الفاتورة اللي على
+  // الشاشة. `null` معناها مافيش سؤال معلّق.
+  //
+  // القرار ده كان بيتأخذ في القاعدة لوحدها: ترفض وخلاص. والنتيجة إن
+  // الكاشير بيتوقف في وش الزبون على خامة **موجودة في المطبخ** ومحدش
+  // سجّل شواله. دلوقتي البرنامج بيوري الناقص وبيسأل.
+  const [shortages, setShortages] = useState<StockShortage[] | null>(null);
 
   // العربية محفوظة، وممكن تكون أكتر من واحدة.
   //
@@ -341,14 +353,9 @@ export default function SalesPage() {
       return { ok: true, label: hit.name };
     }
 
-    const price = priceForTier(hit, priceTier);
+    addItemToCart(hit, 1, priceForTier(hit, priceTier));
 
-    addItemToCart(hit, 1, price);
-
-    // السعر في السطر مش رفاهية: المحل اللي عنده تسعيرات، نفس
-    // الصنف بيتباع بأكتر من سعر. الكاشير لازم يشوف السعر اللي
-    // دخل فعلًا وهو بيمسح، مش يكتشفه في الإجمالي.
-    return { ok: true, label: `${hit.name} — ${price.toFixed(2)}` };
+    return { ok: true, label: hit.name };
   }
 
   function deleteLine(id: string) {
@@ -425,6 +432,38 @@ export default function SalesPage() {
       return;
     }
 
+    // ============================================================
+    // سؤال قبل الرفض
+    // ============================================================
+    //
+    // بنسأل القاعدة الأول: فيه خامة المسجّل منها أقل من المطلوب؟ لو
+    // أيوة، بنوقف ونعرض السؤال - والبيع بيكمّل من زرار «أكمّل» بـ
+    // `allowShort = true`.
+    //
+    // ولو السؤال نفسه فشل (نت أو صلاحية)، **بنكمّل عادي** بـ`false`
+    // والقاعدة ترفض لو لازم. الفحص ده للعرض، فمافيش سبب يوقف بيعة
+    // لأنه مانجحش - ودرس §١: دالة ترجّع "لأ" عند خطأ اتصال بتكدب.
+    try {
+      const found = await getStockShortages(cart, selectedWarehouseId);
+
+      if (found.length > 0) {
+        setShortages(found);
+        return;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
+    await completeCheckout(false);
+  }
+
+  // جسم البيعة. `allowShort` بييجي `true` من زرار التأكيد بس.
+  async function completeCheckout(allowShort: boolean) {
+    if (!user || cart.length === 0 || checkingOut || !selectedWarehouseId) return;
+
+    const subtotal = cart.reduce((sum, line) => sum + line.total, 0);
+    const discountValue = discountAmount === "" ? 0 : Number(discountAmount);
+
     setCheckingOut(true);
 
     try {
@@ -436,7 +475,8 @@ export default function SalesPage() {
         discountValue,
         selectedWarehouseId,
         priceTier,
-        paymentMethod === "credit" ? selectedCustomerId : null
+        paymentMethod === "credit" ? selectedCustomerId : null,
+        allowShort
       );
 
       // Closes the audit session: a cart with adds but no checkout is
@@ -577,12 +617,79 @@ export default function SalesPage() {
           <BarcodeScanner
             onScan={handleScan}
             onClose={() => setScanning(false)}
-            hint={
-              tiersEnabled && business
-                ? `التسعيرة: ${tierLabel(business.price_tier_labels, priceTier)}`
-                : undefined
-            }
           />
+        )}
+
+        {/* ============================================================
+            الخامة ناقصة في الورق - السؤال مش الرفض
+            ============================================================
+
+            قبل كده القاعدة كانت بترفض البيعة وخلاص: «خلص السكر:
+            محتاج ٠.٢ والمتاح ٠». وde صح حسابيًا وغلط في محل: الشوال
+            موجود في المطبخ واللي ناقص هو التسجيل.
+
+            الشاشة دي بتوري الفرق بالأرقام وبتسيب القرار للي واقف
+            وشايف المحل بعينه. والـ«أكمّل» بتخصم الموجود لحد الصفر
+            وبتكمّل - فالخامة بتبان على صفر وde التنبيه إن فيه شرا
+            مش مسجّل. */}
+        {shortages && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 p-4 sm:items-center"
+          >
+            <div className="w-full max-w-md rounded-2xl border border-amber-700 bg-ink-800 p-5">
+              <h2 className="text-lg font-bold text-paper">
+                المسجّل أقل من المطلوب
+              </h2>
+
+              <p className="mt-1 text-sm text-mist">
+                الحاجات دي ناقصة في المخزون المسجّل. لو موجودة عندك
+                فعلًا، كمّل البيعة وسجّل الشرا بعدين.
+              </p>
+
+              <ul className="my-4 space-y-2">
+                {shortages.map((row) => (
+                  <li
+                    key={row.name}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-ink-600 bg-ink-900 p-3 text-sm"
+                  >
+                    <span className="font-semibold text-paper">
+                      {row.name}
+                    </span>
+
+                    <span className="text-mist tabular-nums">
+                      محتاج {row.needed} · المسجّل {row.available}{" "}
+                      <span className="text-xs">{row.unit}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShortages(null);
+                    void completeCheckout(true);
+                  }}
+                  disabled={checkingOut}
+                  className="min-h-12 flex-1 rounded-xl bg-splash px-4 font-bold text-ink-950 transition hover:bg-splash-deep disabled:opacity-50"
+                >
+                  أكمّل البيعة
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShortages(null)}
+                  disabled={checkingOut}
+                  className="min-h-12 flex-1 rounded-xl bg-ink-700 px-4 font-semibold text-paper transition hover:bg-ink-600 disabled:opacity-50"
+                >
+                  رجوع
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {loading ? (

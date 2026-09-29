@@ -97,10 +97,61 @@ $head = (git rev-parse --short HEAD).Trim()
 
 Write-Host ""
 Write-Host ">>> master pushed. HEAD = $head" -ForegroundColor Green
+
+# ------------------------------------------------------------
+# Verify production actually moved
+# ------------------------------------------------------------
+#
+# A green push means GitHub has the code. It does NOT mean the live
+# domain serves it. Twice now a build sat "Production - Staged" while
+# the domain kept serving the old one, because an Instant Rollback
+# pins production until someone promotes by hand.
+#
+# The check below hits routes that only the real app has. A wrong
+# build - a scaffold, a rewrite, a half-deployed project - answers 404
+# on these, and so does a domain that never moved to a build carrying
+# them.
+#
+# This is deliberately a check AT THE MOMENT OF CHANGE, by the person
+# who made it, instead of a robot polling the site forever. The thing
+# that breaks production is a deploy; watch deploys, not clocks.
+
+$site = "https://octopus-fawn-three.vercel.app"
+
+Write-Host ">>> waiting ~80s for Vercel to build and promote..." -ForegroundColor Cyan
+Start-Sleep -Seconds 80
+
+function Test-Route($path) {
+    try {
+        $r = Invoke-WebRequest -Uri ($site + $path) -UseBasicParsing -TimeoutSec 25
+        return $r.StatusCode
+    } catch {
+        if ($_.Exception.Response) { return [int]$_.Exception.Response.StatusCode }
+        return 0
+    }
+}
+
+$login  = Test-Route "/login"
+$labels = Test-Route "/labels"
+
 Write-Host ""
-Write-Host ">>> Vercel is building it now. It takes about a minute." -ForegroundColor Yellow
-Write-Host ">>> THEN open https://octopus-fawn-three.vercel.app on your" -ForegroundColor Yellow
-Write-Host "    phone, press refresh, and check the scan button is there." -ForegroundColor Yellow
+Write-Host ("    /login  -> {0}" -f $login)
+Write-Host ("    /labels -> {0}" -f $labels)
+Write-Host ""
+
+if ($login -eq 200 -and $labels -eq 200) {
+    Write-Host ">>> LIVE. The real app is on the domain." -ForegroundColor Green
+    Write-Host ">>> Open it on your phone and refresh to be sure." -ForegroundColor Green
+} else {
+    Write-Host ">>> PRODUCTION DID NOT MOVE." -ForegroundColor Red
+    Write-Host ""
+    Write-Host "    The push worked, but the domain is still on an older" -ForegroundColor Yellow
+    Write-Host "    build - or the build is still running." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "    Wait a minute and run this check again, or:" -ForegroundColor Yellow
+    Write-Host "    Vercel > octopus > Deployments > newest > ... > Promote" -ForegroundColor Yellow
+}
+
 Write-Host ""
 Write-Host ">>> If anything looks wrong: Vercel > octopus > Instant Rollback." -ForegroundColor Yellow
 Write-Host ""

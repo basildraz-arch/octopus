@@ -2,7 +2,6 @@ import { supabase } from "@/lib/supabase";
 import type { CartItem } from "@/components/Cart";
 import type { PaymentMethod } from "@/types/sale";
 import { getOrCreateOpenShift } from "@/repositories/shift.repository";
-import { checkAvailability } from "@/repositories/stockBatch.repository";
 import { logActivity } from "@/repositories/activity.repository";
 // priceForTier اتشال من هنا عن قصد: السعر بقى بيتحدد في القاعدة
 // (record_sale)، والملف ده مابقاش يعرف بكام بيتباع. لسه مستعمل في
@@ -66,6 +65,63 @@ export async function getSalesByDateRange(
   return (data ?? []) as unknown as SaleWithItems[];
 }
 
+// ============================================================
+// الخامات الناقصة - قبل البيع
+// ============================================================
+//
+// بترجّع الحاجات اللي المسجّل منها أقل من المطلوب، عشان الشاشة
+// تسأل الكاشير «أكمّل؟» بدل ما البيع يترفض في وشه.
+//
+// **الحساب في القاعدة كله** (`sale_stock_shortages`، ميجريشن ١٠٠).
+// الكود اللي كان هنا قبل كده كان بيعمل الفحص في المتصفح، بـ`await`
+// لكل سطر لوحده، وكان فيه عيبين حقيقيين:
+//
+// ١. **كان بيتجاهل الوصفات خالص** - بيسأل عن مخزون الصنف نفسه، مش
+//    عن مكوّناته. فكوباية القهوة كانت تعدّي الفحص وتقع جوه
+//    `sell_line`.
+// ٢. **كان بيحسب كل سطر لوحده** - لاتيه وكابتشينو الاتنين بياخدوا
+//    لبن، فكل سطر كان بيشوف اللبن كامل ويعدّي، والمجموع أكبر من
+//    الموجود.
+//
+// والتحقق الحقيقي فاضل جوه `sell_line`. دي للسؤال بس (§٦: التحقق
+// المكرر بيفترق مع الوقت، فالمرجع واحد).
+
+export type StockShortage = {
+  name: string;
+  unit: string;
+  needed: number;
+  available: number;
+};
+
+export async function getStockShortages(
+  cart: CartItem[],
+  warehouseId: string
+): Promise<StockShortage[]> {
+  const { data, error } = await supabase.rpc("sale_stock_shortages", {
+    p_warehouse_id: warehouseId,
+    p_lines: cart.map((line) => ({
+      item_id: line.item.id,
+      quantity: line.quantity,
+    })),
+  });
+
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as {
+    item_name: string | null;
+    unit: string | null;
+    needed: number | string;
+    available: number | string;
+  }[];
+
+  return rows.map((row) => ({
+    name: row.item_name ?? "—",
+    unit: row.unit ?? "",
+    needed: Number(row.needed),
+    available: Number(row.available),
+  }));
+}
+
 export async function createSale(
   businessId: string,
   createdBy: string,
@@ -74,29 +130,27 @@ export async function createSale(
   discountAmount: number = 0,
   warehouseId: string,
   priceTier: PriceTier = 1,
-  customerId: string | null = null
+  customerId: string | null = null,
+
+  // ============================================================
+  // تأكيد الكاشير إن المخزون المسجّل أقل من الحقيقة
+  // ============================================================
+  //
+  // الافتراضي `false`، يعني السلوك القديم بالظبط: القاعدة ترفض.
+  // بيبقى `true` **بعد ما الكاشير يشوف الناقص ويدوس أكمّل** - مش
+  // إعداد ولا استثناء دايم.
+  //
+  // السبب: الشوال السكر اللي اتشترى ومحدش سجّله موجود في المطبخ،
+  // واللي ناقص هو التسجيل مش الخامة. والبرنامج اللي بيقف في وش
+  // الزبون ويقول "السكر خلص" وصاحب المحل شايفه بعينه بيخلّي الواحد
+  // يرجع للورقة.
+  allowShort: boolean = false
 ) {
   // The database enforces this too (sales_credit_needs_customer_check),
   // but failing here gives the cashier a sentence instead of a
   // constraint name.
   if (paymentMethod === "credit" && !customerId) {
     throw new Error("اختار العميل الأول عشان تبيع على الحساب");
-  }
-
-  for (const line of cart) {
-    if (line.item.has_stock) {
-      const available = await checkAvailability(
-        line.item.id,
-        line.quantity,
-        warehouseId
-      );
-
-      if (!available) {
-        throw new Error(
-          `الكمية المطلوبة من "${line.item.name}" أكبر من المخزون المتاح`
-        );
-      }
-    }
   }
 
   const shift = await getOrCreateOpenShift(businessId);
@@ -129,6 +183,7 @@ export async function createSale(
       item_id: line.item.id,
       quantity: line.quantity,
     })),
+    p_allow_short: allowShort,
   });
 
   if (error) throw new Error(error.message);

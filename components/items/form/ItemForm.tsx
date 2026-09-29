@@ -127,6 +127,8 @@ export default function ItemForm({ item }: Props) {
           stock: item.stock,
           minimum_stock: item.minimum_stock,
 
+          has_stock: item.has_stock ?? true,
+
           is_ingredient: item.is_ingredient ?? false,
         }
       : {
@@ -147,12 +149,17 @@ export default function ItemForm({ item }: Props) {
           stock: 0,
           minimum_stock: 0,
 
+          // الافتراضي بضاعة جاهزة: ده أغلب الحالات في أغلب المحلات،
+          // والمحل اللي بيعمل حاجته بنفسه بيغيّرها بدوسة.
+          has_stock: true,
+
           is_ingredient: false,
         },
   });
 
   const itemType = watch("item_type");
   const isIngredient = watch("is_ingredient");
+  const hasStock = watch("has_stock");
   const name = watch("name");
 
   // التكلفة الحقيقية لصنف موجود.
@@ -178,6 +185,26 @@ export default function ItemForm({ item }: Props) {
       setValue("sale_method", "piece");
     }
   }, [itemType, setValue]);
+
+  // المكوّن لازم يكون له مخزون - الوصفة بتخصم منه، والقاعدة بترفض
+  // مكوّن مالوش مخزون. بنصلّحها لوحدنا بدل ما نوري رسالة غلط عن
+  // تناقض إحنا اللي سمحنا بيه.
+  useEffect(() => {
+    if (isIngredient) setValue("has_stock", true);
+  }, [isIngredient, setValue]);
+
+  // الحقول اللي بتختفي لازم تتصفّر مش تفضل شايلة آخر رقم مكتوب.
+  //
+  // نموذج مخفي بيتبعت بردو. لو حد كتب مخزون ١٠٠ وبعدين غيّر لـ"بعمله
+  // هنا"، الـ١٠٠ كانت هتفضل في الحالة وتتحفظ - ونرجع لنفس المشكلة
+  // اللي بنصلّحها، بس بشكل مش باين خالص.
+  useEffect(() => {
+    if (!hasStock) {
+      setValue("stock", 0);
+      setValue("minimum_stock", 0);
+      setValue("buy_price", 0);
+    }
+  }, [hasStock, setValue]);
 
   // ============================================================
   // توليد كود داخلي
@@ -259,13 +286,26 @@ export default function ItemForm({ item }: Props) {
         void _t2;
         void _t3;
 
+        // ============================================================
+        // المخزون بقى اختيار، مش قدر
+        // ============================================================
+        //
+        // كان مكتوب هنا `has_stock: values.item_type === "product"`،
+        // يعني **أي منتج بياخد مخزون بالعافية** ومافيش طريقة
+        // تقفلها. صاحب قهوة عنده ٤٥ مشروب اضطر يكتب رقم مخزون من
+        // دماغه لكل واحد - وكل رقم منهم بينزل مع كل بيعة لحد ما
+        // يوصل صفر والبرنامج يرفض يبيع المشروب.
+        //
+        // الخدمة بتفضل من غير مخزون زي ما هي: ماتنفعش تتعدّ.
+        const tracksStock = values.item_type === "product" && values.has_stock;
+
         await updateItem(item.id, {
           ...rest,
           ...tierPrices,
-          has_stock: values.item_type === "product",
+          has_stock: tracksStock,
         });
 
-        if (values.item_type === "product" && user) {
+        if (tracksStock && user) {
           await adjustItemStock(user.business_id, item, newStock);
         }
 
@@ -275,13 +315,16 @@ export default function ItemForm({ item }: Props) {
       } else {
         if (!user) return;
 
-        await createItem({
+        const madeHere = values.item_type === "product" && !values.has_stock;
+
+        const created = await createItem({
           ...values,
 
           // بيغطّوا على الصفر الجاي من النموذج - شوف التعليق فوق.
           ...tierPrices,
 
-          has_stock: values.item_type === "product",
+          // نفس السبب المشروح فوق في فرع التعديل.
+          has_stock: values.item_type === "product" && values.has_stock,
           active: true,
 
           business_id: user.business_id,
@@ -290,6 +333,25 @@ export default function ItemForm({ item }: Props) {
         });
 
         await logActivity(user.id, user.business_id);
+
+        // ============================================================
+        // الصنف اللي بيتعمل في المحل بيروح على الوصفة، مش على القايمة
+        // ============================================================
+        //
+        // محرّر الوصفة موجود في شاشة **تعديل** الصنف بس (لأنه محتاج
+        // رقم الصنف عشان يربط بيه المكوّنات). فاللي بيضيف مشروب جديد
+        // كان بيترمي على قايمة الأصناف ومايشوف الوصفة أبدًا - وde
+        // اللي خلّى ٤٥ مشروب يتبنوا من غير ولا وصفة واحدة.
+        //
+        // الصنف اللي ليه مخزون بيفضل بيرجع للقايمة زي ما هو: خلّص
+        // شغله، ومالوش وصفة لازمة.
+        const newId = (created?.[0] as { id?: string } | undefined)?.id;
+
+        if (madeHere && newId) {
+          toast.success("اتحفظ. دلوقتي حدّد الوصفة - بياخد كام من كل خامة.");
+          router.push(`/items/edit/${newId}`);
+          return;
+        }
       }
 
       router.push("/items");
@@ -441,6 +503,81 @@ export default function ItemForm({ item }: Props) {
           </select>
         </div>
 
+        {/* ============================================================
+            بشتريه جاهز ولا بعمله هنا
+            ============================================================
+
+            السؤال ده كان **مش موجود**، والجواب كان مفروض: كل منتج
+            بضاعة ليها مخزون.
+
+            وde شغل تمام في سوبر ماركت. في قهوة لأ: كوباية اللاتيه
+            مش "بضاعة عندي منها ٤٠"، هي حاجة بتتعمل وقت الطلب من بن
+            ولبن وكوب. وأول ما البرنامج طلب من كيرو رقم مخزون
+            للمشروب، كتب **١٠٠** لكل واحد من ٤٥ مشروب - مش لأنه
+            غلطان، لأن الشاشة سألت سؤال مالوش جواب.
+
+            والرقم ده بينزل مع كل بيعة. يعني كل مشروب عنده كان
+            **قنبلة موقوتة** بتضرب لما يوصل صفر فيرفض البيع.
+
+            السؤال هنا بيحل المشكلة من جذرها، وبيفتح الباب للوصفة:
+            "بعمله هنا" معناها التكلفة بتيجي من المكوّنات. */}
+        {itemType === "product" && !isIngredient && (
+          <div className="sm:col-span-2">
+            <span className="mb-2 block text-sm">
+              الصنف ده بييجي منين؟
+            </span>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {(
+                [
+                  {
+                    value: true,
+                    title: "بشتريه جاهز",
+                    hint: "زي الكانز والزجاجات والمعلبات: عندك منه كمية بتنقص لما تبيع، والبرنامج بينبّهك لما تقرب تخلص.",
+                  },
+                  {
+                    value: false,
+                    title: "بعمله هنا في المحل",
+                    hint: "زي كوباية القهوة والعصير والساندوتش: مالوش مخزون بذاته - اللي بينقص هو المكوّنات، وبتحددهم في «الوصفة» تحت.",
+                  },
+                ] as const
+              ).map((choice) => (
+                <label
+                  key={String(choice.value)}
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+                    hasStock === choice.value
+                      ? "border-splash bg-splash-dim/30"
+                      : "border-ink-600 bg-ink-900 hover:border-ink-500"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    checked={hasStock === choice.value}
+                    onChange={() =>
+                      setValue("has_stock", choice.value, { shouldDirty: true })
+                    }
+                    className="mt-0.5 size-5 shrink-0"
+                  />
+
+                  <span>
+                    <span className="block text-sm font-semibold text-paper">
+                      {choice.title}
+                    </span>
+
+                    <span className="mt-1 block text-xs text-mist">
+                      {choice.hint}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <p className="mt-1 text-sm text-red-500">
+              {errors.has_stock?.message}
+            </p>
+          </div>
+        )}
+
         {/* مكوّن — مش بيتباع.
             الوصفات خلقت نوع جديد من الأصناف: البن والسكر والكوب
             بيتضافوا عشان الوصفة تخصم منهم، ومحدش بيبيعهم بالحبة.
@@ -507,7 +644,11 @@ export default function ItemForm({ item }: Props) {
           </div>
         )}
 
-        {itemType === "product" && (
+        {/* الصنف اللي بيتعمل هنا تكلفته بتتحسب من وصفته، فخانة
+            "سعر الشراء" مالهاش معنى - وde كان بابًا تاني للرقم
+            التخميني: كيرو كتب ٥ و١٠ و٣٠ و١٠٠ لمشروباته، وكل تقرير
+            ربح عنده مبني على الأرقام دي. */}
+        {itemType === "product" && hasStock && (
           <div>
             <label className="mb-2 block text-sm">
               سعر الشراء
@@ -612,7 +753,26 @@ export default function ItemForm({ item }: Props) {
           </>
         )}
 
-        {itemType === "product" && (
+        {/* الصنف اللي بيتعمل في المحل مالوش مخزون بذاته، فخانة
+            "المخزون الحالي" مالهاش جواب صحيح - وحقل ظاهر ومطلوب
+            بيخلّي صاحب المحل يكتب رقم عشوائي عشان يعدّي الشاشة.
+            كيرو كتب ١٠٠. */}
+        {itemType === "product" && !hasStock && (
+          <div className="rounded-xl border border-splash/40 bg-ink-900 p-4 sm:col-span-2">
+            <p className="text-sm font-semibold text-paper">
+              مافيش مخزون للصنف ده — وde صح
+            </p>
+
+            <p className="mt-1 text-xs text-mist">
+              اللي بينقص هو المكوّنات. احفظ الصنف، وبعدها افتح
+              <strong className="text-paper"> «🍳 الوصفة» </strong>
+              تحت وحدّد بياخد كام من كل خامة - والبرنامج هيخصمهم
+              لوحده مع كل بيعة، ويحسب تكلفة الوحدة وربحها الحقيقي.
+            </p>
+          </div>
+        )}
+
+        {itemType === "product" && hasStock && (
           <>
             <div>
               <label className="mb-2 block text-sm">
